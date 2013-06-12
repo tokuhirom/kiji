@@ -9,6 +9,13 @@ use Test::More;
 use Data::Dumper;
 use JSON::PP;
 
+sub mul($$) {
+    +{
+        type => 'NQPC_NODE_MUL',
+        value => [@_],
+    }
+}
+
 sub stmts(@) {
     +{
         type => 'NQPC_NODE_STATEMENTS',
@@ -35,14 +42,21 @@ sub test {
     my $tmp = File::Temp->new();
     print {$tmp} $src;
 
-    my $got = `./nqp-parser < $tmp`;
+    my $json = `./nqp-parser < $tmp`;
+    my $got = eval { JSON::PP->new->decode($json) };
+    if ($@) {
+        diag $json;
+        die $@
+    }
     is_deeply(
-        JSON::PP->new->decode($got),
+        $got,
         stmts($expected),
         "code: $src"
     ) or do {
         $Data::Dumper::Sortkeys=1;
-        diag $got;
+        diag "GOT:";
+        diag Dumper($got);
+        diag "EXPECTED:";
         diag Dumper(stmts($expected));
     };
 }

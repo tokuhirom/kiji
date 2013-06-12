@@ -16,6 +16,7 @@ test( '0xdeadbeef', int_(0xdeadbeef));
 test( '0o755', int_(0755));
 
 test( '-5963', int_(-5963));
+test( '3*4', mul(int_(3), int_(4)));
 
 done_testing;
 

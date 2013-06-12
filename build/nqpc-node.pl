@@ -9,6 +9,8 @@ my @types = qw(
     NQPC_NODE_INT
     NQPC_NODE_NUMBER
     NQPC_NODE_STATEMENTS
+    NQPC_NODE_DIV
+    NQPC_NODE_MUL
 );
 
 say qq!/* This file is generated from $0 */!;

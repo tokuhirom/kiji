@@ -8,30 +8,76 @@
 
 class NQPCNode {
 public:
-    NQPCNode() : type(NQPC_NODE_UNDEF) { }
+    NQPCNode() : type_(NQPC_NODE_UNDEF) { }
     NQPCNode(const NQPCNode &node) {
-        this->type = node.type;
-        switch (type) {
+        this->type_ = node.type_;
+        switch (type_) {
         case NQPC_NODE_INT:
-            this->body.iv = node.body.iv;
+            this->body_.iv = node.body_.iv;
             break;
         case NQPC_NODE_NUMBER:
-            this->body.nv = node.body.nv;
+            this->body_.nv = node.body_.nv;
             break;
         case NQPC_NODE_STATEMENTS:
-            this->children = node.children;
+        case NQPC_NODE_MUL:
+        case NQPC_NODE_DIV:
+            this->children_ = node.children_;
             break;
         case NQPC_NODE_UNDEF:
             abort();
         }
     }
 
-    NQPC_NODE_TYPE type;
+    void set(NQPC_NODE_TYPE type, const NQPCNode &child) {
+        this->type_ = type;
+        this->children_.clear();
+        this->children_.push_back(child);
+    }
+    void set(NQPC_NODE_TYPE type, const NQPCNode &c1, const NQPCNode &c2) {
+        this->type_ = type;
+        this->children_.clear();
+        this->children_.push_back(c1);
+        this->children_.push_back(c2);
+    }
+    void set_number(const char*txt) {
+        this->type_ = NQPC_NODE_NUMBER;
+        this->body_.nv = atof(txt);
+    }
+    void set_integer(const char*txt, int base) {
+        this->type_ = NQPC_NODE_INT;
+        this->body_.iv = strtol(txt, NULL, base);
+    }
+
+    long int iv() const {
+        assert(this->type_ == NQPC_NODE_INT);
+        return this->body_.iv;
+    } 
+    double nv() const {
+        assert(this->type_ == NQPC_NODE_NUMBER);
+        return this->body_.nv;
+    } 
+    const std::vector<NQPCNode> & children() const {
+        return children_;
+    }
+    void push_children(NQPCNode &child) {
+        this->children_.push_back(child);
+    }
+    void negate() {
+        if (this->type_ == NQPC_NODE_INT) {
+            this->body_.iv = - this->body_.iv;
+        } else {
+            this->body_.nv = - this->body_.nv;
+        }
+    }
+    NQPC_NODE_TYPE type() const { return type_; }
+
+private:
+    NQPC_NODE_TYPE type_;
     union {
         long int iv; // integer value
         double nv; // number value
-    } body;
-    std::vector<NQPCNode> children;
+    } body_;
+    std::vector<NQPCNode> children_;
 };
 
 static NQPCNode node_global;
@@ -39,55 +85,41 @@ static int line_number;
 
 #define YYSTYPE NQPCNode
 
-static void nqpc_ast_number(NQPCNode & node, const char*txt, int len) {
-    assert(len);
-    node.type = NQPC_NODE_NUMBER;
-    node.body.nv = atof(txt);
-}
-
-static void nqpc_ast_integer(NQPCNode & node, const char*txt, int len, int base) {
-    assert(len);
-    node.type = NQPC_NODE_INT;
-    node.body.iv = strtol(txt, NULL, base);
-}
-
-static void nqpc_ast_statement_list(NQPCNode &node, NQPCNode &child) {
-    node.type = NQPC_NODE_STATEMENTS;
-    node.children.push_back(child);
-}
-
 static void indent(int n) {
     for (int i=0; i<n*4; i++) {
         printf(" ");
     }
 }
 
-static void nqpc_dump_node(NQPCNode &node, unsigned int depth) {
+static void nqpc_dump_node(const NQPCNode &node, unsigned int depth) {
     printf("{\n");
     indent(depth+1);
-    printf("\"type\":\"%s\",\n", nqpc_node_type2name(node.type));
-    switch (node.type) {
+    printf("\"type\":\"%s\",\n", nqpc_node_type2name(node.type()));
+    switch (node.type()) {
     case NQPC_NODE_INT:
         indent(depth+1);
-        printf("\"value\":%ld\n", node.body.iv);
+        printf("\"value\":%ld\n", node.iv());
         break;
     case NQPC_NODE_NUMBER:
         indent(depth+1);
-        printf("\"value\":%lf\n", node.body.nv);
+        printf("\"value\":%lf\n", node.nv());
         break;
+        // Statement has children
+    case NQPC_NODE_MUL:
+    case NQPC_NODE_DIV:
     case NQPC_NODE_STATEMENTS: {
         indent(depth+1);
         printf("\"value\":[\n");
         int i=0;
-        for (auto &x:node.children) {
+        for (auto &x:node.children()) {
             indent(depth+2);
             nqpc_dump_node(
                 x, depth+2
             );
-            if (i==node.children.size()-2) {
-                printf(",\n");
-            } else {
+            if (i==node.children().size()-1) {
                 printf("\n");
+            } else {
+                printf(",\n");
             }
             i++;
         }
@@ -113,28 +145,27 @@ comp_init = e:statementlist end-of-file {
 
 statementlist =
     s1:statement {
-        nqpc_ast_statement_list($$, s1);
+        $$.set(NQPC_NODE_STATEMENTS, s1);
         s1 = $$;
     }
     ( eat_terminator s2:statement {
-        s1.children.push_back(s2);
+        s1.push_children(s2);
         $$ = s1;
     } )* eat_terminator?
 
 # TODO
 statement = e:expr ws* { $$ = e; }
 
-expr = term
+expr =
+      l:term '*' r:term { $$.set(NQPC_NODE_MUL, l, r); }
+    | l:term '/' r:term { $$.set(NQPC_NODE_DIV, l, r); }
+    | term
 
 term = value
 
 value = 
     ( '-' ( integer | dec_number) ) {
-        if ($$.type == NQPC_NODE_INT) {
-            $$.body.iv = - $$.body.iv;
-        } else {
-            $$.body.nv = - $$.body.nv;
-        }
+        $$.negate();
     }
     | integer
     | dec_number
@@ -146,24 +177,24 @@ eat_terminator =
 
 dec_number =
     <([.][0-9]+)> {
-    nqpc_ast_number($$, yytext, yyleng);
+    $$.set_number(yytext);
 }
     | <([0-9]+ '.' [0-9]+)> {
-    nqpc_ast_number($$, yytext, yyleng);
+    $$.set_number(yytext);
 }
     | <([0-9]+)> {
-    nqpc_ast_integer($$, yytext, yyleng, 10);
+    $$.set_integer(yytext, 10);
 }
 
 integer =
     '0b' <[01]+> {
-    nqpc_ast_integer($$, yytext, yyleng, 2);
+    $$.set_integer(yytext, 2);
 }
     | '0x' <[0-9a-f]+> {
-    nqpc_ast_integer($$, yytext, yyleng, 16);
+    $$.set_integer(yytext, 16);
 }
     | '0o' <[0-7]+> {
-    nqpc_ast_integer($$, yytext, yyleng, 8);
+    $$.set_integer(yytext, 8);
 }
 
 # TODO
