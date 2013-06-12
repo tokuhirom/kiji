@@ -1,5 +1,8 @@
 all: nqp-parser
 
+test: nqp-parser
+	prove -r t
+
 clean:
 	rm -f nqp-parser nqp-parser.cc
 
@@ -12,4 +15,4 @@ nqp-parser.cc: nqp.y
 node.h: build/nqpc-node.pl
 	perl build/nqpc-node.pl > node.h
 
-.PHONY: all clean
+.PHONY: all clean test
