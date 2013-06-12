@@ -160,21 +160,32 @@ statementlist =
 # TODO
 statement = e:expr ws* { $$ = e; }
 
-expr =
-      l:add_expr '*' r:expr { $$.set(NQPC_NODE_MUL, l, r); }
-    | l:add_expr '/' r:expr { $$.set(NQPC_NODE_DIV, l, r); }
-    | add_expr
+expr = add_expr
 
 add_expr =
-    l:term (
-          '+' r1:term {
+    l:mul_expr (
+          '+' r1:mul_expr {
             $$.set(NQPC_NODE_ADD, l, r1);
             l = $$;
           }
-        | '-' r2:term {
+        | '-' r2:mul_expr {
             $$.set(NQPC_NODE_SUB, l, r2);
             l = $$;
           }
+    )* {
+        $$ = l;
+    }
+
+mul_expr =
+    l:term (
+        '*' r:term {
+            $$.set(NQPC_NODE_MUL, l, r);
+            l = $$;
+        }
+        | '/' r:term {
+            $$.set(NQPC_NODE_DIV, l, r);
+            l = $$;
+        }
     )* {
         $$ = l;
     }

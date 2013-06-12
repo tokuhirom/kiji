@@ -21,6 +21,8 @@ test( '3/4', div(int_(3), int_(4)));
 test( '3+4', add(int_(3), int_(4)));
 test( '3-4', sub_(int_(3), int_(4)));
 test( '3-4-2', sub_(sub_(int_(3), int_(4)), int_(2)));
+test( '3+4-2', sub_(add(int_(3), int_(4)), int_(2)));
+test( '3+4*2', add(int_(3), mul(int_(4), int_(2))));
 
 done_testing;
 
