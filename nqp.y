@@ -21,6 +21,8 @@ public:
         case NQPC_NODE_STATEMENTS:
         case NQPC_NODE_MUL:
         case NQPC_NODE_DIV:
+        case NQPC_NODE_ADD:
+        case NQPC_NODE_SUB:
             this->children_ = node.children_;
             break;
         case NQPC_NODE_UNDEF:
@@ -106,6 +108,8 @@ static void nqpc_dump_node(const NQPCNode &node, unsigned int depth) {
         break;
         // Statement has children
     case NQPC_NODE_MUL:
+    case NQPC_NODE_ADD:
+    case NQPC_NODE_SUB:
     case NQPC_NODE_DIV:
     case NQPC_NODE_STATEMENTS: {
         indent(depth+1);
@@ -157,9 +161,23 @@ statementlist =
 statement = e:expr ws* { $$ = e; }
 
 expr =
-      l:term '*' r:term { $$.set(NQPC_NODE_MUL, l, r); }
-    | l:term '/' r:term { $$.set(NQPC_NODE_DIV, l, r); }
-    | term
+      l:add_expr '*' r:expr { $$.set(NQPC_NODE_MUL, l, r); }
+    | l:add_expr '/' r:expr { $$.set(NQPC_NODE_DIV, l, r); }
+    | add_expr
+
+add_expr =
+    l:term (
+          '+' r1:term {
+            $$.set(NQPC_NODE_ADD, l, r1);
+            l = $$;
+          }
+        | '-' r2:term {
+            $$.set(NQPC_NODE_SUB, l, r2);
+            l = $$;
+          }
+    )* {
+        $$ = l;
+    }
 
 term = value
 

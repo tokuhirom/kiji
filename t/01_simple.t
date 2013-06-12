@@ -18,6 +18,9 @@ test( '0o755', int_(0755));
 test( '-5963', int_(-5963));
 test( '3*4', mul(int_(3), int_(4)));
 test( '3/4', div(int_(3), int_(4)));
+test( '3+4', add(int_(3), int_(4)));
+test( '3-4', sub_(int_(3), int_(4)));
+test( '3-4-2', sub_(sub_(int_(3), int_(4)), int_(2)));
 
 done_testing;
 

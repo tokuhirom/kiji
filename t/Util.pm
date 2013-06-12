@@ -2,26 +2,32 @@ package t::Util;
 use strict;
 use warnings;
 use utf8;
+use parent qw(Exporter);
 
-use Exporter::Auto;
 use File::Temp;
 use Test::More;
 use Data::Dumper;
 use JSON::PP;
 
-sub div($$) {
-    +{
-        type => 'NQPC_NODE_DIV',
-        value => [@_],
-    }
+our @EXPORT = qw(int_ number test stmts);
+
+sub _two_op {
+    my ($name) = shift;
+    no strict 'refs';
+    push @EXPORT, $name;
+    *{"$name"} = sub ($$) {
+        $name =~ s/_$//;
+        +{
+            type => 'NQPC_NODE_' . uc($name),
+            value => [@_],
+        }
+    };
 }
 
-sub mul($$) {
-    +{
-        type => 'NQPC_NODE_MUL',
-        value => [@_],
-    }
-}
+_two_op('div');
+_two_op('mul');
+_two_op('add');
+_two_op('sub_');
 
 sub stmts(@) {
     +{
@@ -50,7 +56,13 @@ sub test {
     print {$tmp} $src;
 
     my $json = `./nqp-parser < $tmp`;
-    my $got = eval { JSON::PP->new->decode($json) };
+    unless ($json =~ /\A\{/) {
+        die "Cannot get json from '$src'";
+    }
+    note $json;
+    my $got = eval {
+        JSON::PP->new->decode($json)
+    };
     if ($@) {
         diag $json;
         die $@
