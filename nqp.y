@@ -53,9 +53,11 @@ static void nqpc_dump_node(NQPCNode &node, unsigned int depth) {
 
 %}
 
-comp_init = e:value end-of-line? end-of-file {
+comp_init = e:term end-of-line? end-of-file {
     node_global = e;
 }
+
+term = value
 
 value = integer | dec_number
 
