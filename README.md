@@ -22,3 +22,12 @@ Use case
 
  * You can write NQP compiler based on this library.
 
+See also
+--------
+
+ * [NQP::Grammer](https://github.com/perl6/nqp/blob/master/src/NQP/Grammar.nqp)
+ * [HLL::Grammer](https://github.com/perl6/nqp/blob/master/src/HLL/Grammar.nqp)
+ * [greg](https://github.com/nddrylliog/greg)
+   * PEG parser generator
+ * [greg manual](http://piumarta.com/software/peg/peg.1.html)
+
