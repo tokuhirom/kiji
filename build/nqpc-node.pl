@@ -5,12 +5,13 @@ use utf8;
 use 5.010000;
 
 my @types = qw(
+    NQPC_NODE_UNDEF
     NQPC_NODE_INT
     NQPC_NODE_NUMBER
-    NQPC_NODE_STRING
-    NQPC_NODE_FUNCALL
+    NQPC_NODE_STATEMENTS
 );
 
+say qq!/* This file is generated from $0 */!;
 say qq!#pragma once!;
 say qq!!;
 say qq!typedef enum {!;

@@ -7,7 +7,7 @@ clean:
 	rm -f nqp-parser nqp-parser.cc
 
 nqp-parser: nqp-parser.cc node.h
-	clang++ -Wall -o nqp-parser nqp-parser.cc
+	clang++ -g -std=c++11 -Wall -o nqp-parser nqp-parser.cc
 
 nqp-parser.cc: nqp.y
 	greg -o nqp-parser.cc nqp.y
