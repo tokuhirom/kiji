@@ -129,7 +129,7 @@ expr = term
 term = value
 
 value = 
-    ( ('-' integer) | ('-' dec_number) ) {
+    ( '-' ( integer | dec_number) ) {
         if ($$.type == NQPC_NODE_INT) {
             $$.body.iv = - $$.body.iv;
         } else {
@@ -170,6 +170,7 @@ integer =
 
 # white space
 ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
+    | '#' [^\n]*
 end-of-line = ( '\r\n' | '\n' | '\r' ) {
     line_number++;
 }
