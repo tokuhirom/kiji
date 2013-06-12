@@ -9,6 +9,13 @@ use Test::More;
 use Data::Dumper;
 use JSON::PP;
 
+sub div($$) {
+    +{
+        type => 'NQPC_NODE_DIV',
+        value => [@_],
+    }
+}
+
 sub mul($$) {
     +{
         type => 'NQPC_NODE_MUL',
