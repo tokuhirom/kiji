@@ -2,9 +2,6 @@ use strict;
 use warnings;
 use utf8;
 use Test::More;
-use JSON::PP;
-use File::Temp;
-use Data::Dumper;
 use t::Util;
 
 test( '33', int_(33));

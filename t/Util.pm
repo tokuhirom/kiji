@@ -6,6 +6,8 @@ use utf8;
 use Exporter::Auto;
 use File::Temp;
 use Test::More;
+use Data::Dumper;
+use JSON::PP;
 
 sub stmts(@) {
     +{
