@@ -5,7 +5,7 @@
 typedef struct {
     NQPC_NODE_TYPE type;
     union {
-        int iv; // integer value
+        long int iv; // integer value
         double nv; // number value
     } body;
 } NQPCNode;
@@ -37,7 +37,7 @@ static void nqpc_dump_node(NQPCNode &node, unsigned int depth) {
     switch (node.type) {
     case NQPC_NODE_INT:
         indent(depth+1);
-        printf("\"value\":%d\n", node.body.iv);
+        printf("\"value\":%ld\n", node.body.iv);
         break;
     case NQPC_NODE_NUMBER:
         indent(depth+1);
@@ -73,6 +73,12 @@ dec_number =
 integer =
     '0b' <[01]+> {
     nqpc_ast_integer($$, yytext, yyleng, 2);
+}
+    | '0x' <[0-9a-f]+> {
+    nqpc_ast_integer($$, yytext, yyleng, 16);
+}
+    | '0o' <[0-7]+> {
+    nqpc_ast_integer($$, yytext, yyleng, 8);
 }
 
 # TODO
