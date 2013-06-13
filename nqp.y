@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <assert.h>
+#include <string>
 #include "node.h"
 
 class NQPCNode {
@@ -12,34 +13,60 @@ public:
     NQPCNode(const NQPCNode &node) {
         this->type_ = node.type_;
         switch (type_) {
+        case NQPC_NODE_IDENT: {
+            break;
+        }
         case NQPC_NODE_INT:
             this->body_.iv = node.body_.iv;
             break;
         case NQPC_NODE_NUMBER:
             this->body_.nv = node.body_.nv;
             break;
+        case NQPC_NODE_FUNCALL:
         case NQPC_NODE_STATEMENTS:
         case NQPC_NODE_MUL:
         case NQPC_NODE_DIV:
         case NQPC_NODE_ADD:
         case NQPC_NODE_SUB:
-            this->children_ = node.children_;
+            this->body_.children = new std::vector<NQPCNode>();
+            *(this->body_.children) = *(node.body_.children);
             break;
         case NQPC_NODE_UNDEF:
             abort();
         }
     }
+    ~NQPCNode() {
+        switch (type_) {
+        case NQPC_NODE_IDENT: {
+            break;
+        }
+        case NQPC_NODE_INT:
+            break;
+        case NQPC_NODE_NUMBER:
+            break;
+        case NQPC_NODE_FUNCALL:
+        case NQPC_NODE_STATEMENTS:
+        case NQPC_NODE_MUL:
+        case NQPC_NODE_DIV:
+        case NQPC_NODE_ADD:
+        case NQPC_NODE_SUB:
+            // delete this->body_.children;
+            break;
+        case NQPC_NODE_UNDEF:
+            break;
+        }
+    }
 
     void set(NQPC_NODE_TYPE type, const NQPCNode &child) {
         this->type_ = type;
-        this->children_.clear();
-        this->children_.push_back(child);
+        this->body_.children = new std::vector<NQPCNode>();
+        this->body_.children->push_back(child);
     }
     void set(NQPC_NODE_TYPE type, const NQPCNode &c1, const NQPCNode &c2) {
         this->type_ = type;
-        this->children_.clear();
-        this->children_.push_back(c1);
-        this->children_.push_back(c2);
+        this->body_.children = new std::vector<NQPCNode>();
+        this->body_.children->push_back(c1);
+        this->body_.children->push_back(c2);
     }
     void set_number(const char*txt) {
         this->type_ = NQPC_NODE_NUMBER;
@@ -49,6 +76,10 @@ public:
         this->type_ = NQPC_NODE_INT;
         this->body_.iv = strtol(txt, NULL, base);
     }
+//  void set_ident(const char *txt, int length) {
+//      this->type_ = NQPC_NODE_IDENT;
+//      this->pv_ = std::string(txt, length);
+//  }
 
     long int iv() const {
         assert(this->type_ == NQPC_NODE_INT);
@@ -59,10 +90,10 @@ public:
         return this->body_.nv;
     } 
     const std::vector<NQPCNode> & children() const {
-        return children_;
+        return *(this->body_.children);
     }
     void push_children(NQPCNode &child) {
-        this->children_.push_back(child);
+        this->body_.children->push_back(child);
     }
     void negate() {
         if (this->type_ == NQPC_NODE_INT) {
@@ -72,14 +103,16 @@ public:
         }
     }
     NQPC_NODE_TYPE type() const { return type_; }
+    const char* pv(int &len) const {
+    }
 
 private:
     NQPC_NODE_TYPE type_;
     union {
         long int iv; // integer value
         double nv; // number value
+        std::vector<NQPCNode> *children;
     } body_;
-    std::vector<NQPCNode> children_;
 };
 
 static NQPCNode node_global;
@@ -106,7 +139,13 @@ static void nqpc_dump_node(const NQPCNode &node, unsigned int depth) {
         indent(depth+1);
         printf("\"value\":%lf\n", node.nv());
         break;
-        // Statement has children
+        // Node has a PV
+    case NQPC_NODE_IDENT:
+        indent(depth+1);
+//      printf("\"value\":%s\n", node.pv().c_str()); // TODO need escape
+        break;
+        // Node has children
+    case NQPC_NODE_FUNCALL:
     case NQPC_NODE_MUL:
     case NQPC_NODE_ADD:
     case NQPC_NODE_SUB:
@@ -141,6 +180,10 @@ static void nqpc_dump_node(const NQPCNode &node, unsigned int depth) {
     }
 }
 
+static void nqpc_dump_node(const NQPCNode &node) {
+    nqpc_dump_node(node, 0);
+}
+
 %}
 
 comp_init = e:statementlist end-of-file {
@@ -160,7 +203,15 @@ statementlist =
 # TODO
 statement = e:expr ws* { $$ = e; }
 
-expr = add_expr
+expr = funcall_expr
+
+# TODO args
+funcall_expr =
+#   i:ident '(' ')' {
+#       $$.set(NQPC_NODE_FUNCALL, i);
+#   }
+#   | add_expr
+    add_expr
 
 add_expr =
     l:mul_expr (
@@ -191,6 +242,10 @@ mul_expr =
     }
 
 term = value
+
+#   ident = < [a-zA-Z] [a-zA-Z0-9]+ ( [_-] [a-zA-Z0-9]+ )* > {
+#       $$.set_ident(yytext, yyleng);
+#   }
 
 value = 
     ( '-' ( integer | dec_number) ) {
@@ -267,7 +322,7 @@ int main()
     }
     yydeinit(&g);
 
-    nqpc_dump_node(node_global, 0);
+    nqpc_dump_node(node_global);
 
     return 0;
 }
