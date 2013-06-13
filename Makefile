@@ -13,7 +13,7 @@ _build/saru-parser: src/gen.saru.y.cc src/gen.node.h
 src/gen.saru.y.cc: src/saru.y
 	greg -o src/gen.saru.y.cc src/saru.y
 
-src/gen.node.h: build/nqpc-node.pl
-	perl build/nqpc-node.pl > src/gen.node.h
+src/gen.node.h: build/saru-node.pl
+	perl build/saru-node.pl > src/gen.node.h
 
 .PHONY: all clean test
