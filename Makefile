@@ -6,13 +6,13 @@ test: nqp-parser
 clean:
 	rm -f nqp-parser nqp-parser.cc
 
-nqp-parser: nqp-parser.cc node.h
-	clang++ -g -std=c++11 -Wall -o nqp-parser nqp-parser.cc
+nqp-parser: src/gen.nqp.y.cc src/gen.node.h
+	clang++ -g -std=c++11 -Wall -o nqp-parser src/nqp-parser.cc
 
-nqp-parser.cc: nqp.y
-	greg -o nqp-parser.cc nqp.y
+src/gen.nqp.y.cc: src/nqp.y
+	greg -o src/gen.nqp.y.cc src/nqp.y
 
-node.h: build/nqpc-node.pl
-	perl build/nqpc-node.pl > node.h
+src/gen.node.h: build/nqpc-node.pl
+	perl build/nqpc-node.pl > src/gen.node.h
 
 .PHONY: all clean test
