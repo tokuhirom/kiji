@@ -1,6 +1,22 @@
 TODO
 ====
 
+## Step 0. Done in 2013-06-12
+
+ * Start project
+
+## Step 0.1. Done in 2013-06-12
+
+ * Parse some expressions
+
+## Step 0.2  Done in 2013-06-13
+
+ * Hello world on MoarVM with very simple C code
+
+## Step 0.3
+
+ * Hello world from saru
+
 ## Step 1.
 
  * simple string
@@ -10,11 +26,24 @@ TODO
 
 ## Step 2.
 
+ * Run fib(n)
+
+## Step 3.
+
+ * Support OOP
+
+## Step 4.
+
  * Support all statements in NQP
-  * Parse + - * /
  * Parse NQP test cases
- * Parse Rakudo
+
+## Step 20.
+
  * regexp
+
+## Step 21.
+
+ * Grammars
 
 ## Step ∞.
 
