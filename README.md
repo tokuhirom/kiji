@@ -1,5 +1,5 @@
-nqp-parser
-==========
+saru
+====
 
 Current Status
 --------------
@@ -9,7 +9,7 @@ Under development.... pre-alpha.
 What's this?
 -------------
 
-This is a parser library for NQP language. NQP is Not Quite Perl(6), is subset of Perl6.
+This is a interpreter for subset of Perl6. It's running on MoarVM.
 
 Why?
 ----
