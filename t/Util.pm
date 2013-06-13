@@ -63,7 +63,7 @@ sub test {
     my $tmp = File::Temp->new();
     print {$tmp} $src;
 
-    my $json = `./nqp-parser < $tmp`;
+    my $json = `./_build/saru-parser < $tmp`;
     unless ($json =~ /\A\{/) {
         die "Cannot get json from '$src'";
     }

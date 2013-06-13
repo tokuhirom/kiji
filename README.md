@@ -17,6 +17,12 @@ Why?
 NQP's compiler is written in NQP.
 I want to parse NQP by C++.
 
+Dependencies
+------------
+
+ * [greg](https://github.com/nddrylliog/greg)
+ * Perl5
+
 Use case
 --------
 
