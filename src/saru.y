@@ -8,7 +8,7 @@ comp_init = e:statementlist end-of-file {
 
 statementlist =
     s1:statement {
-        $$.set(NQPC_NODE_STATEMENTS, s1);
+        $$.set(SARU_NODE_STATEMENTS, s1);
         s1 = $$;
     }
     ( eat_terminator s2:statement {
@@ -22,7 +22,7 @@ statement = e:expr ws* { $$ = e; }
 args =
     (
         s1:expr {
-            $$.set(NQPC_NODE_ARGS, s1);
+            $$.set(SARU_NODE_ARGS, s1);
             s1 = $$;
         }
         ( ',' s2:expr {
@@ -30,24 +30,24 @@ args =
             $$ = s1;
         } )*
     )
-    | '' { $$.set_children(NQPC_NODE_ARGS); }
+    | '' { $$.set_children(SARU_NODE_ARGS); }
 
 expr = funcall_expr
 
 funcall_expr =
     i:ident '(' a:args ')' {
-        $$.set(NQPC_NODE_FUNCALL, i, a);
+        $$.set(SARU_NODE_FUNCALL, i, a);
     }
     | add_expr
 
 add_expr =
     l:mul_expr (
           '+' r1:mul_expr {
-            $$.set(NQPC_NODE_ADD, l, r1);
+            $$.set(SARU_NODE_ADD, l, r1);
             l = $$;
           }
         | '-' r2:mul_expr {
-            $$.set(NQPC_NODE_SUB, l, r2);
+            $$.set(SARU_NODE_SUB, l, r2);
             l = $$;
           }
     )* {
@@ -57,11 +57,11 @@ add_expr =
 mul_expr =
     l:term (
         '*' r:term {
-            $$.set(NQPC_NODE_MUL, l, r);
+            $$.set(SARU_NODE_MUL, l, r);
             l = $$;
         }
         | '/' r:term {
-            $$.set(NQPC_NODE_DIV, l, r);
+            $$.set(SARU_NODE_DIV, l, r);
             l = $$;
         }
     )* {

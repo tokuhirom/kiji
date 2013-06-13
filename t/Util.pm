@@ -18,7 +18,7 @@ sub _children_op {
     *{"$name"} = sub {
         $name =~ s/_$//;
         +{
-            type => 'NQPC_NODE_' . uc($name),
+            type => 'SARU_NODE_' . uc($name),
             value => [@_],
         }
     };
@@ -32,27 +32,27 @@ _children_op($_) for qw(
 
 sub ident {
     +{
-        type => 'NQPC_NODE_IDENT',
+        type => 'SARU_NODE_IDENT',
         value => $_[0],
     }
 }
 
 sub stmts(@) {
     +{
-        type => 'NQPC_NODE_STATEMENTS',
+        type => 'SARU_NODE_STATEMENTS',
         value => [@_],
     }
 }
 
 sub number($) {
     +{
-        type => 'NQPC_NODE_NUMBER',
+        type => 'SARU_NODE_NUMBER',
         value => $_[0],
     }
 }
 sub int_($) {
     +{
-        type => 'NQPC_NODE_INT',
+        type => 'SARU_NODE_INT',
         value => $_[0],
     }
 }
