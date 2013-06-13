@@ -24,5 +24,7 @@ test( '3-4-2', sub_(sub_(int_(3), int_(4)), int_(2)));
 test( '3+4-2', sub_(add(int_(3), int_(4)), int_(2)));
 test( '3+4*2', add(int_(3), mul(int_(4), int_(2))));
 
+test( 'say()', funcall(ident('say')));
+
 done_testing;
 

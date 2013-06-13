@@ -13,9 +13,9 @@ public:
     NQPCNode(const NQPCNode &node) {
         this->type_ = node.type_;
         switch (type_) {
-        case NQPC_NODE_IDENT: {
+        case NQPC_NODE_IDENT:
+            this->body_.pv = new std::string(*(node.body_.pv));
             break;
-        }
         case NQPC_NODE_INT:
             this->body_.iv = node.body_.iv;
             break;
@@ -33,6 +33,7 @@ public:
             break;
         case NQPC_NODE_UNDEF:
             abort();
+            break;
         }
     }
     ~NQPCNode() {
@@ -76,10 +77,10 @@ public:
         this->type_ = NQPC_NODE_INT;
         this->body_.iv = strtol(txt, NULL, base);
     }
-//  void set_ident(const char *txt, int length) {
-//      this->type_ = NQPC_NODE_IDENT;
-//      this->pv_ = std::string(txt, length);
-//  }
+    void set_ident(const char *txt, int length) {
+        this->type_ = NQPC_NODE_IDENT;
+        this->body_.pv = new std::string(txt, length);
+    }
 
     long int iv() const {
         assert(this->type_ == NQPC_NODE_INT);
@@ -103,7 +104,8 @@ public:
         }
     }
     NQPC_NODE_TYPE type() const { return type_; }
-    const char* pv(int &len) const {
+    const std::string pv() const {
+        return *(this->body_.pv);
     }
 
 private:
@@ -111,6 +113,7 @@ private:
     union {
         long int iv; // integer value
         double nv; // number value
+        std::string *pv;
         std::vector<NQPCNode> *children;
     } body_;
 };
@@ -142,7 +145,7 @@ static void nqpc_dump_node(const NQPCNode &node, unsigned int depth) {
         // Node has a PV
     case NQPC_NODE_IDENT:
         indent(depth+1);
-//      printf("\"value\":%s\n", node.pv().c_str()); // TODO need escape
+        printf("\"value\":\"%s\"\n", node.pv().c_str()); // TODO need escape
         break;
         // Node has children
     case NQPC_NODE_FUNCALL:
@@ -207,11 +210,10 @@ expr = funcall_expr
 
 # TODO args
 funcall_expr =
-#   i:ident '(' ')' {
-#       $$.set(NQPC_NODE_FUNCALL, i);
-#   }
-#   | add_expr
-    add_expr
+    i:ident '(' ')' {
+        $$.set(NQPC_NODE_FUNCALL, i);
+    }
+    | add_expr
 
 add_expr =
     l:mul_expr (
@@ -243,9 +245,9 @@ mul_expr =
 
 term = value
 
-#   ident = < [a-zA-Z] [a-zA-Z0-9]+ ( [_-] [a-zA-Z0-9]+ )* > {
-#       $$.set_ident(yytext, yyleng);
-#   }
+ident = < [a-zA-Z] [a-zA-Z0-9]+ ( [_-] [a-zA-Z0-9]+ )* > {
+    $$.set_ident(yytext, yyleng);
+}
 
 value = 
     ( '-' ( integer | dec_number) ) {

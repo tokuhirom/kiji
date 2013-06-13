@@ -9,13 +9,13 @@ use Test::More;
 use Data::Dumper;
 use JSON::PP;
 
-our @EXPORT = qw(int_ number test stmts);
+our @EXPORT = qw(int_ number test stmts ident);
 
-sub _two_op {
+sub _children_op {
     my ($name) = shift;
     no strict 'refs';
     push @EXPORT, $name;
-    *{"$name"} = sub ($$) {
+    *{"$name"} = sub {
         $name =~ s/_$//;
         +{
             type => 'NQPC_NODE_' . uc($name),
@@ -24,10 +24,18 @@ sub _two_op {
     };
 }
 
-_two_op('div');
-_two_op('mul');
-_two_op('add');
-_two_op('sub_');
+_children_op('div');
+_children_op('mul');
+_children_op('add');
+_children_op('sub_');
+_children_op('funcall');
+
+sub ident {
+    +{
+        type => 'NQPC_NODE_IDENT',
+        value => $_[0],
+    }
+}
 
 sub stmts(@) {
     +{
