@@ -22,6 +22,7 @@ public:
         case NQPC_NODE_NUMBER:
             this->body_.nv = node.body_.nv;
             break;
+        case NQPC_NODE_ARGS:
         case NQPC_NODE_FUNCALL:
         case NQPC_NODE_STATEMENTS:
         case NQPC_NODE_MUL:
@@ -45,6 +46,7 @@ public:
             break;
         case NQPC_NODE_NUMBER:
             break;
+        case NQPC_NODE_ARGS:
         case NQPC_NODE_FUNCALL:
         case NQPC_NODE_STATEMENTS:
         case NQPC_NODE_MUL:
@@ -68,6 +70,10 @@ public:
         this->body_.children = new std::vector<NQPCNode>();
         this->body_.children->push_back(c1);
         this->body_.children->push_back(c2);
+    }
+    void set_children(NQPC_NODE_TYPE type) {
+        this->type_ = type;
+        this->body_.children = new std::vector<NQPCNode>();
     }
     void set_number(const char*txt) {
         this->type_ = NQPC_NODE_NUMBER;
@@ -93,7 +99,10 @@ public:
     const std::vector<NQPCNode> & children() const {
         return *(this->body_.children);
     }
-    void push_children(NQPCNode &child) {
+    void push_child(NQPCNode &child) {
+        assert(this->type_ != NQPC_NODE_INT);
+        assert(this->type_ != NQPC_NODE_NUMBER);
+        assert(this->type_ != NQPC_NODE_IDENT);
         this->body_.children->push_back(child);
     }
     void negate() {
@@ -148,6 +157,7 @@ static void nqpc_dump_node(const NQPCNode &node, unsigned int depth) {
         printf("\"value\":\"%s\"\n", node.pv().c_str()); // TODO need escape
         break;
         // Node has children
+    case NQPC_NODE_ARGS:
     case NQPC_NODE_FUNCALL:
     case NQPC_NODE_MUL:
     case NQPC_NODE_ADD:
@@ -199,19 +209,31 @@ statementlist =
         s1 = $$;
     }
     ( eat_terminator s2:statement {
-        s1.push_children(s2);
+        s1.push_child(s2);
         $$ = s1;
     } )* eat_terminator?
 
 # TODO
 statement = e:expr ws* { $$ = e; }
 
+args =
+    (
+        s1:expr {
+            $$.set(NQPC_NODE_ARGS, s1);
+            s1 = $$;
+        }
+        ( ',' s2:expr {
+            s1.push_child(s2);
+            $$ = s1;
+        } )*
+    )
+    | '' { $$.set_children(NQPC_NODE_ARGS); }
+
 expr = funcall_expr
 
-# TODO args
 funcall_expr =
-    i:ident '(' ')' {
-        $$.set(NQPC_NODE_FUNCALL, i);
+    i:ident '(' a:args ')' {
+        $$.set(NQPC_NODE_FUNCALL, i, a);
     }
     | add_expr
 

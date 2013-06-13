@@ -24,11 +24,11 @@ sub _children_op {
     };
 }
 
-_children_op('div');
-_children_op('mul');
-_children_op('add');
-_children_op('sub_');
-_children_op('funcall');
+_children_op($_) for qw(
+    div mul
+    add sub_
+    funcall args
+);
 
 sub ident {
     +{

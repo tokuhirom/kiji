@@ -15,6 +15,7 @@ my @types = qw(
     NQPC_NODE_SUB
     NQPC_NODE_IDENT
     NQPC_NODE_FUNCALL
+    NQPC_NODE_ARGS
 );
 
 say qq!/* This file is generated from $0 */!;
