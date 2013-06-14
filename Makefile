@@ -2,6 +2,8 @@
 EXE = 
 O   = .o
 
+CXXFLAGS=-g -Wno-unused-function
+
 CXX=clang++
 CINCLUDE = -I3rd/MoarVM/3rdparty/apr/include -I3rd/MoarVM/3rdparty/libatomic_ops/src -I3rd/MoarVM/3rdparty/libtommath/ -I3rd/MoarVM/3rdparty/sha1/ -I3rd/MoarVM/src -I3rd/MoarVM/3rdparty
 LLIBS=-lapr-1 -lpthread -lm -luuid
@@ -164,8 +166,8 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
 
 all: saru
 
-saru: 3rd/MoarVM/moarvm src/saru.cc
-	$(CXX) -g -std=c++11 -Wall $(CINCLUDE) -o saru src/saru.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS)
+saru: 3rd/MoarVM/moarvm src/saru.cc src/gen.node.h src/gen.saru.y.cc
+	$(CXX) $(CXXFLAGS) -g -std=c++11 -Wall $(CINCLUDE) -o saru src/saru.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS)
 
 test: _build/saru-parser
 	prove -r t
@@ -177,7 +179,7 @@ test: _build/saru-parser
 	cd 3rd/MoarVM/ && make
 
 clean:
-	rm -rf _build/ saru-parser.cc
+	rm -rf _build/ saru src/gen.*
 
 _build/saru-parser: src/gen.saru.y.cc src/gen.node.h
 	mkdir -p _build/

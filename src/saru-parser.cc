@@ -1,5 +1,5 @@
 #include "node.h"
-#include "gen.nqp.y.cc"
+#include "gen.saru.y.cc"
 #include "node_dump.h"
 
 int main()
