@@ -34,6 +34,8 @@ test( 'say(3)', funcall(ident('say'), args(int_(3))));
 test( '"hoge"', string('hoge'));
 test( '"ho\nge"', string("ho\nge"));
 
+test( '(3+4)*2', mul(add(int_(3), int_(4)), int_(2)));
+
 filter { $_[0] };
 test( '1;2"', statements(int_("1"), int_("2")));
 

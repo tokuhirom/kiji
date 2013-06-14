@@ -28,7 +28,7 @@ TODO
 
  * say(3+2)
 
-## Step 1.11
+## Step 1.11 Done in 2013-06-14
 
  * `say(3*2)`
  * `say(3/2)`
@@ -40,7 +40,7 @@ TODO
 
 ## Step 1.2
 
- * say(3.2)
+ * say(3%2)
 
 ## Step 2.
 
@@ -48,6 +48,7 @@ TODO
 
 ## Step 2.
 
+ * say(3.2)
  * funcall
  * Run fib(n)
  * Range object

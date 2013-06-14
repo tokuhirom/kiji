@@ -85,6 +85,7 @@ value =
     | integer
     | dec_number
     | string
+    | '(' e:expr ')' { $$ = e; }
 
 #  <?MARKED('endstmt')>
 #  <?terminator>
