@@ -84,7 +84,7 @@ public:
     }
     void set_integer(const char*txt, int base) {
         this->type_ = SARU_NODE_INT;
-        this->body_.iv = strtol(txt, NULL, base);
+        this->body_.iv = strtoll(txt, NULL, base);
     }
     void set_ident(const char *txt, int length) {
         this->type_ = SARU_NODE_IDENT;
@@ -134,7 +134,7 @@ public:
 private:
     SARU_NODE_TYPE type_;
     union {
-        long int iv; // integer value
+        int64_t iv; // integer value
         double nv; // number value
         std::string *pv;
         std::vector<SARUNode> *children;

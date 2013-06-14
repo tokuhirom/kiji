@@ -7,21 +7,49 @@
 namespace saru {
   class Assembler {
   public:
-    void write(MVMuint8 bank_num, MVMuint8 op_num) {
-      write_8(bank_num);
-      write_8(op_num);
+    void op(MVMuint8 bank_num, MVMuint8 op_num) {
+      write_u8(bank_num);
+      write_u8(op_num);
     }
-    void write(MVMuint8 bank_num, MVMuint8 op_num, MVMuint16 op1, MVMuint16 op2) {
-      write(bank_num, op_num);
-      write_16(op1);
-      write_16(op2);
+    void op_u16_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, uint16_t op2) {
+      op(bank_num, op_num);
+      write_u16(op1);
+      write_u16(op2);
     }
-    void write_8(MVMuint8 i) {
+    void op_u16_i64(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, int64_t op2) {
+      op(bank_num, op_num);
+      write_u16(op1);
+      write_i64(op2);
+    }
+    void write_u8(MVMuint8 i) {
       bytecode_.push_back(i);
     }
-    void write_16(MVMuint16 i) {
-      bytecode_.push_back(i&0xffff);
-      bytecode_.push_back(i>>4);
+    void write_u16(MVMuint16 i) {
+      bytecode_.push_back((i>>0)  &0xffff);
+      bytecode_.push_back((i>>8)  &0xffff);
+    }
+    void write_16(uint32_t i) {
+      bytecode_.push_back((i>>0)  &0xffff);
+      bytecode_.push_back((i>>8)  &0xffff);
+      bytecode_.push_back((i>>16) &0xffff);
+      bytecode_.push_back((i>>24) &0xffff);
+    }
+    void write_i64(int64_t i) {
+      static char buf[8];
+      memcpy(buf, &i, 8); // TODO endian
+      for (int i=0; i<8; i++) {
+        bytecode_.push_back(buf[i]);
+      }
+      /*
+      bytecode_.push_back((i>>0)  &0xffff);
+      bytecode_.push_back((i>>8)  &0xffff);
+      bytecode_.push_back((i>>16) &0xffff);
+      bytecode_.push_back((i>>24) &0xffff);
+      bytecode_.push_back((i>>32) &0xffff);
+      bytecode_.push_back((i>>40) &0xffff);
+      bytecode_.push_back((i>>48) &0xffff);
+      bytecode_.push_back((i>>54) &0xffff);
+      */
     }
     MVMuint8* bytecode() {
       return bytecode_.data(); // C++11
@@ -120,6 +148,10 @@ namespace saru {
       local_types_.push_back(reg_type);
       return local_types_.size()-1;
     }
+    // Get register type at 'n'
+    uint16_t get_local_type(int n) {
+      return local_types_[n];
+    }
 
     void run() {
       assert(cu_->main_frame);
@@ -155,7 +187,13 @@ namespace saru {
       case SARU_NODE_STRING: {
         int str_num = interp_.push_string(node.pv());
         int reg_num = interp_.push_local_type(MVM_reg_str);
-        assembler_.write(MVM_OP_BANK_primitives, MVM_OP_const_s, reg_num, str_num);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_const_s, reg_num, str_num);
+        return reg_num;
+      }
+      case SARU_NODE_INT: {
+        uint16_t reg_num = interp_.push_local_type(MVM_reg_int64);
+        int64_t n = node.iv();
+        assembler_.op_u16_i64(MVM_OP_BANK_primitives, MVM_OP_const_i64, reg_num, n);
         return reg_num;
       }
       case SARU_NODE_IDENT:
@@ -171,8 +209,24 @@ namespace saru {
         const SARUNode &args  = node.children()[1];
         if (ident.pv() == "say") {
           for (auto a:args.children()) {
-            int reg_num = do_compile(a);
-            assembler_.write(MVM_OP_BANK_io, MVM_OP_say, reg_num, 0);
+            uint16_t reg_num = do_compile(a);
+            switch (interp_.get_local_type(reg_num)) {
+            case MVM_reg_str:
+              // nop
+              break;
+            case MVM_reg_int64: {
+              // need stringify
+              uint16_t orig_reg_num = reg_num;
+              reg_num = interp_.push_local_type(MVM_reg_str);
+              assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_is, reg_num, orig_reg_num);
+              break;
+            }
+            default:
+              // TODO
+              MVM_panic(MVM_exitcode_compunit, "Not implemented, say %d", interp_.get_local_type(reg_num));
+              break;
+            }
+            assembler_.op_u16_u16(MVM_OP_BANK_io, MVM_OP_say, reg_num, 0);
           }
         } else {
           MVM_panic(MVM_exitcode_compunit, "Not implemented, normal function call: '%s'", ident.pv().c_str());
@@ -191,11 +245,8 @@ namespace saru {
       do_compile(node);
 
       // final op must be return.
-      assembler_.write(MVM_OP_BANK_primitives, MVM_OP_return);
-      /*
-      assembler_.write(MVM_OP_BANK_primitives, MVM_OP_const_s, 0, 0);
-      assembler_.write(MVM_OP_BANK_io,         MVM_OP_say,     0, 0);
-      */
+      assembler_.op(MVM_OP_BANK_primitives, MVM_OP_return);
+
       interp_.set_bytecode(assembler_.bytecode(), assembler_.bytecode_size());
     }
   };

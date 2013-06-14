@@ -178,11 +178,11 @@ test: _build/saru-parser saru
 3rd/MoarVM/Makefile: 3rd/MoarVM/build/Makefile.in 3rd/MoarVM/Configure.pl
 	cd 3rd/MoarVM/ && perl Configure.pl --clang
 
-3rd/MoarVM/moarvm: 3rd/MoarVM/Makefile
+3rd/MoarVM/moarvm: 3rd/MoarVM/Makefile 3rd/MoarVM/src/core/*.c
 	cd 3rd/MoarVM/ && make
 
 clean:
-	rm -rf _build/ saru src/gen.*
+	rm -rf _build/ saru src/gen.* 3rd/greg/greg 3rd/greg/*.o
 
 _build/saru-parser: src/gen.saru.y.cc src/gen.node.h
 	mkdir -p _build/

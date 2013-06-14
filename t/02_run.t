@@ -4,12 +4,17 @@ use utf8;
 use Test::More;
 use Test::Base::Less;
 use File::Temp;
+use POSIX;
 
 for my $block (blocks) {
+    note $block->code;
+
     my $tmp = File::Temp->new();
     print {$tmp} $block->code;
 
     my $ret = `./saru < $tmp`;
+    ok(POSIX::WIFEXITED($?));
+    is(POSIX::WEXITSTATUS($?), 0);
 
     $ret =~ s/\n+\z//;
     (my $expected = $block->expected) =~ s/\n+\z//;
@@ -42,3 +47,8 @@ Yo!
 --- expected
 Hey
 Yo!
+
+===
+--- code: say(5963)
+--- expected
+5963

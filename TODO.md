@@ -20,6 +20,18 @@ TODO
  * say('Hello, world') on MoarVM
  * double quoted string
 
+## Step 1.1
+
+ * say(3)
+
+## Step 1.1
+
+ * say(3.2)
+
+## Step 1.2
+
+ * say(3+3)
+
 ## Step 2.
 
  * if statement
