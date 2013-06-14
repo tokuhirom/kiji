@@ -27,6 +27,7 @@ TODO
 ## Step 2.
 
  * Run fib(n)
+ * Range object
 
 ## Step 3.
 
@@ -44,6 +45,7 @@ TODO
 ## Step 21.
 
  * Grammars
+ * REPL
 
 ## Step ∞.
 
