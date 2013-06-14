@@ -1,3 +1,6 @@
 [submodule "3rd/MoarVM"]
 	path = 3rd/MoarVM
 	url = git://github.com/tokuhirom/MoarVM.git
+[submodule "3rd/greg"]
+	path = 3rd/greg
+	url = git://github.com/nddrylliog/greg.git

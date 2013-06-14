@@ -172,6 +172,9 @@ saru: 3rd/MoarVM/moarvm src/saru.cc src/gen.node.h src/gen.saru.y.cc src/compile
 test: _build/saru-parser saru
 	prove -r t
 
+3rd/greg/greg:
+	cd 3rd/greg/ && $(CC) -g -o greg greg.c compile.c tree.c
+
 3rd/MoarVM/Makefile: 3rd/MoarVM/build/Makefile.in 3rd/MoarVM/Configure.pl
 	cd 3rd/MoarVM/ && perl Configure.pl --clang
 
@@ -185,8 +188,8 @@ _build/saru-parser: src/gen.saru.y.cc src/gen.node.h
 	mkdir -p _build/
 	clang++ -g -std=c++11 -Wall -o _build/saru-parser src/saru-parser.cc
 
-src/gen.saru.y.cc: src/saru.y
-	greg -o src/gen.saru.y.cc.new src/saru.y
+src/gen.saru.y.cc: src/saru.y 3rd/greg/greg
+	./3rd/greg/greg -o src/gen.saru.y.cc.new src/saru.y
 	mv src/gen.saru.y.cc.new src/gen.saru.y.cc
 
 src/gen.node.h: build/saru-node.pl
