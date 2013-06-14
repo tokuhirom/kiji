@@ -208,21 +208,7 @@ namespace saru {
         }
         break;
       case SARU_NODE_ADD: {
-        assert(node.children().size() == 2);
-        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
-        int reg_num1 = do_compile(node.children()[0]);
-        int reg_num2 = do_compile(node.children()[1]);
-        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
-          if (interp_.get_local_type(reg_num2) == MVM_reg_int64) {
-            assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
-            assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, MVM_OP_add_i, reg_num_dst, reg_num1, reg_num2);
-            return reg_num_dst;
-          } else {
-            abort(); // TODO
-          }
-        } else {
-          abort(); // TODO
-        }
+        return this->numeric_binop(node, MVM_OP_add_i);
       }
       case SARU_NODE_FUNCALL: {
         assert(node.children().size() == 2);
@@ -261,6 +247,24 @@ namespace saru {
         break;
       }
       return -1;
+    }
+  private:
+    int numeric_binop(const SARUNode& node, uint16_t op) {
+        assert(node.children().size() == 2);
+        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
+        int reg_num1 = do_compile(node.children()[0]);
+        int reg_num2 = do_compile(node.children()[1]);
+        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
+          if (interp_.get_local_type(reg_num2) == MVM_reg_int64) {
+            assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
+            assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, op, reg_num_dst, reg_num1, reg_num2);
+            return reg_num_dst;
+          } else {
+            abort(); // TODO
+          }
+        } else {
+          abort(); // TODO
+        }
     }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }
