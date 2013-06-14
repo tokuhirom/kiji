@@ -207,6 +207,15 @@ namespace saru {
           do_compile(n);
         }
         break;
+      case SARU_NODE_MUL: {
+        return this->numeric_binop(node, MVM_OP_mul_i);
+      }
+      case SARU_NODE_SUB: {
+        return this->numeric_binop(node, MVM_OP_sub_i);
+      }
+      case SARU_NODE_DIV: {
+        return this->numeric_binop(node, MVM_OP_div_i);
+      }
       case SARU_NODE_ADD: {
         return this->numeric_binop(node, MVM_OP_add_i);
       }

@@ -57,3 +57,18 @@ Yo!
 --- code: say(3+2)
 --- expected
 5
+
+===
+--- code: say(3-2)
+--- expected
+1
+
+===
+--- code: say(3*2)
+--- expected
+6
+
+===
+--- code: say(20/2)
+--- expected
+10
