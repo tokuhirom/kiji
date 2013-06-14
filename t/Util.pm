@@ -9,7 +9,9 @@ use Test::More;
 use Data::Dumper;
 use JSON::PP;
 
-our @EXPORT = qw(int_ number test stmts ident);
+our @EXPORT = qw(int_ number test ident filter);
+
+my $FILTER = sub { $_[0] };
 
 sub _children_op {
     my ($name) = shift;
@@ -28,6 +30,7 @@ _children_op($_) for qw(
     div mul
     add sub_
     funcall args
+    statements
 );
 
 sub _value_op {
@@ -50,11 +53,8 @@ _value_op($_) for qw(
     int_
 );
 
-sub stmts(@) {
-    +{
-        type => 'SARU_NODE_STATEMENTS',
-        value => [@_],
-    }
+sub filter(&) {
+    $FILTER = $_[0];
 }
 
 sub test {
@@ -77,7 +77,7 @@ sub test {
     }
     is_deeply(
         $got,
-        stmts($expected),
+        $FILTER->($expected),
         "code: $src"
     ) or do {
         $Data::Dumper::Sortkeys=1;

@@ -175,12 +175,12 @@ namespace saru {
             assembler_.write(MVM_OP_BANK_io, MVM_OP_say, reg_num, 0);
           }
         } else {
-          MVM_panic(MVM_exitcode_compunit, "Not implemented");
+          MVM_panic(MVM_exitcode_compunit, "Not implemented, normal function call: '%s'", ident.pv().c_str());
         }
         break;
       }
       default:
-        MVM_panic(MVM_exitcode_compunit, "Not implemented");
+        MVM_panic(MVM_exitcode_compunit, "Not implemented op: %s", node.type_name());
         break;
       }
       return 0;

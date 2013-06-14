@@ -10,7 +10,10 @@ for my $block (blocks) {
     print {$tmp} $block->code;
 
     my $ret = `./saru < $tmp`;
-    is($ret, $block->expected);
+
+    $ret =~ s/\n+\z//;
+    (my $expected = $block->expected) =~ s/\n+\z//;
+    is($ret, $expected);
 }
 
 done_testing;
@@ -21,3 +24,21 @@ __END__
 --- code: say("Hello");
 --- expected
 Hello
+
+===
+--- code: say("Hey");say("Yo!");
+--- expected
+Hey
+Yo!
+
+===
+--- code: say("Hey"); say("Yo!");
+--- expected
+Hey
+Yo!
+
+===
+--- code: say ( "Hey" ) ; say ( "Yo!" ) ;
+--- expected
+Hey
+Yo!

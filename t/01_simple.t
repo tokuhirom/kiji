@@ -4,6 +4,10 @@ use utf8;
 use Test::More;
 use t::Util;
 
+filter {
+    statements($_[0]);
+};
+
 test( '33', int_(33));
 test( '.33', number(0.33));
 test( '0.33', number(0.33));
@@ -29,6 +33,9 @@ test( 'say(3)', funcall(ident('say'), args(int_(3))));
 
 test( '"hoge"', string('hoge'));
 test( '"ho\nge"', string("ho\nge"));
+
+filter { $_[0] };
+test( '1;2"', statements(int_("1"), int_("2")));
 
 done_testing;
 

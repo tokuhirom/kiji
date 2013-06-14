@@ -39,7 +39,7 @@ args =
 expr = funcall_expr
 
 funcall_expr =
-    i:ident '(' a:args ')' {
+    i:ident '(' - a:args - ')' - {
         $$.set(SARU_NODE_FUNCALL, i, a);
     }
     | add_expr
@@ -74,9 +74,9 @@ mul_expr =
 
 term = value
 
-ident = < [a-zA-Z] [a-zA-Z0-9]+ ( [_-] [a-zA-Z0-9]+ )* > {
+ident = < [a-zA-Z] [a-zA-Z0-9]+ ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);
-}
+} -
 
 value = 
     ( '-' ( integer | dec_number) ) {
@@ -89,7 +89,7 @@ value =
 #  <?MARKED('endstmt')>
 #  <?terminator>
 eat_terminator =
-    ';' | end-of-file
+    ';' - | end-of-file
 
 dec_number =
     <([.][0-9]+)> {
@@ -129,6 +129,7 @@ string = '"' { $$.init_string(); } (
 # white space
 ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
     | '#' [^\n]*
+- = ws?
 end-of-line = ( '\r\n' | '\n' | '\r' ) {
     line_number++;
 }

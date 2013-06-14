@@ -30,14 +30,11 @@ TODO
  * Run fib(n)
  * Range object
 
-## Step 3.
+## Step 10.
 
  * Support OOP
-
-## Step 4.
-
- * Support all statements in NQP
- * Parse NQP test cases
+ * Support -e option
+ * read code from file
 
 ## Step 20.
 
@@ -47,6 +44,12 @@ TODO
 
  * Grammars
  * REPL
+ * One liner support
+
+## Step 30.
+
+ * Support all statements in NQP
+ * Pass NQP test cases
 
 ## Step ∞. Will done in 2999-12-31
 
