@@ -115,12 +115,47 @@ namespace saru {
   private:
     Interpreter &interp_;
     Assembler assembler_;
+    void do_compile(SARUNode &node) {
+      switch (node.type()) {
+      case SARU_NODE_STRING:
+        assembler_.write(MVM_OP_BANK_primitives, MVM_OP_const_s, 0, 0);
+        break;
+      case SARU_NODE_IDENT:
+        break;
+      case SARU_NODE_STATEMENTS:
+        for (auto n: node.children()) {
+          do_compile(n);
+        }
+        break;
+      case SARU_NODE_FUNCALL: {
+        assert(node.children().size() == 2);
+        const SARUNode &ident = node.children()[0];
+        const SARUNode &args  = node.children()[1];
+        if (ident.pv() == "say") {
+          for (auto a:args.children()) {
+            do_compile(a);
+            assembler_.write(MVM_OP_BANK_io, MVM_OP_say, 0, 0);
+          }
+        } else {
+          MVM_panic(MVM_exitcode_compunit, "Not implemented");
+        }
+        break;
+      }
+      default:
+        MVM_panic(MVM_exitcode_compunit, "Not implemented");
+      }
+    }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }
     void compile(SARUNode &node) {
+      do_compile(node);
+
+      // final op must be return.
+      assembler_.write(MVM_OP_BANK_primitives, MVM_OP_return);
+      /*
       assembler_.write(MVM_OP_BANK_primitives, MVM_OP_const_s, 0, 0);
       assembler_.write(MVM_OP_BANK_io,         MVM_OP_say,     0, 0);
-      assembler_.write(MVM_OP_BANK_primitives, MVM_OP_return);
+      */
       interp_.set_bytecode(assembler_.bytecode(), assembler_.bytecode_size());
     }
   };

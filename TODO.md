@@ -13,11 +13,7 @@ TODO
 
  * Hello world on MoarVM with very simple C code
 
-## Step 0.3
-
- * Hello world from saru
-
-## Step 1.
+## Step 1.   Done in 2013-06-14
 
  * simple string
  * ident

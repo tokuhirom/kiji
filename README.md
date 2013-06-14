@@ -1,5 +1,5 @@
-saru
-====
+saru - -Ofun prototype of Perl6 interpreter
+===========================================
 
 Current Status
 --------------
