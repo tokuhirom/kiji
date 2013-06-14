@@ -20,17 +20,27 @@ TODO
  * say('Hello, world') on MoarVM
  * double quoted string
 
-## Step 1.1
+## Step 1.1 Done in 2013-06-14
 
  * say(3)
 
-## Step 1.1
+## Step 1.1 Done in 2013-06-14
 
- * say(3.2)
+ * say(3+2)
+
+## Step 1.11
+
+ * `say(3*2)`
+ * `say(3/2)`
+ * `say(3-2)`
+
+## Step 1.12
+
+ * `say(1+(3-2)/5)`
 
 ## Step 1.2
 
- * say(3+3)
+ * say(3.2)
 
 ## Step 2.
 

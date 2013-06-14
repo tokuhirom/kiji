@@ -52,3 +52,8 @@ Yo!
 --- code: say(5963)
 --- expected
 5963
+
+===
+--- code: say(3+2)
+--- expected
+5

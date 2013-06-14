@@ -16,6 +16,12 @@ namespace saru {
       write_u16(op1);
       write_u16(op2);
     }
+    void op_u16_u16_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, uint16_t op2, uint16_t op3) {
+      op(bank_num, op_num);
+      write_u16(op1);
+      write_u16(op2);
+      write_u16(op3);
+    }
     void op_u16_i64(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, int64_t op2) {
       op(bank_num, op_num);
       write_u16(op1);
@@ -29,27 +35,19 @@ namespace saru {
       bytecode_.push_back((i>>8)  &0xffff);
     }
     void write_16(uint32_t i) {
+      // optmize?
       bytecode_.push_back((i>>0)  &0xffff);
       bytecode_.push_back((i>>8)  &0xffff);
       bytecode_.push_back((i>>16) &0xffff);
       bytecode_.push_back((i>>24) &0xffff);
     }
     void write_i64(int64_t i) {
+      // optmize?
       static char buf[8];
       memcpy(buf, &i, 8); // TODO endian
       for (int i=0; i<8; i++) {
         bytecode_.push_back(buf[i]);
       }
-      /*
-      bytecode_.push_back((i>>0)  &0xffff);
-      bytecode_.push_back((i>>8)  &0xffff);
-      bytecode_.push_back((i>>16) &0xffff);
-      bytecode_.push_back((i>>24) &0xffff);
-      bytecode_.push_back((i>>32) &0xffff);
-      bytecode_.push_back((i>>40) &0xffff);
-      bytecode_.push_back((i>>48) &0xffff);
-      bytecode_.push_back((i>>54) &0xffff);
-      */
     }
     MVMuint8* bytecode() {
       return bytecode_.data(); // C++11
@@ -150,6 +148,8 @@ namespace saru {
     }
     // Get register type at 'n'
     uint16_t get_local_type(int n) {
+      assert(n>=0);
+      assert(n<local_types_.size());
       return local_types_[n];
     }
 
@@ -177,11 +177,15 @@ namespace saru {
     }
   };
 
+  /**
+   * OP map is 3rd/MoarVM/src/core/oplist
+   * interp code is 3rd/MoarVM/src/core/interp.c
+   */
   class Compiler {
   private:
     Interpreter &interp_;
     Assembler assembler_;
-    int do_compile(SARUNode &node) {
+    int do_compile(const SARUNode &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
       case SARU_NODE_STRING: {
@@ -203,6 +207,23 @@ namespace saru {
           do_compile(n);
         }
         break;
+      case SARU_NODE_ADD: {
+        assert(node.children().size() == 2);
+        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
+        int reg_num1 = do_compile(node.children()[0]);
+        int reg_num2 = do_compile(node.children()[1]);
+        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
+          if (interp_.get_local_type(reg_num2) == MVM_reg_int64) {
+            assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
+            assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, MVM_OP_add_i, reg_num_dst, reg_num1, reg_num2);
+            return reg_num_dst;
+          } else {
+            abort(); // TODO
+          }
+        } else {
+          abort(); // TODO
+        }
+      }
       case SARU_NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const SARUNode &ident = node.children()[0];
@@ -210,6 +231,7 @@ namespace saru {
         if (ident.pv() == "say") {
           for (auto a:args.children()) {
             uint16_t reg_num = do_compile(a);
+            assert(reg_num >= 0);
             switch (interp_.get_local_type(reg_num)) {
             case MVM_reg_str:
               // nop
@@ -227,6 +249,7 @@ namespace saru {
               break;
             }
             assembler_.op_u16_u16(MVM_OP_BANK_io, MVM_OP_say, reg_num, 0);
+            return -1; // TODO: Is there a result?
           }
         } else {
           MVM_panic(MVM_exitcode_compunit, "Not implemented, normal function call: '%s'", ident.pv().c_str());
@@ -237,7 +260,7 @@ namespace saru {
         MVM_panic(MVM_exitcode_compunit, "Not implemented op: %s", node.type_name());
         break;
       }
-      return 0;
+      return -1;
     }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }

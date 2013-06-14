@@ -1,10 +1,15 @@
 saru - -Ofun prototype of Perl6 interpreter
 ===========================================
 
+This is a new great toy for Perl hackers.
+
 Current Status
 --------------
 
 Under development.... pre-alpha.
+
+Currently, we only support linux and OSX. Do not send me win32 patch.
+Win32 patch makes hard to maintain. Please do it before first stable release.
 
 What's this?
 -------------
