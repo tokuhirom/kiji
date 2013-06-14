@@ -30,30 +30,30 @@ _children_op($_) for qw(
     funcall args
 );
 
-sub ident {
-    +{
-        type => 'SARU_NODE_IDENT',
-        value => $_[0],
-    }
+sub _value_op {
+    my ($name) = shift;
+    no strict 'refs';
+    push @EXPORT, $name;
+    *{"$name"} = sub {
+        $name =~ s/_$//;
+        +{
+            type => 'SARU_NODE_' . uc($name),
+            value => @_,
+        }
+    };
 }
+
+_value_op($_) for qw(
+    string
+    ident
+    number
+    int_
+);
 
 sub stmts(@) {
     +{
         type => 'SARU_NODE_STATEMENTS',
         value => [@_],
-    }
-}
-
-sub number($) {
-    +{
-        type => 'SARU_NODE_NUMBER',
-        value => $_[0],
-    }
-}
-sub int_($) {
-    +{
-        type => 'SARU_NODE_INT',
-        value => $_[0],
     }
 }
 

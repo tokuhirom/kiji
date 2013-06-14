@@ -21,11 +21,12 @@ TODO
 
  * simple string
  * ident
- * funcall
  * say('Hello, world') on MoarVM
+ * double quoted string
 
 ## Step 2.
 
+ * funcall
  * Run fib(n)
  * Range object
 

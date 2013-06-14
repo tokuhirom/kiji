@@ -27,5 +27,8 @@ test( '3+4*2', add(int_(3), mul(int_(4), int_(2))));
 test( 'say()', funcall(ident('say'), args()));
 test( 'say(3)', funcall(ident('say'), args(int_(3))));
 
+test( '"hoge"', string('hoge'));
+test( '"ho\nge"', string("ho\nge"));
+
 done_testing;
 

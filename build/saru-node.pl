@@ -16,6 +16,7 @@ my @types = qw(
     SARU_NODE_IDENT
     SARU_NODE_FUNCALL
     SARU_NODE_ARGS
+    SARU_NODE_STRING
 );
 
 say qq!/* This file is generated from $0 */!;

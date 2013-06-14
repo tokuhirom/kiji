@@ -84,6 +84,7 @@ value =
     }
     | integer
     | dec_number
+    | string
 
 #  <?MARKED('endstmt')>
 #  <?terminator>
@@ -111,6 +112,17 @@ integer =
     | '0o' <[0-7]+> {
     $$.set_integer(yytext, 8);
 }
+
+# Missing foo
+string = '"' { $$.init_string(); } (
+        < [^"]+ > { $$.append_string(yytext, yyleng); }
+        | '\a' { $$.append_string("\a", 1); }
+        | '\b' { $$.append_string("\b", 1); }
+        | '\t' { $$.append_string("\t", 1); }
+        | '\r' { $$.append_string("\r", 1); }
+        | '\n' { $$.append_string("\n", 1); }
+        | '\"' { $$.append_string("\"", 1); }
+    ) '"'
 
 # TODO
 

@@ -20,6 +20,7 @@ static void nqpc_dump_node(const SARUNode &node, unsigned int depth) {
         printf("\"value\":%lf\n", node.nv());
         break;
         // Node has a PV
+    case SARU_NODE_STRING:
     case SARU_NODE_IDENT:
         indent(depth+1);
         printf("\"value\":\"%s\"\n", node.pv().c_str()); // TODO need escape

@@ -15,6 +15,7 @@ public:
         this->type_ = node.type_;
         switch (type_) {
         case SARU_NODE_IDENT:
+        case SARU_NODE_STRING:
             this->body_.pv = new std::string(*(node.body_.pv));
             break;
         case SARU_NODE_INT:
@@ -40,6 +41,7 @@ public:
     }
     ~SARUNode() {
         switch (type_) {
+        case SARU_NODE_STRING:
         case SARU_NODE_IDENT: {
             break;
         }
@@ -87,6 +89,14 @@ public:
     void set_ident(const char *txt, int length) {
         this->type_ = SARU_NODE_IDENT;
         this->body_.pv = new std::string(txt, length);
+    }
+    void init_string() {
+        this->type_ = SARU_NODE_STRING;
+        this->body_.pv = new std::string();
+    }
+    void append_string(const char *txt, size_t length) {
+        assert(this->type_ == SARU_NODE_STRING);
+        this->body_.pv->append(txt, length);
     }
 
     long int iv() const {

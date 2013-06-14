@@ -186,7 +186,8 @@ _build/saru-parser: src/gen.saru.y.cc src/gen.node.h
 	clang++ -g -std=c++11 -Wall -o _build/saru-parser src/saru-parser.cc
 
 src/gen.saru.y.cc: src/saru.y
-	greg -o src/gen.saru.y.cc src/saru.y
+	greg -o src/gen.saru.y.cc.new src/saru.y
+	mv src/gen.saru.y.cc.new src/gen.saru.y.cc
 
 src/gen.node.h: build/saru-node.pl
 	perl build/saru-node.pl > src/gen.node.h
