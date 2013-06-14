@@ -1,10 +1,43 @@
 #include <stdio.h>
 #include <assert.h>
 #include "node.h"
-#include "gen.nqp.y.cc"
+#include "gen.saru.y.cc"
 extern "C" {
 #include "moarvm.h"
 }
+
+namespace saru {
+    namespace Assembler {
+        class MVM {
+        public:
+            void write(MVMuint8 bank_num, MVMuint8 op_num) {
+                write_8(bank_num);
+                write_8(op_num);
+            }
+            void write(MVMuint8 bank_num, MVMuint8 op_num, MVMuint16 op1, MVMuint16 op2) {
+                write(bank_num, op_num);
+                write_16(op1);
+                write_16(op2);
+            }
+            void write_8(MVMuint8 i) {
+                bytecode_.push_back(i);
+            }
+            void write_16(MVMuint16 i) {
+                bytecode_.push_back(i&0xffff);
+                bytecode_.push_back(i>>4);
+            }
+            MVMuint8* bytecode() {
+                return bytecode_.data(); // C++11
+            }
+            size_t bytecode_size() {
+                return bytecode_.size();
+            }
+        private:
+            std::vector<MVMuint8> bytecode_;
+        };
+    }
+}
+
 
 static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
     /* Dummy, 0-arg callsite. */
@@ -36,38 +69,22 @@ void runit(int argc) {
     cu->frames = (MVMStaticFrame**)malloc(sizeof(MVMStaticFrame) * 1);
     cu->frames[0] = cu->main_frame;
     memset(cu->main_frame, 0, sizeof(MVMStaticFrame));
-    cu->main_frame->bytecode = (MVMuint8*)malloc(sizeof(MVMuint8)*1000);
-    memset(cu->main_frame->bytecode, 0, sizeof(MVMuint8)*1000);
     cu->main_frame->cuuid = MVM_string_utf8_decode(tc, tc->instance->VMString, "cuuid", strlen("cuuid"));
     cu->main_frame->name = MVM_string_utf8_decode(tc, tc->instance->VMString, "main frame", strlen("main frame"));
     assert(cu->main_frame->cuuid);
     cu->main_frame->cu = cu;
-    int i=0;
 
-    // const_s 0, 0
-    cu->main_frame->bytecode[i++] = MVM_OP_BANK_primitives; // bank_num
-    cu->main_frame->bytecode[i++] = MVM_OP_const_s;
+    saru::Assembler::MVM assembler;
+    assembler.write(MVM_OP_BANK_primitives, MVM_OP_const_s, 0, 0);
+    assembler.write(MVM_OP_BANK_io,         MVM_OP_say,     0, 0);
+    assembler.write(MVM_OP_BANK_primitives, MVM_OP_return);
 
-    cu->main_frame->bytecode[i++] = 0;
-    cu->main_frame->bytecode[i++] = 0;
+    cu->main_frame->bytecode      = assembler.bytecode();
+    cu->main_frame->bytecode_size = assembler.bytecode_size();
 
-    cu->main_frame->bytecode[i++] = 0;
-    cu->main_frame->bytecode[i++] = 0;
+    cu->main_frame->work_size = 0;
 
-    // say 0
-    cu->main_frame->bytecode[i++] = MVM_OP_BANK_io; // bank num
-    cu->main_frame->bytecode[i++] = MVM_OP_say;
-    cu->main_frame->bytecode[i++] = 0;
-    cu->main_frame->bytecode[i++] = 0;
-
-    // return
-    cu->main_frame->bytecode[i++] = MVM_OP_BANK_primitives; // bank num
-    cu->main_frame->bytecode[i++] = MVM_OP_return;
-
-    cu->main_frame->bytecode_size = i;
-    cu->main_frame->work_size = 10; // register size?
-
-    cu->main_frame->num_locals= 1; // register size?
+    cu->main_frame->num_locals= 1; // register size
     cu->main_frame->local_types = (MVMuint16*)malloc(sizeof(MVMuint16)*cu->main_frame->num_locals);
     cu->main_frame->local_types[0] = MVM_reg_str;
 

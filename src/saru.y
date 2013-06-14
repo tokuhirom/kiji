@@ -1,5 +1,9 @@
 %{
 
+#include "node.h"
+
+#define YYSTYPE SARUNode
+
 %}
 
 comp_init = e:statementlist end-of-file {
