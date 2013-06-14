@@ -35,7 +35,6 @@ int main(int argc, char** argv) {
     exit(1);
   }
   yydeinit(&g);
-  printf("Done parsing\n");
 
   saru::Interpreter interp;
   interp.initialize();

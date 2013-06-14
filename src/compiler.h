@@ -1,6 +1,9 @@
 #pragma once
 // vim:ts=2:sw=2:tw=0:
 
+#include <string>
+#include <vector>
+
 namespace saru {
   class Assembler {
   public:
@@ -34,6 +37,18 @@ namespace saru {
   private:
     MVMInstance* vm_;
     MVMCompUnit* cu_;
+    std::vector<MVMString*> strings_;
+    std::vector<MVMuint16> local_types_;
+
+  protected:
+    // Copy data to CompUnit.
+    void prepare() {
+      cu_->strings = strings_.data();
+      cu_->num_strings = strings_.size();
+
+      cu_->main_frame->local_types = local_types_.data();
+      cu_->main_frame->num_locals  = local_types_.size();
+    }
   public:
     Interpreter() {
       vm_ = MVM_vm_create_instance();
@@ -76,12 +91,10 @@ namespace saru {
 
       cu_->main_frame->work_size = 0;
 
-      cu_->main_frame->num_locals= 1; // register size
-      cu_->main_frame->local_types = (MVMuint16*)malloc(sizeof(MVMuint16)*cu_->main_frame->num_locals);
-      cu_->main_frame->local_types[0] = MVM_reg_str;
+      // cu_->main_frame->num_locals= 1; // register size
+      // cu_->main_frame->local_types = (MVMuint16*)malloc(sizeof(MVMuint16)*cu_->main_frame->num_locals);
+      // cu_->main_frame->local_types[0] = MVM_reg_str;
 
-      cu_->strings = (MVMString**)malloc(sizeof(MVMString)*1);
-      cu_->strings[0] = MVM_string_utf8_decode(tc, tc->instance->VMString, "Hello, world!", strlen("Hello, world!"));
       cu_->num_strings = 1;
     }
 
@@ -91,17 +104,38 @@ namespace saru {
       cu_->main_frame->bytecode_size = size;
     }
 
+    int push_string(const std::string &str) {
+      return this->push_string(str.c_str(), str.size());
+    }
+
+    int push_string(const char*string, int length) {
+      MVMThreadContext *tc = vm_->main_thread;
+      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, string, length);
+      strings_.push_back(str);
+      return strings_.size() - 1;
+    }
+
+    // reserve register
+    int push_local_type(MVMuint16 reg_type) {
+      local_types_.push_back(reg_type);
+      return local_types_.size()-1;
+    }
+
     void run() {
       assert(cu_->main_frame);
       assert(cu_->main_frame->bytecode);
       assert(cu_->main_frame->bytecode_size > 0);
+
+      this->prepare();
 
       MVMThreadContext *tc = vm_->main_thread;
       MVMStaticFrame *start_frame = cu_->main_frame ? cu_->main_frame : cu_->frames[0];
       MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
     }
 
-    void dump() const {
+    void dump() {
+      this->prepare();
+
       MVMThreadContext *tc = vm_->main_thread;
       // dump it
       char *dump = MVM_bytecode_dump(tc, cu_);
@@ -115,11 +149,15 @@ namespace saru {
   private:
     Interpreter &interp_;
     Assembler assembler_;
-    void do_compile(SARUNode &node) {
+    int do_compile(SARUNode &node) {
+      // printf("node: %s\n", node.type_name());
       switch (node.type()) {
-      case SARU_NODE_STRING:
-        assembler_.write(MVM_OP_BANK_primitives, MVM_OP_const_s, 0, 0);
-        break;
+      case SARU_NODE_STRING: {
+        int str_num = interp_.push_string(node.pv());
+        int reg_num = interp_.push_local_type(MVM_reg_str);
+        assembler_.write(MVM_OP_BANK_primitives, MVM_OP_const_s, reg_num, str_num);
+        return reg_num;
+      }
       case SARU_NODE_IDENT:
         break;
       case SARU_NODE_STATEMENTS:
@@ -133,8 +171,8 @@ namespace saru {
         const SARUNode &args  = node.children()[1];
         if (ident.pv() == "say") {
           for (auto a:args.children()) {
-            do_compile(a);
-            assembler_.write(MVM_OP_BANK_io, MVM_OP_say, 0, 0);
+            int reg_num = do_compile(a);
+            assembler_.write(MVM_OP_BANK_io, MVM_OP_say, reg_num, 0);
           }
         } else {
           MVM_panic(MVM_exitcode_compunit, "Not implemented");
@@ -143,7 +181,9 @@ namespace saru {
       }
       default:
         MVM_panic(MVM_exitcode_compunit, "Not implemented");
+        break;
       }
+      return 0;
     }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }

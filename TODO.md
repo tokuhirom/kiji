@@ -22,6 +22,10 @@ TODO
 
 ## Step 2.
 
+ * if statement
+
+## Step 2.
+
  * funcall
  * Run fib(n)
  * Range object
@@ -44,7 +48,7 @@ TODO
  * Grammars
  * REPL
 
-## Step ∞.
+## Step ∞. Will done in 2999-12-31
 
  * Support full feature of Perl6
 

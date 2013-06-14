@@ -127,6 +127,9 @@ public:
     const std::string pv() const {
         return *(this->body_.pv);
     }
+    const char* type_name() const {
+        return nqpc_node_type2name(this->type());
+    }
 
 private:
     SARU_NODE_TYPE type_;
