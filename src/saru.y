@@ -68,6 +68,10 @@ mul_expr =
             $$.set(SARU_NODE_DIV, l, r);
             l = $$;
         }
+        | '%' r:term {
+            $$.set(SARU_NODE_MOD, l, r);
+            l = $$;
+        }
     )* {
         $$ = l;
     }

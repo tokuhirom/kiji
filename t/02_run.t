@@ -72,3 +72,23 @@ Yo!
 --- code: say(20/2)
 --- expected
 10
+
+===
+--- code: say(10%2)
+--- expected
+0
+
+===
+--- code: say(10%3)
+--- expected
+1
+
+===
+--- code: say(10%4)
+--- expected
+2
+
+===
+--- code: say(10%5)
+--- expected
+0

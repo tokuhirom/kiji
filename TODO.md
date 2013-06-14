@@ -34,16 +34,18 @@ TODO
  * `say(3/2)`
  * `say(3-2)`
 
-## Step 1.12
+## Step 1.12 Done at 2013-06-14
 
  * `say(1+(3-2)/5)`
 
-## Step 1.2
+## Step 1.2 Done at 2013-06-15
 
  * say(3%2)
 
 ## Step 2.
 
+ * my $i=0; say($i);
+ * `my $i=2; say($i*3);`
  * if statement
 
 ## Step 2.

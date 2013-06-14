@@ -31,6 +31,7 @@ public:
         case SARU_NODE_DIV:
         case SARU_NODE_ADD:
         case SARU_NODE_SUB:
+        case SARU_NODE_MOD:
             this->body_.children = new std::vector<SARUNode>();
             *(this->body_.children) = *(node.body_.children);
             break;
@@ -54,6 +55,7 @@ public:
         case SARU_NODE_STATEMENTS:
         case SARU_NODE_MUL:
         case SARU_NODE_DIV:
+        case SARU_NODE_MOD:
         case SARU_NODE_ADD:
         case SARU_NODE_SUB:
             // delete this->body_.children;

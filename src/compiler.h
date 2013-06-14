@@ -219,6 +219,9 @@ namespace saru {
       case SARU_NODE_ADD: {
         return this->numeric_binop(node, MVM_OP_add_i);
       }
+      case SARU_NODE_MOD: {
+        return this->numeric_binop(node, MVM_OP_mod_i);
+      }
       case SARU_NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const SARUNode &ident = node.children()[0];
