@@ -166,7 +166,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
 
 all: saru
 
-saru: 3rd/MoarVM/moarvm src/saru.cc src/gen.node.h src/gen.saru.y.cc src/compiler.h src/node.h
+saru: 3rd/MoarVM/moarvm src/saru.cc src/gen.node.h src/gen.saru.y.cc src/compiler.h src/node.h src/*.h
 	$(CXX) $(CXXFLAGS) -g -std=c++11 -Wall $(CINCLUDE) -o saru src/saru.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS)
 
 test: _build/saru-parser saru
@@ -184,7 +184,7 @@ test: _build/saru-parser saru
 clean:
 	rm -rf _build/ saru src/gen.* 3rd/greg/greg 3rd/greg/*.o
 
-_build/saru-parser: src/gen.saru.y.cc src/gen.node.h
+_build/saru-parser: src/gen.saru.y.cc src/gen.node.h src/node.h src/node_dump.h
 	mkdir -p _build/
 	clang++ -g -std=c++11 -Wall -o _build/saru-parser src/saru-parser.cc
 

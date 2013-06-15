@@ -21,7 +21,10 @@ statementlist =
     } )* eat_terminator?
 
 # TODO
-statement = e:expr ws* { $$ = e; }
+statement = b:bind_stmt ws* { $$ = b; }
+
+bind_stmt = e1:expr - ':=' - e2:expr { $$.set(SARU_NODE_BIND, e1, e2); }
+        | e3:expr { $$ = e3; }
 
 args =
     (
@@ -90,6 +93,10 @@ value =
     | dec_number
     | string
     | '(' e:expr ')' { $$ = e; }
+    | 'my' ws v:variable { $$.set(SARU_NODE_MY, v); }
+    | variable
+
+variable = '$' < [a-zA-Z] [a-zA-Z0-9]* > { assert(yyleng > 0); $$.set_variable(yytext, yyleng); }
 
 #  <?MARKED('endstmt')>
 #  <?terminator>

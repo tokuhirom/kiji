@@ -31,6 +31,8 @@ _children_op($_) for qw(
     add sub_
     funcall args
     statements
+    bind_
+    my_
 );
 
 sub _value_op {
@@ -51,6 +53,7 @@ _value_op($_) for qw(
     ident
     number
     int_
+    variable
 );
 
 sub filter(&) {
@@ -84,7 +87,7 @@ sub test {
         diag "GOT:";
         diag Dumper($got);
         diag "EXPECTED:";
-        diag Dumper(stmts($expected));
+        diag Dumper(statements($expected));
     };
 }
 

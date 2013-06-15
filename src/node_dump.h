@@ -20,12 +20,15 @@ static void nqpc_dump_node(const SARUNode &node, unsigned int depth) {
         printf("\"value\":%lf\n", node.nv());
         break;
         // Node has a PV
+    case SARU_NODE_VARIABLE:
     case SARU_NODE_STRING:
     case SARU_NODE_IDENT:
         indent(depth+1);
         printf("\"value\":\"%s\"\n", node.pv().c_str()); // TODO need escape
         break;
         // Node has children
+    case SARU_NODE_BIND:
+    case SARU_NODE_MY:
     case SARU_NODE_ARGS:
     case SARU_NODE_FUNCALL:
     case SARU_NODE_MUL:
@@ -55,6 +58,8 @@ static void nqpc_dump_node(const SARUNode &node, unsigned int depth) {
     }
     case SARU_NODE_UNDEF:
         break;
+    default:
+        abort();
     }
     indent(depth);
     printf("}");

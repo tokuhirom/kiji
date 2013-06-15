@@ -14,6 +14,7 @@ public:
     SARUNode(const SARUNode &node) {
         this->type_ = node.type_;
         switch (type_) {
+        case SARU_NODE_VARIABLE:
         case SARU_NODE_IDENT:
         case SARU_NODE_STRING:
             this->body_.pv = new std::string(*(node.body_.pv));
@@ -24,6 +25,8 @@ public:
         case SARU_NODE_NUMBER:
             this->body_.nv = node.body_.nv;
             break;
+        case SARU_NODE_BIND:
+        case SARU_NODE_MY:
         case SARU_NODE_ARGS:
         case SARU_NODE_FUNCALL:
         case SARU_NODE_STATEMENTS:
@@ -42,6 +45,7 @@ public:
     }
     ~SARUNode() {
         switch (type_) {
+        case SARU_NODE_VARIABLE:
         case SARU_NODE_STRING:
         case SARU_NODE_IDENT: {
             break;
@@ -50,6 +54,8 @@ public:
             break;
         case SARU_NODE_NUMBER:
             break;
+        case SARU_NODE_MY:
+        case SARU_NODE_BIND:
         case SARU_NODE_ARGS:
         case SARU_NODE_FUNCALL:
         case SARU_NODE_STATEMENTS:
@@ -92,6 +98,10 @@ public:
         this->type_ = SARU_NODE_IDENT;
         this->body_.pv = new std::string(txt, length);
     }
+    void set_variable(const char *txt, int length) {
+        this->type_ = SARU_NODE_VARIABLE;
+        this->body_.pv = new std::string(txt, length);
+    }
     void init_string() {
         this->type_ = SARU_NODE_STRING;
         this->body_.pv = new std::string();
@@ -116,6 +126,7 @@ public:
         assert(this->type_ != SARU_NODE_INT);
         assert(this->type_ != SARU_NODE_NUMBER);
         assert(this->type_ != SARU_NODE_IDENT);
+        assert(this->type_ != SARU_NODE_VARIABLE);
         this->body_.children->push_back(child);
     }
     void negate() {

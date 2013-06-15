@@ -18,6 +18,9 @@ my @types = qw(
     SARU_NODE_ARGS
     SARU_NODE_STRING
     SARU_NODE_MOD
+    SARU_NODE_VARIABLE
+    SARU_NODE_MY
+    SARU_NODE_BIND
 );
 
 say qq!/* This file is generated from $0 */!;
