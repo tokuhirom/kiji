@@ -40,6 +40,8 @@ test( '$n', variable('$n'));
 test( 'my $n:=3;', bind_(my_(variable('$n')), int_(3)));
 
 test( '"H" ~ "M"', string_concat(string("H"), string("M")));
+test( 'if 1 {say(4)}', if_(int_(1), statements(funcall(ident('say'), args(int_(4))))));
+test( 'if 1 { say(4)}', if_(int_(1), statements(funcall(ident('say'), args(int_(4))))));
 
 filter { $_[0] };
 test( '1;2"', statements(int_("1"), int_("2")));

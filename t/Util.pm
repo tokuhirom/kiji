@@ -34,6 +34,7 @@ _children_op($_) for qw(
     bind_
     my_
     string_concat
+    if_
 );
 
 sub _value_op {

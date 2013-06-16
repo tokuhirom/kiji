@@ -27,6 +27,7 @@ namespace saru {
       case SARU_NODE_NUMBER:
         this->body_.nv = node.body_.nv;
         break;
+      case SARU_NODE_IF:
       case SARU_NODE_STRING_CONCAT:
       case SARU_NODE_BIND:
       case SARU_NODE_MY:
@@ -57,6 +58,7 @@ namespace saru {
         break;
       case SARU_NODE_NUMBER:
         break;
+      case SARU_NODE_IF:
       case SARU_NODE_STRING_CONCAT:
       case SARU_NODE_MY:
       case SARU_NODE_BIND:
@@ -169,6 +171,7 @@ namespace saru {
         printf("\"value\":\"%s\"\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case SARU_NODE_IF:
       case SARU_NODE_BIND:
       case SARU_NODE_STRING_CONCAT:
       case SARU_NODE_MY:

@@ -196,6 +196,22 @@ namespace saru {
         bytecode_.push_back(buf[i]);
       }
     }
+    void write_uint32_t(uint32_t i, size_t pos) {
+      // optmize?
+      static char buf[4];
+      memcpy(buf, &i, 4); // TODO endian
+      for (int i=0; i<4; i++) {
+        bytecode_[pos+i] = buf[i];
+      }
+    }
+    void write_uint16_t(uint16_t i, size_t pos) {
+      // optmize?
+      static char buf[2];
+      memcpy(buf, &i, 2); // TODO endian
+      for (int i=0; i<2; i++) {
+        bytecode_[pos+i] = buf[i];
+      }
+    }
     void write_uint16_t(uint16_t i) {
       // optmize?
       static char buf[2];

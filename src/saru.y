@@ -10,18 +10,35 @@ comp_init = e:statementlist end-of-file {
     $$ = (node_global = e);
 }
 
-statementlist =
-    s1:statement {
+statementlist = s1:statement {
         $$.set(SARU_NODE_STATEMENTS, s1);
         s1 = $$;
-    }
-    ( eat_terminator s2:statement {
-        s1.push_child(s2);
-        $$ = s1;
-    } )* eat_terminator?
+            }
+    (
+        - s2:statement {
+            s1.push_child(s2);
+            $$ = s1;
+        }
+    )* eat_terminator?
+#   s1:statement {
+#       $$.set(SARU_NODE_STATEMENTS, s1);
+#       s1 = $$;
+#   }
+#   (
+#       eat_terminator s2:statement {
+#           s1.push_child(s2);
+#           $$ = s1;
+#       }
+#       | if_stmt
+#   )* eat_terminator?
 
 # TODO
-statement = b:bind_stmt ws* { $$ = b; }
+statement = b:bind_stmt eat_terminator { $$ = b; }
+          | if_stmt
+
+if_stmt = 'if' - cond:expr - '{' - sl:statementlist - '}' {
+            $$.set(SARU_NODE_IF, cond, sl);
+        }
 
 bind_stmt = e1:my - ':=' - e2:expr { $$.set(SARU_NODE_BIND, e1, e2); }
         | e3:expr { $$ = e3; }

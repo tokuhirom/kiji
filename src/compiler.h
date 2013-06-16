@@ -293,6 +293,22 @@ namespace saru {
         int idx = interp_.push_lexical(n.pv().c_str(), n.pv().size(), MVM_reg_obj);
         return idx;
       }
+      case SARU_NODE_IF: {
+        auto cond  = node.children()[0];
+        auto stmts = node.children()[1];
+        auto cond_reg = do_compile(cond);
+        switch (interp_.get_local_type(cond_reg)) {
+        case MVM_reg_int64: {
+          uint16_t pos = assembler_.bytecode_size() + 2 + 2;
+          assembler_.unless_i(cond_reg, 0);
+          (void)do_compile(stmts);
+          assembler_.write_uint32_t(assembler_.bytecode_size(), pos);
+          return -1;
+        }
+        default:
+          abort();
+        }
+      }
       case SARU_NODE_IDENT:
         break;
       case SARU_NODE_STATEMENTS:

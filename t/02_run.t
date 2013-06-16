@@ -142,3 +142,14 @@ X Japan!
 --- code: say(-555*2);
 --- expected
 -1110
+
+===
+--- code: if 1 { say(4) } say(5);
+--- expected
+4
+5
+
+===
+--- code: if 0 { say(4) } say(5);
+--- expected
+5
