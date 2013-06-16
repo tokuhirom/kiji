@@ -292,7 +292,7 @@ namespace saru {
   private:
     Interpreter &interp_;
     Assembler assembler_;
-    int do_compile(const SARUNode &node) {
+    int do_compile(const saru::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
       case SARU_NODE_STRING: {
@@ -391,8 +391,8 @@ namespace saru {
       }
       case SARU_NODE_FUNCALL: {
         assert(node.children().size() == 2);
-        const SARUNode &ident = node.children()[0];
-        const SARUNode &args  = node.children()[1];
+        const saru::Node &ident = node.children()[0];
+        const saru::Node &args  = node.children()[1];
         if (ident.pv() == "say") {
           for (auto a:args.children()) {
             uint16_t reg_num = stringify(do_compile(a));
@@ -480,7 +480,7 @@ namespace saru {
         break;
       }
     }
-    int numeric_binop(const SARUNode& node, uint16_t op) {
+    int numeric_binop(const saru::Node& node, uint16_t op) {
         assert(node.children().size() == 2);
 
         // TODO support dobule
@@ -494,7 +494,7 @@ namespace saru {
     }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }
-    void compile(SARUNode &node) {
+    void compile(saru::Node &node) {
       do_compile(node);
 
       // final op must be return.

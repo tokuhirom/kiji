@@ -2,7 +2,7 @@
 
 #include "node.h"
 
-#define YYSTYPE SARUNode
+#define YYSTYPE saru::Node
 
 %}
 

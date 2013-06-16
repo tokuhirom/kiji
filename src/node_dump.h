@@ -8,7 +8,7 @@ namespace saru {
     }
   }
 
-  static void dump_node(const SARUNode &node, unsigned int depth) {
+  static void dump_node(const saru::Node &node, unsigned int depth) {
     printf("{\n");
     indent(depth+1);
     printf("\"type\":\"%s\",\n", nqpc_node_type2name(node.type()));
@@ -71,7 +71,7 @@ namespace saru {
     }
   }
 
-  static void dump_node(const SARUNode &node) {
+  static void dump_node(const saru::Node &node) {
     dump_node(node, 0);
   }
 };
