@@ -97,3 +97,8 @@ Yo!
 --- code: my $i:=4649;say($i)
 --- expected
 4649
+
+===
+--- code: my $i:=2;say($i*3);
+--- expected
+6

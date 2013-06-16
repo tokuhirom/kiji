@@ -48,10 +48,13 @@ TODO
  * Parse `my $n`
  * Parse `my $n := 3`
 
+## Step 1.4 Done at 2013-06-16
+
+ * my $i:=0; say($i);
+ * `my $i:=2; say($i*3);`
+
 ## Step 2.
 
- * my $i=0; say($i);
- * `my $i=2; say($i*3);`
  * if statement
 
 ## Step 2.
