@@ -56,7 +56,18 @@ args =
     )
     | '' { $$.set_children(SARU_NODE_ARGS); }
 
-expr = funcall_expr
+expr = cmp_expr
+
+cmp_expr = f1:funcall_expr - (
+          '==' - f2:funcall_expr { $$.set(SARU_NODE_EQ, f1, f2); f1=$$; }
+        | '!=' - f2:funcall_expr { $$.set(SARU_NODE_NE, f1, f2); f1=$$; }
+        | '<'  - f2:funcall_expr { $$.set(SARU_NODE_LT, f1, f2); f1=$$; }
+        | '<=' - f2:funcall_expr { $$.set(SARU_NODE_LE, f1, f2); f1=$$; }
+        | '>'  - f2:funcall_expr { $$.set(SARU_NODE_GT, f1, f2); f1=$$; }
+        | '>=' - f2:funcall_expr { $$.set(SARU_NODE_GE, f1, f2); f1=$$; }
+    )* {
+        $$ = f1;
+    }
 
 funcall_expr =
     i:ident '(' - a:args - ')' - {
@@ -149,7 +160,7 @@ integer =
 
 # Missing foo
 string = '"' { $$.init_string(); } (
-        < [^"]+ > { $$.append_string(yytext, yyleng); }
+        < [^"]* > { $$.append_string(yytext, yyleng); }
         | '\a' { $$.append_string("\a", 1); }
         | '\b' { $$.append_string("\b", 1); }
         | '\t' { $$.append_string("\t", 1); }

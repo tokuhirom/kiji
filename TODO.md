@@ -73,9 +73,26 @@ TODO
  * `say(-3*-1);`
  * variable assignment for string
 
+## Step 1.9 Done at 2013-06-17
+
+ * `if 0 { }`
+
+## Step 1.91 Done at 2013-06-17
+
+ * `if 0.1 { }`
+ * `if "hoge" { }`
+ * `my $i:=0; if $i { }`
+
+## Step 1.92
+
+ * int/double comparation operators
+
+## Step 1.93
+
+ * str comparation operators
+
 ## Step 2.
 
- * if statement
  * apr command parsing
  * abs(-3), abs(3)
  * eq, ne, gt,ge,lt,le

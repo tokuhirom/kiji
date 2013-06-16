@@ -23,6 +23,12 @@ my @types = qw(
     SARU_NODE_BIND
     SARU_NODE_STRING_CONCAT
     SARU_NODE_IF
+    SARU_NODE_EQ
+    SARU_NODE_NE
+    SARU_NODE_LT
+    SARU_NODE_LE
+    SARU_NODE_GT
+    SARU_NODE_GE
 );
 
 say qq!/* This file is generated from $0 */!;

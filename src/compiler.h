@@ -305,8 +305,29 @@ namespace saru {
           assembler_.write_uint32_t(assembler_.bytecode_size(), pos);
           return -1;
         }
+        case MVM_reg_num64: {
+          uint16_t pos = assembler_.bytecode_size() + 2 + 2;
+          assembler_.unless_n(cond_reg, 0);
+          (void)do_compile(stmts);
+          assembler_.write_uint32_t(assembler_.bytecode_size(), pos);
+          return -1;
+        }
+        case MVM_reg_str: {
+          uint16_t pos = assembler_.bytecode_size() + 2 + 2;
+          assembler_.unless_s(cond_reg, 0);
+          (void)do_compile(stmts);
+          assembler_.write_uint32_t(assembler_.bytecode_size(), pos);
+          return -1;
+        }
+        case MVM_reg_obj: {
+          uint16_t pos = assembler_.bytecode_size() + 2 + 2;
+          assembler_.unless_o(cond_reg, 0);
+          (void)do_compile(stmts);
+          assembler_.write_uint32_t(assembler_.bytecode_size(), pos);
+          return -1;
+        }
         default:
-          abort();
+          abort(); // should not reach here?
         }
       }
       case SARU_NODE_IDENT:
@@ -328,6 +349,24 @@ namespace saru {
           r
         );
         return dst_reg;
+      }
+      case SARU_NODE_EQ: {
+        return this->numeric_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
+      }
+      case SARU_NODE_NE: {
+        return this->numeric_binop(node, MVM_OP_ne_i, MVM_OP_ne_n);
+      }
+      case SARU_NODE_LT: {
+        return this->numeric_binop(node, MVM_OP_lt_i, MVM_OP_lt_n);
+      }
+      case SARU_NODE_LE: {
+        return this->numeric_binop(node, MVM_OP_le_i, MVM_OP_le_n);
+      }
+      case SARU_NODE_GT: {
+        return this->numeric_binop(node, MVM_OP_gt_i, MVM_OP_gt_n);
+      }
+      case SARU_NODE_GE: {
+        return this->numeric_binop(node, MVM_OP_ge_i, MVM_OP_ge_n);
       }
       case SARU_NODE_MUL: {
         return this->numeric_binop(node, MVM_OP_mul_i, MVM_OP_mul_n);

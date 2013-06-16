@@ -153,3 +153,47 @@ X Japan!
 --- code: if 0 { say(4) } say(5);
 --- expected
 5
+
+===
+--- code: if 0.0 { say(4) } say(5);
+--- expected
+5
+
+===
+--- code: if 0.1 { say(4) } say(5);
+--- expected
+4
+5
+
+===
+--- code: if "" { say(4) } say(5);
+--- expected
+5
+
+===
+--- code: if "a" { say(4) } say(5);
+--- expected
+4
+5
+
+===
+--- code: my $i:=0; if $i { say(4) } say(5);
+--- expected
+5
+
+===
+--- code: my $i:=1; if $i { say(4) } say(5);
+--- expected
+4
+5
+
+===
+--- code: if 4==4 { say(4) } say(5);
+--- expected
+4
+5
+
+===
+--- code: if 4!=4 { say(4) } say(5);
+--- expected
+5
