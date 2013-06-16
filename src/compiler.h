@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 namespace saru {
   class Assembler {
@@ -35,6 +36,11 @@ namespace saru {
       write_u16(op1);
       write_i64(op2);
     }
+    void op_u16_n64(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, MVMnum64 op2) {
+      op(bank_num, op_num);
+      write_u16(op1);
+      write_n64(op2);
+    }
     void write_u8(MVMuint8 i) {
       bytecode_.push_back(i);
     }
@@ -48,6 +54,14 @@ namespace saru {
       bytecode_.push_back((i>>8)  &0xffff);
       bytecode_.push_back((i>>16) &0xffff);
       bytecode_.push_back((i>>24) &0xffff);
+    }
+    void write_n64(MVMnum64 i) {
+      // optmize?
+      static char buf[8];
+      memcpy(buf, &i, 8); // TODO endian
+      for (int i=0; i<8; i++) {
+        bytecode_.push_back(buf[i]);
+      }
     }
     void write_i64(int64_t i) {
       // optmize?
@@ -306,6 +320,12 @@ namespace saru {
         assembler_.op_u16_i64(MVM_OP_BANK_primitives, MVM_OP_const_i64, reg_num, n);
         return reg_num;
       }
+      case SARU_NODE_NUMBER: {
+        uint16_t reg_num = interp_.push_local_type(MVM_reg_num64);
+        MVMnum64 n = node.nv();
+        assembler_.op_u16_n64(MVM_OP_BANK_primitives, MVM_OP_const_n64, reg_num, n);
+        return reg_num;
+      }
       case SARU_NODE_BIND: {
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
@@ -374,19 +394,19 @@ namespace saru {
         return dst_reg;
       }
       case SARU_NODE_MUL: {
-        return this->numeric_binop(node, MVM_OP_mul_i);
+        return this->numeric_binop(node, MVM_OP_mul_i, MVM_OP_mul_n);
       }
       case SARU_NODE_SUB: {
-        return this->numeric_binop(node, MVM_OP_sub_i);
+        return this->numeric_binop(node, MVM_OP_sub_i, MVM_OP_sub_n);
       }
       case SARU_NODE_DIV: {
-        return this->numeric_binop(node, MVM_OP_div_i);
+        return this->numeric_binop(node, MVM_OP_div_i, MVM_OP_div_n);
       }
       case SARU_NODE_ADD: {
-        return this->numeric_binop(node, MVM_OP_add_i);
+        return this->numeric_binop(node, MVM_OP_add_i, MVM_OP_add_n);
       }
       case SARU_NODE_MOD: {
-        return this->numeric_binop(node, MVM_OP_mod_i);
+        return this->numeric_binop(node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
       case SARU_NODE_FUNCALL: {
         assert(node.children().size() == 2);
@@ -430,9 +450,40 @@ namespace saru {
         assembler_.op_u16(MVM_OP_BANK_object, MVM_OP_hllboxtype_i, boxtype_reg);
         assembler_.op_u16_u16_u16(MVM_OP_BANK_object, MVM_OP_box_i, dst_num, reg_num, boxtype_reg);
         return dst_num;
+      case MVM_reg_num64:
+        assembler_.op_u16(MVM_OP_BANK_object, MVM_OP_hllboxtype_n, boxtype_reg);
+        assembler_.op_u16_u16_u16(MVM_OP_BANK_object, MVM_OP_box_n, dst_num, reg_num, boxtype_reg);
+        return dst_num;
       default:
         MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", interp_.get_local_type(reg_num));
         abort();
+      }
+    }
+    int to_n(int reg_num) {
+      assert(reg_num >= 0);
+      switch (interp_.get_local_type(reg_num)) {
+      case MVM_reg_str: {
+        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_sn, dst_num, reg_num);
+        return dst_num;
+      }
+      case MVM_reg_num64: {
+        return reg_num;
+      }
+      case MVM_reg_int64: {
+        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_in, dst_num, reg_num);
+        return dst_num;
+      }
+      case MVM_reg_obj: {
+        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        assembler_.op_u16_u16(MVM_OP_BANK_object, MVM_OP_unbox_n, dst_num, reg_num);
+        return dst_num;
+      }
+      default:
+        // TODO
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", interp_.get_local_type(reg_num));
+        break;
       }
     }
     int to_i(int reg_num) {
@@ -441,6 +492,11 @@ namespace saru {
       case MVM_reg_str: {
         int dst_num = interp_.push_local_type(MVM_reg_int64);
         assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_si, dst_num, reg_num);
+        return dst_num;
+      }
+      case MVM_reg_num64: {
+        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_ni, dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_int64: {
@@ -463,6 +519,11 @@ namespace saru {
       case MVM_reg_str:
         // nop
         return reg_num;
+      case MVM_reg_num64: {
+        int dst_num = interp_.push_local_type(MVM_reg_str);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_ns, dst_num, reg_num);
+        return dst_num;
+      }
       case MVM_reg_int64: {
         int dst_num = interp_.push_local_type(MVM_reg_str);
         assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_is, dst_num, reg_num);
@@ -479,17 +540,38 @@ namespace saru {
         break;
       }
     }
-    int numeric_binop(const saru::Node& node, uint16_t op) {
+    int numeric_binop(const saru::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);
 
-        // TODO support dobule
-        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
-        int reg_num1 = this->to_i(do_compile(node.children()[0]));
-        int reg_num2 = this->to_i(do_compile(node.children()[1]));
-        assert(interp_.get_local_type(reg_num1) == MVM_reg_int64);
-        assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
-        assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, op, reg_num_dst, reg_num1, reg_num2);
-        return reg_num_dst;
+        int reg_num1 = do_compile(node.children()[0]);
+        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
+          int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
+          int reg_num2 = this->to_i(do_compile(node.children()[1]));
+          assert(interp_.get_local_type(reg_num1) == MVM_reg_int64);
+          assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
+          assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
+          return reg_num_dst;
+        } else if (interp_.get_local_type(reg_num1) == MVM_reg_num64) {
+          int reg_num_dst = interp_.push_local_type(MVM_reg_num64);
+          int reg_num2 = this->to_n(do_compile(node.children()[1]));
+          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
+          return reg_num_dst;
+        } else if (interp_.get_local_type(reg_num1) == MVM_reg_obj) {
+          // TODO should I use intify instead if the object is int?
+          int reg_num_dst = interp_.push_local_type(MVM_reg_num64);
+
+          int dst_num = interp_.push_local_type(MVM_reg_num64);
+          assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
+
+          int reg_num2 = this->to_n(do_compile(node.children()[1]));
+          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
+          return reg_num_dst;
+        } else {
+          // NOT IMPLEMENTED
+          abort();
+        }
     }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }

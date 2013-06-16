@@ -66,16 +66,16 @@ add_expr =
     }
 
 mul_expr =
-    l:term (
-        '*' r:term {
+    l:term - (
+        '*' - r:term {
             $$.set(SARU_NODE_MUL, l, r);
             l = $$;
         }
-        | '/' r:term {
+        | '/' - r:term {
             $$.set(SARU_NODE_DIV, l, r);
             l = $$;
         }
-        | '%' r:term {
+        | '%' - r:term {
             $$.set(SARU_NODE_MOD, l, r);
             l = $$;
         }

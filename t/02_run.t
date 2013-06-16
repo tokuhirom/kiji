@@ -117,3 +117,18 @@ Hello, world
 --- code: my $s:="X ";say($s ~ "Japan!");
 --- expected
 X Japan!
+===
+
+--- code: say(3.14);
+--- expected
+3.14
+
+===
+--- code: say(3.14+2.12);
+--- expected
+5.26
+
+===
+--- code: my $pi:=3.14; say($pi *2);
+--- expected
+6.28
