@@ -70,6 +70,7 @@ TODO
  * eq, ne, gt,ge,lt,le
  * Array operations
  * Hash operations
+ * `3.14*2`
 
 ## Step 2.
 
