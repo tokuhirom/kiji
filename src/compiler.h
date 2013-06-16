@@ -60,91 +60,41 @@ namespace saru {
     std::vector<MVMuint8> bytecode_;
   };
 
-  class Interpreter {
+  class Frame {
   private:
-    MVMInstance* vm_;
-    MVMCompUnit* cu_;
-    std::vector<MVMString*> strings_;
+    MVMStaticFrame frame_; // frame itself
+    MVMThreadContext *tc_;
+
     std::vector<MVMuint16> local_types_;
-    std::vector<MVMuint16> lexical_types_; // per frame
+    std::vector<MVMuint16> lexical_types_;
 
-  protected:
-    // Copy data to CompUnit.
-    void prepare() {
-      cu_->strings = strings_.data();
-      cu_->num_strings = strings_.size();
+  public:
+    Frame() {
+      memset(&frame_, 0, sizeof(MVMFrame));
+      tc_ = NULL;
+    }
+    void set_tc(MVMThreadContext *tc) {
+      tc_ = tc;
+    }
 
-      cu_->main_frame->local_types = local_types_.data();
-      cu_->main_frame->num_locals  = local_types_.size();
+    void finalize(MVMStaticFrame * frame) {
+      assert(frame);
 
-      cu_->main_frame->num_lexicals  = lexical_types_.size();
-      cu_->main_frame->lexical_types = lexical_types_.data();
+      frame_.local_types = local_types_.data();
+      frame_.num_locals  = local_types_.size();
+
+      frame_.num_lexicals  = lexical_types_.size();
+      frame_.lexical_types = lexical_types_.data();
 
       // see src/core/bytecode.c
-      cu_->main_frame->env_size = cu_->main_frame->num_lexicals * sizeof(MVMRegister);
-      cu_->main_frame->static_env = (MVMRegister*)malloc(cu_->main_frame->env_size);
-      memset(cu_->main_frame->static_env, 0, cu_->main_frame->env_size);
-    }
-  public:
-    Interpreter() {
-      vm_ = MVM_vm_create_instance();
-      cu_ = (MVMCompUnit*)malloc(sizeof(MVMCompUnit));
-      memset(cu_, 0, sizeof(MVMCompUnit));
-    }
-    ~Interpreter() {
-      MVM_vm_destroy_instance(vm_);
-      free(cu_);
-    }
-    static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
-      /* Dummy, 0-arg callsite. */
-      static MVMCallsite no_arg_callsite;
-      no_arg_callsite.arg_flags = NULL;
-      no_arg_callsite.arg_count = 0;
-      no_arg_callsite.num_pos   = 0;
+      frame_.env_size = frame_.num_lexicals * sizeof(MVMRegister);
+      frame_.static_env = (MVMRegister*)malloc(frame_.env_size);
+      memset(frame_.static_env, 0, frame_.env_size);
 
-      /* Create initial frame, which sets up all of the interpreter state also. */
-      MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
-    }
-    void initialize() {
-      // init compunit.
-      MVMThreadContext *tc = vm_->main_thread;
-      int          apr_return_status;
-      apr_pool_t  *pool        = NULL;
-      /* Ensure the file exists, and get its size. */
-      if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
-        MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
-      }
-      cu_->pool       = pool;
-      cu_->num_frames  = 1;
-      cu_->main_frame = (MVMStaticFrame*)malloc(sizeof(MVMStaticFrame));
-      cu_->frames = (MVMStaticFrame**)malloc(sizeof(MVMStaticFrame) * 1);
-      cu_->frames[0] = cu_->main_frame;
-      memset(cu_->main_frame, 0, sizeof(MVMStaticFrame));
-      cu_->main_frame->cuuid = MVM_string_utf8_decode(tc, tc->instance->VMString, "cuuid", strlen("cuuid"));
-      cu_->main_frame->name = MVM_string_utf8_decode(tc, tc->instance->VMString, "main frame", strlen("main frame"));
-      assert(cu_->main_frame->cuuid);
-      cu_->main_frame->cu = cu_;
+      frame_.cuuid = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "cuuid", strlen("cuuid"));
+      frame_.name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "main frame", strlen("main frame"));
 
-      cu_->main_frame->work_size = 0;
-
-      cu_->num_strings = 1;
-    }
-
-    void set_bytecode(MVMuint8*b, size_t size) {
-      assert(cu_->main_frame && "Call initialize() before call this method");
-      cu_->main_frame->bytecode      = b;
-      cu_->main_frame->bytecode_size = size;
-    }
-
-    int push_string(const std::string &str) {
-      return this->push_string(str.c_str(), str.size());
-    }
-
-    int push_string(const char*string, int length) {
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, string, length);
-      strings_.push_back(str);
-      return strings_.size() - 1;
+      memcpy(frame, &frame_, sizeof(MVMStaticFrame));
     }
 
     // reserve register
@@ -168,14 +118,14 @@ namespace saru {
 
       int idx = lexical_types_.size()-1;
 
-      MVMThreadContext *tc = vm_->main_thread;
       MVMLexicalHashEntry *entry = (MVMLexicalHashEntry*)calloc(sizeof(MVMLexicalHashEntry), 1);
       entry->value = idx;
 
-      MVMString* name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_c, name_len);
-      MVM_string_flatten(tc, name);
+      MVMThreadContext *tc = tc_; // workaround for MVM's bad macro
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_c, name_len);
+      MVM_string_flatten(tc_, name);
       // lexical_names is Hash.
-      MVM_HASH_BIND(tc, cu_->main_frame->lexical_names, name, entry);
+      MVM_HASH_BIND(tc_, frame_.lexical_names, name, entry);
 
       return idx;
     }
@@ -183,11 +133,10 @@ namespace saru {
     // lexical variable number by name
     // TODO: find from outer frame?
     int find_lexical_by_name(const std::string &name_cc, int &outer) {
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMString* name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_cc.c_str(), name_cc.size());
-      MVMLexicalHashEntry *lexical_names = cu_->main_frame->lexical_names;
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+      MVMLexicalHashEntry *lexical_names = frame_.lexical_names;
       MVMLexicalHashEntry *entry;
-      MVM_HASH_GET(tc, lexical_names, name, entry);
+      MVM_HASH_GET(tc_, lexical_names, name, entry);
       if (entry) {
         return entry->value;
       } else {
@@ -196,12 +145,114 @@ namespace saru {
       }
     }
 
+    void set_bytecode(MVMuint8*b, size_t size) {
+      frame_.bytecode      = b;
+      frame_.bytecode_size = size;
+    }
+  };
+
+  class Interpreter {
+  private:
+    MVMInstance* vm_;
+    MVMCompUnit* cu_;
+    std::vector<MVMString*> strings_;
+    std::vector<Frame> frames_;
+
+  protected:
+    // Copy data to CompUnit.
+    void prepare() {
+      // finalize strings
+      cu_->strings     = strings_.data();
+      cu_->num_strings = strings_.size();
+
+      // finalize frames
+      cu_->num_frames  = frames_.size();
+      assert(frames_.size() >= 1);
+
+      cu_->frames = (MVMStaticFrame**)malloc(sizeof(MVMStaticFrame*)*frames_.size());
+      cu_->frames[0] = (MVMStaticFrame*)malloc(sizeof(MVMStaticFrame));
+      cu_->main_frame = cu_->frames[0];
+
+      for (int i=0; i<frames_.size(); i++) {
+        frames_[i].finalize(cu_->frames[i]);
+        cu_->frames[i]->cu = cu_;
+        cu_->frames[i]->work_size = 0;
+      }
+      assert(cu_->main_frame->cuuid);
+    }
+  public:
+    Interpreter() :frames_(1) {
+      vm_ = MVM_vm_create_instance();
+      cu_ = (MVMCompUnit*)malloc(sizeof(MVMCompUnit));
+      memset(cu_, 0, sizeof(MVMCompUnit));
+    }
+    ~Interpreter() {
+      MVM_vm_destroy_instance(vm_);
+      free(cu_);
+    }
+    static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
+      /* Dummy, 0-arg callsite. */
+      static MVMCallsite no_arg_callsite;
+      no_arg_callsite.arg_flags = NULL;
+      no_arg_callsite.arg_count = 0;
+      no_arg_callsite.num_pos   = 0;
+
+      /* Create initial frame, which sets up all of the interpreter state also. */
+      MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
+    }
+    void initialize() {
+      // init compunit.
+      int apr_return_status;
+      apr_pool_t  *pool        = NULL;
+      /* Ensure the file exists, and get its size. */
+      if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
+        MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
+      }
+      cu_->pool       = pool;
+      frames_[0].set_tc(vm_->main_thread);
+    }
+
+    void set_bytecode(int frame_no, MVMuint8*b, size_t size) {
+      frames_[frame_no].set_bytecode(b, size);
+    }
+
+    int push_string(const std::string &str) {
+      return this->push_string(str.c_str(), str.size());
+    }
+
+    int push_string(const char*string, int length) {
+      MVMThreadContext *tc = vm_->main_thread;
+      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, string, length);
+      strings_.push_back(str);
+      return strings_.size() - 1;
+    }
+
+    // reserve register
+    int push_local_type(MVMuint16 reg_type) {
+      // TODO deprecate
+      return frames_[0].push_local_type(reg_type);
+    }
+    // Get register type at 'n'
+    uint16_t get_local_type(int n) {
+      return frames_[0].get_local_type(n);
+    }
+    // Push lexical variable.
+    int push_lexical(const char*name_c, int name_len, MVMuint16 type) {
+      return frames_[0].push_lexical(name_c, name_len, type);
+    }
+
+    // lexical variable number by name
+    // TODO: find from outer frame?
+    int find_lexical_by_name(const std::string &name_cc, int &outer) {
+      return frames_[0].find_lexical_by_name(name_cc, outer);
+    }
+
     void run() {
+      this->prepare();
+
       assert(cu_->main_frame);
       assert(cu_->main_frame->bytecode);
       assert(cu_->main_frame->bytecode_size > 0);
-
-      this->prepare();
 
       MVMThreadContext *tc = vm_->main_thread;
       MVMStaticFrame *start_frame = cu_->main_frame ? cu_->main_frame : cu_->frames[0];
@@ -375,7 +426,7 @@ namespace saru {
       // final op must be return.
       assembler_.op(MVM_OP_BANK_primitives, MVM_OP_return);
 
-      interp_.set_bytecode(assembler_.bytecode(), assembler_.bytecode_size());
+      interp_.set_bytecode(0, assembler_.bytecode(), assembler_.bytecode_size());
     }
   };
 }
