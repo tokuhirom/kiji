@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include "node_dump.h"
 
 namespace saru {
   class Assembler {

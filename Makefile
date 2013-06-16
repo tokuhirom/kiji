@@ -184,7 +184,7 @@ test: _build/saru-parser saru
 clean:
 	rm -rf _build/ saru src/gen.* 3rd/greg/greg 3rd/greg/*.o
 
-_build/saru-parser: src/gen.saru.y.cc src/gen.node.h src/node.h src/node_dump.h
+_build/saru-parser: src/gen.saru.y.cc src/gen.node.h src/node.h
 	mkdir -p _build/
 	clang++ -g -std=c++11 -Wall -o _build/saru-parser src/saru-parser.cc
 

@@ -148,6 +148,71 @@ namespace saru {
       return nqpc_node_type2name(this->type());
     }
 
+    void dump_json(unsigned int depth) const {
+      printf("{\n");
+      indent(depth+1);
+      printf("\"type\":\"%s\",\n", nqpc_node_type2name(this->type()));
+      switch (this->type()) {
+      case SARU_NODE_INT:
+        indent(depth+1);
+        printf("\"value\":%ld\n", this->iv());
+        break;
+      case SARU_NODE_NUMBER:
+        indent(depth+1);
+        printf("\"value\":%lf\n", this->nv());
+        break;
+        // Node has a PV
+      case SARU_NODE_VARIABLE:
+      case SARU_NODE_STRING:
+      case SARU_NODE_IDENT:
+        indent(depth+1);
+        printf("\"value\":\"%s\"\n", this->pv().c_str()); // TODO need escape
+        break;
+        // Node has children
+      case SARU_NODE_BIND:
+      case SARU_NODE_STRING_CONCAT:
+      case SARU_NODE_MY:
+      case SARU_NODE_ARGS:
+      case SARU_NODE_FUNCALL:
+      case SARU_NODE_MUL:
+      case SARU_NODE_ADD:
+      case SARU_NODE_SUB:
+      case SARU_NODE_DIV:
+      case SARU_NODE_MOD:
+      case SARU_NODE_STATEMENTS: {
+        indent(depth+1);
+        printf("\"value\":[\n");
+        int i=0;
+        for (auto &x: this->children()) {
+          indent(depth+2);
+          x.dump_json(depth+2);
+          if (i==this->children().size()-1) {
+            printf("\n");
+          } else {
+            printf(",\n");
+          }
+          i++;
+        }
+        indent(depth+1);
+        printf("]\n");
+        break;
+      }
+      case SARU_NODE_UNDEF:
+        break;
+      default:
+        abort();
+      }
+      indent(depth);
+      printf("}");
+      if (depth == 0) {
+        printf("\n");
+      }
+    }
+
+    void dump_json() const {
+      this->dump_json(0);
+    }
+
   private:
     SARU_NODE_TYPE type_;
     union {
@@ -156,6 +221,11 @@ namespace saru {
         std::string *pv;
         std::vector<saru::Node> *children;
     } body_;
+    static void indent(int n) {
+      for (int i=0; i<n*4; i++) {
+          printf(" ");
+      }
+    }
   };
 
 };

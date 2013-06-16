@@ -1,6 +1,5 @@
 #include "node.h"
 #include "gen.saru.y.cc"
-#include "node_dump.h"
 
 int main()
 {
@@ -31,7 +30,7 @@ int main()
     }
     yydeinit(&g);
 
-    saru::dump_node(node_global);
+    node_global.dump_json();
 
     return 0;
 }
