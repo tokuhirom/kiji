@@ -30,6 +30,7 @@ namespace saru {
       break;
       // Node has children
     case SARU_NODE_BIND:
+    case SARU_NODE_STRING_CONCAT:
     case SARU_NODE_MY:
     case SARU_NODE_ARGS:
     case SARU_NODE_FUNCALL:

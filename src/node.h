@@ -25,6 +25,7 @@ public:
         case SARU_NODE_NUMBER:
             this->body_.nv = node.body_.nv;
             break;
+        case SARU_NODE_STRING_CONCAT:
         case SARU_NODE_BIND:
         case SARU_NODE_MY:
         case SARU_NODE_ARGS:
@@ -54,6 +55,7 @@ public:
             break;
         case SARU_NODE_NUMBER:
             break;
+        case SARU_NODE_STRING_CONCAT:
         case SARU_NODE_MY:
         case SARU_NODE_BIND:
         case SARU_NODE_ARGS:

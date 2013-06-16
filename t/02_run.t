@@ -1,24 +1,24 @@
 use strict;
 use warnings;
 use utf8;
-use Test::More;
+use Test::More 0.98;
 use Test::Base::Less;
 use File::Temp;
 use POSIX;
 
 for my $block (blocks) {
-    note $block->code;
+    subtest $block->code => sub {
+        my $tmp = File::Temp->new();
+        print {$tmp} $block->code;
 
-    my $tmp = File::Temp->new();
-    print {$tmp} $block->code;
+        my $ret = `./saru < $tmp`;
+        ok(POSIX::WIFEXITED($?));
+        is(POSIX::WEXITSTATUS($?), 0);
 
-    my $ret = `./saru < $tmp`;
-    ok(POSIX::WIFEXITED($?));
-    is(POSIX::WEXITSTATUS($?), 0);
-
-    $ret =~ s/\n+\z//;
-    (my $expected = $block->expected) =~ s/\n+\z//;
-    is($ret, $expected);
+        $ret =~ s/\n+\z//;
+        (my $expected = $block->expected) =~ s/\n+\z//;
+        is($ret, $expected);
+    };
 }
 
 done_testing;
@@ -102,3 +102,18 @@ Yo!
 --- code: my $i:=2;say($i*3);
 --- expected
 6
+
+===
+--- code: say("Hello, " ~ "world");
+--- expected
+Hello, world
+
+===
+--- code: say(3 ~ 4);
+--- expected
+34
+
+===
+--- code: my $s:="X ";say($s ~ "Japan!");
+--- expected
+X Japan!

@@ -9,8 +9,16 @@ namespace saru {
   class Assembler {
   public:
     void op(MVMuint8 bank_num, MVMuint8 op_num) {
+      if (0) {
+        MVMOpInfo *op = MVM_op_get_op(bank_num, op_num);
+        printf("%d %d %s\n", bank_num, op_num, op->name);
+      }
       write_u8(bank_num);
       write_u8(op_num);
+    }
+    void op_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1) {
+      op(bank_num, op_num);
+      write_u16(op1);
     }
     void op_u16_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, uint16_t op2) {
       op(bank_num, op_num);
@@ -179,6 +187,11 @@ namespace saru {
         cu_->frames[i]->work_size = 0;
       }
       assert(cu_->main_frame->cuuid);
+
+      // setup hllconfig
+      MVMThreadContext *tc = vm_->main_thread;
+      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, "saru", 4);
+      cu_->hll_config = MVM_hll_get_config_for(tc, str);
     }
   public:
     Interpreter() :frames_(1) {
@@ -302,7 +315,7 @@ namespace saru {
           abort();
         }
         int lex_no = do_compile(lhs);
-        int val    = do_compile(rhs);
+        int val    = this->box(do_compile(rhs));
         assembler_.op_u16_u16_u16(
             MVM_OP_BANK_primitives,
             MVM_OP_bindlex,
@@ -314,7 +327,7 @@ namespace saru {
       }
       case SARU_NODE_VARIABLE: {
         // copy lexical variable to register
-        auto reg_no = interp_.push_local_type(MVM_reg_int64);
+        auto reg_no = interp_.push_local_type(MVM_reg_obj);
         int outer = 0;
         auto lex_no = interp_.find_lexical_by_name(node.pv(), outer);
         assembler_.op_u16_u16_u16(
@@ -336,7 +349,7 @@ namespace saru {
           printf("This is variable: %s\n", n.type_name());
           exit(0);
         }
-        int idx = interp_.push_lexical(n.pv().c_str(), n.pv().size(), MVM_reg_int64);
+        int idx = interp_.push_lexical(n.pv().c_str(), n.pv().size(), MVM_reg_obj);
         return idx;
       }
       case SARU_NODE_IDENT:
@@ -346,6 +359,21 @@ namespace saru {
           do_compile(n);
         }
         return -1;
+      case SARU_NODE_STRING_CONCAT: {
+        auto dst_reg = interp_.push_local_type(MVM_reg_str);
+        auto lhs = node.children()[0];
+        auto rhs = node.children()[1];
+        auto l = stringify(do_compile(lhs));
+        auto r = stringify(do_compile(rhs));
+        assembler_.op_u16_u16_u16(
+          MVM_OP_BANK_string,
+          MVM_OP_concat_s,
+          dst_reg,
+          l,
+          r
+        );
+        return dst_reg;
+      }
       case SARU_NODE_MUL: {
         return this->numeric_binop(node, MVM_OP_mul_i);
       }
@@ -367,24 +395,7 @@ namespace saru {
         const SARUNode &args  = node.children()[1];
         if (ident.pv() == "say") {
           for (auto a:args.children()) {
-            uint16_t reg_num = do_compile(a);
-            assert(reg_num >= 0);
-            switch (interp_.get_local_type(reg_num)) {
-            case MVM_reg_str:
-              // nop
-              break;
-            case MVM_reg_int64: {
-              // need stringify
-              uint16_t orig_reg_num = reg_num;
-              reg_num = interp_.push_local_type(MVM_reg_str);
-              assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_is, reg_num, orig_reg_num);
-              break;
-            }
-            default:
-              // TODO
-              MVM_panic(MVM_exitcode_compunit, "Not implemented, say %d", interp_.get_local_type(reg_num));
-              break;
-            }
+            uint16_t reg_num = stringify(do_compile(a));
             assembler_.op_u16_u16(MVM_OP_BANK_io, MVM_OP_say, reg_num, 0);
             return -1; // TODO: Is there a result?
           }
@@ -401,22 +412,85 @@ namespace saru {
       abort();
     }
   private:
+    // objectify the register.
+    int box(int reg_num) {
+      assert(reg_num >= 0);
+      auto reg_type = interp_.get_local_type(reg_num);
+      if (reg_type == MVM_reg_obj) {
+        return reg_num;
+      }
+
+      int dst_num = interp_.push_local_type(MVM_reg_obj);
+      int boxtype_reg = interp_.push_local_type(MVM_reg_obj);
+      switch (reg_type) {
+      case MVM_reg_str:
+        assembler_.op_u16(MVM_OP_BANK_object, MVM_OP_hllboxtype_s, boxtype_reg);
+        assembler_.op_u16_u16_u16(MVM_OP_BANK_object, MVM_OP_box_s, dst_num, reg_num, boxtype_reg);
+        return dst_num;
+      case MVM_reg_int64:
+        assembler_.op_u16(MVM_OP_BANK_object, MVM_OP_hllboxtype_i, boxtype_reg);
+        assembler_.op_u16_u16_u16(MVM_OP_BANK_object, MVM_OP_box_i, dst_num, reg_num, boxtype_reg);
+        return dst_num;
+      default:
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", interp_.get_local_type(reg_num));
+        abort();
+      }
+    }
+    int to_i(int reg_num) {
+      assert(reg_num >= 0);
+      switch (interp_.get_local_type(reg_num)) {
+      case MVM_reg_str: {
+        int dst_num = interp_.push_local_type(MVM_reg_int64);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_si, dst_num, reg_num);
+        return dst_num;
+      }
+      case MVM_reg_int64: {
+        return reg_num;
+      }
+      case MVM_reg_obj: {
+        int dst_num = interp_.push_local_type(MVM_reg_int64);
+        assembler_.op_u16_u16(MVM_OP_BANK_object, MVM_OP_unbox_i, dst_num, reg_num);
+        return dst_num;
+      }
+      default:
+        // TODO
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", interp_.get_local_type(reg_num));
+        break;
+      }
+    }
+    int stringify(int reg_num) {
+      assert(reg_num >= 0);
+      switch (interp_.get_local_type(reg_num)) {
+      case MVM_reg_str:
+        // nop
+        return reg_num;
+      case MVM_reg_int64: {
+        int dst_num = interp_.push_local_type(MVM_reg_str);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_is, dst_num, reg_num);
+        return dst_num;
+      }
+      case MVM_reg_obj: {
+        int dst_num = interp_.push_local_type(MVM_reg_str);
+        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_strify, dst_num, reg_num);
+        return dst_num;
+      }
+      default:
+        // TODO
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, stringify %d", interp_.get_local_type(reg_num));
+        break;
+      }
+    }
     int numeric_binop(const SARUNode& node, uint16_t op) {
         assert(node.children().size() == 2);
+
+        // TODO support dobule
         int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
-        int reg_num1 = do_compile(node.children()[0]);
-        int reg_num2 = do_compile(node.children()[1]);
-        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
-          if (interp_.get_local_type(reg_num2) == MVM_reg_int64) {
-            assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
-            assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, op, reg_num_dst, reg_num1, reg_num2);
-            return reg_num_dst;
-          } else {
-            abort(); // TODO
-          }
-        } else {
-          abort(); // TODO
-        }
+        int reg_num1 = this->to_i(do_compile(node.children()[0]));
+        int reg_num2 = this->to_i(do_compile(node.children()[1]));
+        assert(interp_.get_local_type(reg_num1) == MVM_reg_int64);
+        assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
+        assembler_.op_u16_u16_u16(MVM_OP_BANK_primitives, op, reg_num_dst, reg_num1, reg_num2);
+        return reg_num_dst;
     }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }

@@ -33,6 +33,7 @@ _children_op($_) for qw(
     statements
     bind_
     my_
+    string_concat
 );
 
 sub _value_op {

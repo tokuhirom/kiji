@@ -178,7 +178,7 @@ test: _build/saru-parser saru
 3rd/MoarVM/Makefile: 3rd/MoarVM/build/Makefile.in 3rd/MoarVM/Configure.pl
 	cd 3rd/MoarVM/ && perl Configure.pl --clang
 
-3rd/MoarVM/moarvm: 3rd/MoarVM/Makefile 3rd/MoarVM/src/core/*.c
+3rd/MoarVM/moarvm: 3rd/MoarVM/Makefile 3rd/MoarVM/src/core/*.c 3rd/MoarVM/src/core/validation.c
 	cd 3rd/MoarVM/ && make
 
 clean:

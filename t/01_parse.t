@@ -39,6 +39,8 @@ test( '(3+4)*2', mul(add(int_(3), int_(4)), int_(2)));
 test( '$n', variable('$n'));
 test( 'my $n:=3;', bind_(my_(variable('$n')), int_(3)));
 
+test( '"H" ~ "M"', string_concat(string("H"), string("M")));
+
 filter { $_[0] };
 test( '1;2"', statements(int_("1"), int_("2")));
 

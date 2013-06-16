@@ -53,9 +53,23 @@ TODO
  * my $i:=0; say($i);
  * `my $i:=2; say($i*3);`
 
+## Step 1.5 Done at 2013-06-16
+
+ * Refactor frame
+
+## Step 1.6 Done at 2013-06-16
+
+ * string concat
+
 ## Step 2.
 
+ * variable assignment for string
  * if statement
+ * apr command parsing
+ * abs(-3), abs(3)
+ * eq, ne, gt,ge,lt,le
+ * Array operations
+ * Hash operations
 
 ## Step 2.
 
@@ -70,24 +84,25 @@ TODO
  * basic i/o
  * multi assign like `my ($x, $y) = (1,2)`
 
-## Step 10.
+## Step 30.
 
  * Support OOP
  * Support -e option
  * read code from file
  * ? :
 
-## Step 20.
+## Step 40.
 
  * regexp
 
-## Step 21.
+## Step 41.
 
  * Grammars
  * REPL
  * One liner support
+ * constant folding optimization
 
-## Step 30.
+## Step 50.
 
  * Support all statements in NQP
  * Pass NQP test cases

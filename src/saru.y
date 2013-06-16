@@ -48,13 +48,17 @@ funcall_expr =
     | add_expr
 
 add_expr =
-    l:mul_expr (
+    l:mul_expr - (
           '+' r1:mul_expr {
             $$.set(SARU_NODE_ADD, l, r1);
             l = $$;
           }
         | '-' r2:mul_expr {
             $$.set(SARU_NODE_SUB, l, r2);
+            l = $$;
+          }
+        | '~' - r2:mul_expr {
+            $$.set(SARU_NODE_STRING_CONCAT, l, r2);
             l = $$;
           }
     )* {
