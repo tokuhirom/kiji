@@ -1,32 +1,34 @@
 #pragma once
+// vim:ts=2:sw=2:tw=0:
 
-static void indent(int n) {
+namespace saru {
+  static void indent(int n) {
     for (int i=0; i<n*4; i++) {
         printf(" ");
     }
-}
+  }
 
-static void nqpc_dump_node(const SARUNode &node, unsigned int depth) {
+  static void dump_node(const SARUNode &node, unsigned int depth) {
     printf("{\n");
     indent(depth+1);
     printf("\"type\":\"%s\",\n", nqpc_node_type2name(node.type()));
     switch (node.type()) {
     case SARU_NODE_INT:
-        indent(depth+1);
-        printf("\"value\":%ld\n", node.iv());
-        break;
+      indent(depth+1);
+      printf("\"value\":%ld\n", node.iv());
+      break;
     case SARU_NODE_NUMBER:
-        indent(depth+1);
-        printf("\"value\":%lf\n", node.nv());
-        break;
-        // Node has a PV
+      indent(depth+1);
+      printf("\"value\":%lf\n", node.nv());
+      break;
+      // Node has a PV
     case SARU_NODE_VARIABLE:
     case SARU_NODE_STRING:
     case SARU_NODE_IDENT:
-        indent(depth+1);
-        printf("\"value\":\"%s\"\n", node.pv().c_str()); // TODO need escape
-        break;
-        // Node has children
+      indent(depth+1);
+      printf("\"value\":\"%s\"\n", node.pv().c_str()); // TODO need escape
+      break;
+      // Node has children
     case SARU_NODE_BIND:
     case SARU_NODE_MY:
     case SARU_NODE_ARGS:
@@ -37,37 +39,39 @@ static void nqpc_dump_node(const SARUNode &node, unsigned int depth) {
     case SARU_NODE_DIV:
     case SARU_NODE_MOD:
     case SARU_NODE_STATEMENTS: {
-        indent(depth+1);
-        printf("\"value\":[\n");
-        int i=0;
-        for (auto &x:node.children()) {
-            indent(depth+2);
-            nqpc_dump_node(
-                x, depth+2
-            );
-            if (i==node.children().size()-1) {
-                printf("\n");
-            } else {
-                printf(",\n");
-            }
-            i++;
+      indent(depth+1);
+      printf("\"value\":[\n");
+      int i=0;
+      for (auto &x:node.children()) {
+        indent(depth+2);
+        dump_node(
+          x, depth+2
+        );
+        if (i==node.children().size()-1) {
+          printf("\n");
+        } else {
+          printf(",\n");
         }
-        indent(depth+1);
-        printf("]\n");
-        break;
+        i++;
+      }
+      indent(depth+1);
+      printf("]\n");
+      break;
     }
     case SARU_NODE_UNDEF:
-        break;
+      break;
     default:
-        abort();
+      abort();
     }
     indent(depth);
     printf("}");
     if (depth == 0) {
-        printf("\n");
+      printf("\n");
     }
-}
+  }
 
-static void nqpc_dump_node(const SARUNode &node) {
-    nqpc_dump_node(node, 0);
-}
+  static void dump_node(const SARUNode &node) {
+    dump_node(node, 0);
+  }
+};
+

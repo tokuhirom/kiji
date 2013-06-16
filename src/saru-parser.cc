@@ -31,7 +31,7 @@ int main()
     }
     yydeinit(&g);
 
-    nqpc_dump_node(node_global);
+    saru::dump_node(node_global);
 
     return 0;
 }
