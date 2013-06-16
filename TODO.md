@@ -66,24 +66,27 @@ TODO
  * `3.14*2`
  * say(3.2)
 
+## Step 1.8 Done at 2013-06-17
+
+ * Generate assembler from MoarVM/src/core/oplist
+ * say(-3);
+ * `say(-3*-1);`
+ * variable assignment for string
+
 ## Step 2.
 
- * variable assignment for string
  * if statement
  * apr command parsing
  * abs(-3), abs(3)
  * eq, ne, gt,ge,lt,le
  * Array operations
  * Hash operations
- * say(-3);
- * `say(-3*-1);`
 
 ## Step 2.
 
  * funcall
  * Run fib(n)
  * Range object
- * Generate assembler from MoarVM/src/core/oplist
 
 ## Step 4.
 

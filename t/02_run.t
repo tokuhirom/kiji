@@ -132,3 +132,13 @@ X Japan!
 --- code: my $pi:=3.14; say($pi *2);
 --- expected
 6.28
+
+===
+--- code: say(-555);
+--- expected
+-555
+
+===
+--- code: say(-555*2);
+--- expected
+-1110
