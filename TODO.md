@@ -61,6 +61,11 @@ TODO
 
  * string concat
 
+## Step 1.7 Done at 2013-06-17
+
+ * `3.14*2`
+ * say(3.2)
+
 ## Step 2.
 
  * variable assignment for string
@@ -70,11 +75,11 @@ TODO
  * eq, ne, gt,ge,lt,le
  * Array operations
  * Hash operations
- * `3.14*2`
+ * say(-3);
+ * `say(-3*-1);`
 
 ## Step 2.
 
- * say(3.2)
  * funcall
  * Run fib(n)
  * Range object

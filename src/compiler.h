@@ -4,83 +4,9 @@
 #include <string>
 #include <vector>
 #include <stdint.h>
+#include "gen.assembler.h"
 
 namespace saru {
-  class Assembler {
-  public:
-    void op(MVMuint8 bank_num, MVMuint8 op_num) {
-      if (0) {
-        MVMOpInfo *op = MVM_op_get_op(bank_num, op_num);
-        printf("%d %d %s\n", bank_num, op_num, op->name);
-      }
-      write_u8(bank_num);
-      write_u8(op_num);
-    }
-    void op_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1) {
-      op(bank_num, op_num);
-      write_u16(op1);
-    }
-    void op_u16_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, uint16_t op2) {
-      op(bank_num, op_num);
-      write_u16(op1);
-      write_u16(op2);
-    }
-    void op_u16_u16_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, uint16_t op2, uint16_t op3) {
-      op(bank_num, op_num);
-      write_u16(op1);
-      write_u16(op2);
-      write_u16(op3);
-    }
-    void op_u16_i64(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, int64_t op2) {
-      op(bank_num, op_num);
-      write_u16(op1);
-      write_i64(op2);
-    }
-    void op_u16_n64(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, MVMnum64 op2) {
-      op(bank_num, op_num);
-      write_u16(op1);
-      write_n64(op2);
-    }
-    void write_u8(MVMuint8 i) {
-      bytecode_.push_back(i);
-    }
-    void write_u16(MVMuint16 i) {
-      bytecode_.push_back((i>>0)  &0xffff);
-      bytecode_.push_back((i>>8)  &0xffff);
-    }
-    void write_16(uint32_t i) {
-      // optmize?
-      bytecode_.push_back((i>>0)  &0xffff);
-      bytecode_.push_back((i>>8)  &0xffff);
-      bytecode_.push_back((i>>16) &0xffff);
-      bytecode_.push_back((i>>24) &0xffff);
-    }
-    void write_n64(MVMnum64 i) {
-      // optmize?
-      static char buf[8];
-      memcpy(buf, &i, 8); // TODO endian
-      for (int i=0; i<8; i++) {
-        bytecode_.push_back(buf[i]);
-      }
-    }
-    void write_i64(int64_t i) {
-      // optmize?
-      static char buf[8];
-      memcpy(buf, &i, 8); // TODO endian
-      for (int i=0; i<8; i++) {
-        bytecode_.push_back(buf[i]);
-      }
-    }
-    MVMuint8* bytecode() {
-      return bytecode_.data(); // C++11
-    }
-    size_t bytecode_size() {
-      return bytecode_.size();
-    }
-  private:
-    std::vector<MVMuint8> bytecode_;
-  };
-
   class Frame {
   private:
     MVMStaticFrame frame_; // frame itself
@@ -311,19 +237,19 @@ namespace saru {
       case SARU_NODE_STRING: {
         int str_num = interp_.push_string(node.pv());
         int reg_num = interp_.push_local_type(MVM_reg_str);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_const_s, reg_num, str_num);
+        assembler_.const_s(reg_num, str_num);
         return reg_num;
       }
       case SARU_NODE_INT: {
         uint16_t reg_num = interp_.push_local_type(MVM_reg_int64);
         int64_t n = node.iv();
-        assembler_.op_u16_i64(MVM_OP_BANK_primitives, MVM_OP_const_i64, reg_num, n);
+        assembler_.const_i64(reg_num, n);
         return reg_num;
       }
       case SARU_NODE_NUMBER: {
         uint16_t reg_num = interp_.push_local_type(MVM_reg_num64);
         MVMnum64 n = node.nv();
-        assembler_.op_u16_n64(MVM_OP_BANK_primitives, MVM_OP_const_n64, reg_num, n);
+        assembler_.const_n64(reg_num, n);
         return reg_num;
       }
       case SARU_NODE_BIND: {
@@ -335,12 +261,10 @@ namespace saru {
         }
         int lex_no = do_compile(lhs);
         int val    = this->box(do_compile(rhs));
-        assembler_.op_u16_u16_u16(
-            MVM_OP_BANK_primitives,
-            MVM_OP_bindlex,
-            lex_no, // lex number
-            0,      // frame outer count
-            val     // value
+        assembler_.bindlex(
+          lex_no, // lex number
+          0,      // frame outer count
+          val     // value
         );
         return -1;
       }
@@ -349,9 +273,7 @@ namespace saru {
         auto reg_no = interp_.push_local_type(MVM_reg_obj);
         int outer = 0;
         auto lex_no = interp_.find_lexical_by_name(node.pv(), outer);
-        assembler_.op_u16_u16_u16(
-          MVM_OP_BANK_primitives,
-          MVM_OP_getlex,
+        assembler_.getlex(
           reg_no,
           lex_no,
           outer // outer frame
@@ -384,9 +306,7 @@ namespace saru {
         auto rhs = node.children()[1];
         auto l = stringify(do_compile(lhs));
         auto r = stringify(do_compile(rhs));
-        assembler_.op_u16_u16_u16(
-          MVM_OP_BANK_string,
-          MVM_OP_concat_s,
+        assembler_.concat_s(
           dst_reg,
           l,
           r
@@ -415,7 +335,7 @@ namespace saru {
         if (ident.pv() == "say") {
           for (auto a:args.children()) {
             uint16_t reg_num = stringify(do_compile(a));
-            assembler_.op_u16_u16(MVM_OP_BANK_io, MVM_OP_say, reg_num, 0);
+            assembler_.say(reg_num);
             return -1; // TODO: Is there a result?
           }
         } else {
@@ -443,16 +363,16 @@ namespace saru {
       int boxtype_reg = interp_.push_local_type(MVM_reg_obj);
       switch (reg_type) {
       case MVM_reg_str:
-        assembler_.op_u16(MVM_OP_BANK_object, MVM_OP_hllboxtype_s, boxtype_reg);
-        assembler_.op_u16_u16_u16(MVM_OP_BANK_object, MVM_OP_box_s, dst_num, reg_num, boxtype_reg);
+        assembler_.hllboxtype_s(boxtype_reg);
+        assembler_.box_s(dst_num, reg_num, boxtype_reg);
         return dst_num;
       case MVM_reg_int64:
-        assembler_.op_u16(MVM_OP_BANK_object, MVM_OP_hllboxtype_i, boxtype_reg);
-        assembler_.op_u16_u16_u16(MVM_OP_BANK_object, MVM_OP_box_i, dst_num, reg_num, boxtype_reg);
+        assembler_.hllboxtype_i(boxtype_reg);
+        assembler_.box_i(dst_num, reg_num, boxtype_reg);
         return dst_num;
       case MVM_reg_num64:
-        assembler_.op_u16(MVM_OP_BANK_object, MVM_OP_hllboxtype_n, boxtype_reg);
-        assembler_.op_u16_u16_u16(MVM_OP_BANK_object, MVM_OP_box_n, dst_num, reg_num, boxtype_reg);
+        assembler_.hllboxtype_n(boxtype_reg);
+        assembler_.box_n(dst_num, reg_num, boxtype_reg);
         return dst_num;
       default:
         MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", interp_.get_local_type(reg_num));
@@ -464,7 +384,7 @@ namespace saru {
       switch (interp_.get_local_type(reg_num)) {
       case MVM_reg_str: {
         int dst_num = interp_.push_local_type(MVM_reg_num64);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_sn, dst_num, reg_num);
+        assembler_.coerce_sn(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_num64: {
@@ -472,12 +392,12 @@ namespace saru {
       }
       case MVM_reg_int64: {
         int dst_num = interp_.push_local_type(MVM_reg_num64);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_in, dst_num, reg_num);
+        assembler_.coerce_in(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
         int dst_num = interp_.push_local_type(MVM_reg_num64);
-        assembler_.op_u16_u16(MVM_OP_BANK_object, MVM_OP_unbox_n, dst_num, reg_num);
+        assembler_.unbox_n(dst_num, reg_num);
         return dst_num;
       }
       default:
@@ -491,12 +411,12 @@ namespace saru {
       switch (interp_.get_local_type(reg_num)) {
       case MVM_reg_str: {
         int dst_num = interp_.push_local_type(MVM_reg_int64);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_si, dst_num, reg_num);
+        assembler_.coerce_si(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_num64: {
         int dst_num = interp_.push_local_type(MVM_reg_num64);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_ni, dst_num, reg_num);
+        assembler_.coerce_ni(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_int64: {
@@ -504,7 +424,7 @@ namespace saru {
       }
       case MVM_reg_obj: {
         int dst_num = interp_.push_local_type(MVM_reg_int64);
-        assembler_.op_u16_u16(MVM_OP_BANK_object, MVM_OP_unbox_i, dst_num, reg_num);
+        assembler_.unbox_i(dst_num, reg_num);
         return dst_num;
       }
       default:
@@ -521,17 +441,17 @@ namespace saru {
         return reg_num;
       case MVM_reg_num64: {
         int dst_num = interp_.push_local_type(MVM_reg_str);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_ns, dst_num, reg_num);
+        assembler_.coerce_ns(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_int64: {
         int dst_num = interp_.push_local_type(MVM_reg_str);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_coerce_is, dst_num, reg_num);
+        assembler_.coerce_is(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
         int dst_num = interp_.push_local_type(MVM_reg_str);
-        assembler_.op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_strify, dst_num, reg_num);
+        assembler_.smrt_strify(dst_num, reg_num);
         return dst_num;
       }
       default:
