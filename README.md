@@ -22,11 +22,11 @@ Why?
 NQP's compiler is written in NQP.
 I want to parse NQP by C++.
 
-Dependencies
-------------
+Build time dependencies
+-----------------------
 
- * [greg](https://github.com/nddrylliog/greg)
  * Perl5
+ * C++ compiler supports C++11
 
 Use case
 --------

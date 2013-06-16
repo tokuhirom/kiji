@@ -92,3 +92,8 @@ Yo!
 --- code: say(10%5)
 --- expected
 0
+
+===
+--- code: my $i:=4649;say($i)
+--- expected
+4649

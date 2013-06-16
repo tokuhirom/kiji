@@ -42,16 +42,10 @@ TODO
 
  * say(3%2)
 
-## Step 1.3
+## Step 1.3 Done at 2013-06-15
 
  * Parse `$n`
-
-## Step 1.3
-
  * Parse `my $n`
-
-## Step 1.3
-
  * Parse `my $n := 3`
 
 ## Step 2.
@@ -66,6 +60,12 @@ TODO
  * funcall
  * Run fib(n)
  * Range object
+ * Generate assembler from MoarVM/src/core/oplist
+
+## Step 4.
+
+ * basic i/o
+ * multi assign like `my ($x, $y) = (1,2)`
 
 ## Step 10.
 
