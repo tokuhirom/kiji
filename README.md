@@ -19,11 +19,12 @@ This is a interpreter for subset of Perl6. It's running on MoarVM.
 Why?
 ----
 
-NQP's compiler is written in NQP.
-I want to parse NQP by C++.
+I need lightweight Perl6 sub set interpreter for daily hacking.
 
 Build time dependencies
 -----------------------
+
+These things are not required at run time.
 
  * Perl5
  * C++ compiler supports C++11
