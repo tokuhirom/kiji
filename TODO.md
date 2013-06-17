@@ -95,17 +95,23 @@ TODO
 
  * `say([1,2,3][1]);`
 
+## Step 2.10
+
+ * `say([4,5,6].shift())`
+
 ## Step 2.5
 
  * str comparation operators
+ * eq, ne, gt,ge,lt,le
 
 ## Step 3.
 
  * apr command parsing
  * abs(-3), abs(3)
- * eq, ne, gt,ge,lt,le
  * Array operations
  * Hash operations
+ * die
+ * catch
 
 ## Step 4.
 
@@ -141,6 +147,7 @@ TODO
  * REPL
  * One liner support
  * constant folding optimization
+ * $?LINE
 
 ## Step 50.
 

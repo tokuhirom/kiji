@@ -27,6 +27,7 @@ namespace saru {
       case NODE_NUMBER:
         this->body_.nv = node.body_.nv;
         break;
+      case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:
       case NODE_EQ:
@@ -66,6 +67,7 @@ namespace saru {
         break;
       case NODE_NUMBER:
         break;
+      case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:
       case NODE_EQ:
@@ -103,6 +105,13 @@ namespace saru {
       this->body_.children = new std::vector<saru::Node>();
       this->body_.children->push_back(c1);
       this->body_.children->push_back(c2);
+    }
+    void set(NODE_TYPE type, const saru::Node &c1, const saru::Node &c2, const saru::Node &c3) {
+      this->type_ = type;
+      this->body_.children = new std::vector<saru::Node>();
+      this->body_.children->push_back(c1);
+      this->body_.children->push_back(c2);
+      this->body_.children->push_back(c3);
     }
     void set_children(NODE_TYPE type) {
       this->type_ = type;
@@ -187,6 +196,7 @@ namespace saru {
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:
       case NODE_EQ:

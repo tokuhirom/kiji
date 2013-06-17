@@ -107,7 +107,7 @@ namespace saru {
 
   protected:
     // Copy data to CompUnit.
-    void prepare() {
+    void finalize() {
       // finalize strings
       cu_->strings     = strings_.data();
       cu_->num_strings = strings_.size();
@@ -129,8 +129,21 @@ namespace saru {
 
       // setup hllconfig
       MVMThreadContext *tc = vm_->main_thread;
-      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, "saru", 4);
+      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, "nqp", 4);
       cu_->hll_config = MVM_hll_get_config_for(tc, str);
+
+      // setup callsite
+      // TODO: flexible method call
+      cu_->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*2);
+      cu_->callsites[0] = (MVMCallsite*)malloc(sizeof(MVMCallsite));
+      memset(cu_->callsites[0], 0, sizeof(MVMCallsite));
+      cu_->callsites[0]->arg_count=1;
+      cu_->callsites[0]->num_pos=1;
+      cu_->callsites[0]->arg_flags=new MVMCallsiteEntry[1];
+      cu_->callsites[0]->arg_flags[0]=MVM_CALLSITE_ARG_OBJ;;
+      cu_->callsites[1] = (MVMCallsite*)malloc(sizeof(MVMCallsite));
+      memset(cu_->callsites[1], 0, sizeof(MVMCallsite));
+      cu_->num_callsites = 2;
     }
   public:
     Interpreter() :frames_(1) {
@@ -200,7 +213,7 @@ namespace saru {
     }
 
     void run() {
-      this->prepare();
+      this->finalize();
 
       assert(cu_->main_frame);
       assert(cu_->main_frame->bytecode);
@@ -212,7 +225,7 @@ namespace saru {
     }
 
     void dump() {
-      this->prepare();
+      this->finalize();
 
       MVMThreadContext *tc = vm_->main_thread;
       // dump it
@@ -370,6 +383,19 @@ namespace saru {
         auto dst = interp_.push_local_type(MVM_reg_obj);
         assembler_.atpos_o(dst, container, idx);
         return dst;
+      }
+      case NODE_METHODCALL: {
+        assert(node.children().size() == 3);
+        auto obj = do_compile(node.children()[0]);
+        auto str = interp_.push_string(node.children()[1].pv());
+        auto meth = interp_.push_local_type(MVM_reg_obj);
+        auto ret = interp_.push_local_type(MVM_reg_obj);
+        // TODO process args
+        assembler_.findmeth(meth, obj, str);
+        assembler_.prepargs(0);
+        assembler_.arg_o(0, obj);
+        assembler_.invoke_o(ret, meth);
+        return ret;
       }
       case NODE_EQ: {
         return this->numeric_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
@@ -572,7 +598,23 @@ namespace saru {
   public:
     Compiler(Interpreter &interp): interp_(interp) { }
     void compile(saru::Node &node) {
+      assembler_.checkarity(0, -1);
+
       do_compile(node);
+
+      // bootarray
+      /*
+      int ary = interp_.push_local_type(MVM_reg_obj);
+      assembler_.bootarray(ary);
+      assembler_.create(ary, ary);
+      assembler_.prepargs(1);
+      assembler_.invoke_o(ary, ary);
+
+      assembler_.bootstrarray(ary);
+      assembler_.create(ary, ary);
+      assembler_.prepargs(1);
+      assembler_.invoke_o(ary, ary);
+      */
 
       // final op must be return.
       assembler_.op(MVM_OP_BANK_primitives, MVM_OP_return);

@@ -203,3 +203,9 @@ X Japan!
 --- expected
 2
 
+===
+--- SKIP
+--- code: say([4,5,6].shift());
+--- expected
+4
+
