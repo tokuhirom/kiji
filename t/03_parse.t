@@ -61,7 +61,7 @@ sub mangle {
         my $header = shift @$data;
         my $value = [map { mangle($_) } @$data];
         return +{
-            type  => 'SARU_NODE_'.uc($header->name),
+            type  => 'NODE_'.uc($header->name),
             value => $value,
         };
     } else {
@@ -218,3 +218,16 @@ __END__
 (statements
     (int 1)
     (int 2))
+
+===
+--- code: []
+--- expected
+(statements
+    (array))
+
+===
+--- code: [1,2,3]
+--- expected
+(statements
+    (array (int 1) (int 2) (int 3)))
+

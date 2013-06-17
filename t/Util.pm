@@ -18,7 +18,7 @@ sub _children_op {
     *{"$name"} = sub {
         $name =~ s/_$//;
         +{
-            type => 'SARU_NODE_' . uc($name),
+            type => 'NODE_' . uc($name),
             value => [@_],
         }
     };

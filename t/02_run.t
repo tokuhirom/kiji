@@ -197,3 +197,4 @@ X Japan!
 --- code: if 4!=4 { say(4) } say(5);
 --- expected
 5
+

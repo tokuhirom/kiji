@@ -83,15 +83,19 @@ TODO
  * `if "hoge" { }`
  * `my $i:=0; if $i { }`
 
-## Step 1.92
+## Step 1.92 Done at 2013-06-17
 
  * int/double comparation operators
 
-## Step 1.93
+## Step 2 Done at 2013-06-17
+
+ * `s/SARU_NODE_/saru::NODE_/g`
+
+## Step 2.01
 
  * str comparation operators
 
-## Step 2.
+## Step 3.
 
  * apr command parsing
  * abs(-3), abs(3)
@@ -99,14 +103,13 @@ TODO
  * Array operations
  * Hash operations
 
-## Step 2.
+## Step 4.
 
  * funcall
  * Run fib(n)
  * Range object
- * `s/SARU_NODE_/saru::NODE_/g`
 
-## Step 4.
+## Step 10.
 
  * basic i/o
  * multi assign like `my ($x, $y) = (1,2)`

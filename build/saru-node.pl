@@ -5,44 +5,45 @@ use utf8;
 use 5.010000;
 
 my @types = qw(
-    SARU_NODE_UNDEF
-    SARU_NODE_INT
-    SARU_NODE_NUMBER
-    SARU_NODE_STATEMENTS
-    SARU_NODE_DIV
-    SARU_NODE_MUL
-    SARU_NODE_ADD
-    SARU_NODE_SUB
-    SARU_NODE_IDENT
-    SARU_NODE_FUNCALL
-    SARU_NODE_ARGS
-    SARU_NODE_STRING
-    SARU_NODE_MOD
-    SARU_NODE_VARIABLE
-    SARU_NODE_MY
-    SARU_NODE_BIND
-    SARU_NODE_STRING_CONCAT
-    SARU_NODE_IF
-    SARU_NODE_EQ
-    SARU_NODE_NE
-    SARU_NODE_LT
-    SARU_NODE_LE
-    SARU_NODE_GT
-    SARU_NODE_GE
-    SARU_NODE_ARRAY
+    NODE_UNDEF
+    NODE_INT
+    NODE_NUMBER
+    NODE_STATEMENTS
+    NODE_DIV
+    NODE_MUL
+    NODE_ADD
+    NODE_SUB
+    NODE_IDENT
+    NODE_FUNCALL
+    NODE_ARGS
+    NODE_STRING
+    NODE_MOD
+    NODE_VARIABLE
+    NODE_MY
+    NODE_BIND
+    NODE_STRING_CONCAT
+    NODE_IF
+    NODE_EQ
+    NODE_NE
+    NODE_LT
+    NODE_LE
+    NODE_GT
+    NODE_GE
+    NODE_ARRAY
 );
 
 say qq!/* This file is generated from $0 */!;
 say qq!#pragma once!;
 say qq!!;
-say qq!typedef enum {!;
-say qq!    $_,! for @types;
-say qq!} SARU_NODE_TYPE;!;
-say qq!!;
+say qq!namespace saru {!;
+say qq!  typedef enum {!;
+say qq!      $_,! for @types;
+say qq!  } NODE_TYPE;!;
 
-say qq!static const char* nqpc_node_type2name(SARU_NODE_TYPE t) {!;
+say qq!  static const char* nqpc_node_type2name(saru::NODE_TYPE t) {!;
 say qq!    switch (t) {!;
-say qq!        case $_: return "$_";! for @types;
+say qq!      case $_: return "$_";! for @types;
 say qq!    }!;
 say qq!    return "UNKNOWN";!;
+say qq!  }!;
 say qq!}!;

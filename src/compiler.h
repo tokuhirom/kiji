@@ -234,28 +234,28 @@ namespace saru {
     int do_compile(const saru::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
-      case SARU_NODE_STRING: {
+      case NODE_STRING: {
         int str_num = interp_.push_string(node.pv());
         int reg_num = interp_.push_local_type(MVM_reg_str);
         assembler_.const_s(reg_num, str_num);
         return reg_num;
       }
-      case SARU_NODE_INT: {
+      case NODE_INT: {
         uint16_t reg_num = interp_.push_local_type(MVM_reg_int64);
         int64_t n = node.iv();
         assembler_.const_i64(reg_num, n);
         return reg_num;
       }
-      case SARU_NODE_NUMBER: {
+      case NODE_NUMBER: {
         uint16_t reg_num = interp_.push_local_type(MVM_reg_num64);
         MVMnum64 n = node.nv();
         assembler_.const_n64(reg_num, n);
         return reg_num;
       }
-      case SARU_NODE_BIND: {
+      case NODE_BIND: {
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
-        if (lhs.type() != SARU_NODE_MY) {
+        if (lhs.type() != NODE_MY) {
           printf("You can't bind value to %s, currently.\n", lhs.type_name());
           abort();
         }
@@ -268,7 +268,7 @@ namespace saru {
         );
         return -1;
       }
-      case SARU_NODE_VARIABLE: {
+      case NODE_VARIABLE: {
         // copy lexical variable to register
         auto reg_no = interp_.push_local_type(MVM_reg_obj);
         int outer = 0;
@@ -280,20 +280,20 @@ namespace saru {
         );
         return reg_no;
       }
-      case SARU_NODE_MY: {
+      case NODE_MY: {
         if (node.children().size() != 1) {
           printf("NOT IMPLEMENTED\n");
           abort();
         }
         auto n = node.children()[0];
-        if (n.type() != SARU_NODE_VARIABLE) {
+        if (n.type() != NODE_VARIABLE) {
           printf("This is variable: %s\n", n.type_name());
           exit(0);
         }
         int idx = interp_.push_lexical(n.pv().c_str(), n.pv().size(), MVM_reg_obj);
         return idx;
       }
-      case SARU_NODE_IF: {
+      case NODE_IF: {
         auto cond  = node.children()[0];
         auto stmts = node.children()[1];
         auto cond_reg = do_compile(cond);
@@ -330,14 +330,14 @@ namespace saru {
           abort(); // should not reach here?
         }
       }
-      case SARU_NODE_IDENT:
+      case NODE_IDENT:
         break;
-      case SARU_NODE_STATEMENTS:
+      case NODE_STATEMENTS:
         for (auto n: node.children()) {
           do_compile(n);
         }
         return -1;
-      case SARU_NODE_STRING_CONCAT: {
+      case NODE_STRING_CONCAT: {
         auto dst_reg = interp_.push_local_type(MVM_reg_str);
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
@@ -350,40 +350,40 @@ namespace saru {
         );
         return dst_reg;
       }
-      case SARU_NODE_EQ: {
+      case NODE_EQ: {
         return this->numeric_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
       }
-      case SARU_NODE_NE: {
+      case NODE_NE: {
         return this->numeric_binop(node, MVM_OP_ne_i, MVM_OP_ne_n);
       }
-      case SARU_NODE_LT: {
+      case NODE_LT: {
         return this->numeric_binop(node, MVM_OP_lt_i, MVM_OP_lt_n);
       }
-      case SARU_NODE_LE: {
+      case NODE_LE: {
         return this->numeric_binop(node, MVM_OP_le_i, MVM_OP_le_n);
       }
-      case SARU_NODE_GT: {
+      case NODE_GT: {
         return this->numeric_binop(node, MVM_OP_gt_i, MVM_OP_gt_n);
       }
-      case SARU_NODE_GE: {
+      case NODE_GE: {
         return this->numeric_binop(node, MVM_OP_ge_i, MVM_OP_ge_n);
       }
-      case SARU_NODE_MUL: {
+      case NODE_MUL: {
         return this->numeric_binop(node, MVM_OP_mul_i, MVM_OP_mul_n);
       }
-      case SARU_NODE_SUB: {
+      case NODE_SUB: {
         return this->numeric_binop(node, MVM_OP_sub_i, MVM_OP_sub_n);
       }
-      case SARU_NODE_DIV: {
+      case NODE_DIV: {
         return this->numeric_binop(node, MVM_OP_div_i, MVM_OP_div_n);
       }
-      case SARU_NODE_ADD: {
+      case NODE_ADD: {
         return this->numeric_binop(node, MVM_OP_add_i, MVM_OP_add_n);
       }
-      case SARU_NODE_MOD: {
+      case NODE_MOD: {
         return this->numeric_binop(node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
-      case SARU_NODE_FUNCALL: {
+      case NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const saru::Node &ident = node.children()[0];
         const saru::Node &args  = node.children()[1];
