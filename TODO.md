@@ -104,22 +104,29 @@ TODO
  * funcall
  * Run fib(n)
  * Range object
+ * `s/SARU_NODE_/saru::NODE_/g`
 
 ## Step 4.
 
  * basic i/o
  * multi assign like `my ($x, $y) = (1,2)`
 
+## Step 20
+
+ * Support most of features in Perl5 without regexp, grammar, OOP
+ * Support -e option
+
 ## Step 30.
 
  * Support OOP
- * Support -e option
  * read code from file
  * ? :
 
 ## Step 40.
 
  * regexp
+ * True/False
+ * multi dispatch
 
 ## Step 41.
 

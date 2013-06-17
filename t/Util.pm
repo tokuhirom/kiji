@@ -9,9 +9,7 @@ use Test::More;
 use Data::Dumper;
 use JSON::PP;
 
-our @EXPORT = qw(int_ number test ident filter);
-
-my $FILTER = sub { $_[0] };
+our @EXPORT = qw(test);
 
 sub _children_op {
     my ($name) = shift;
@@ -36,32 +34,12 @@ _children_op($_) for qw(
     string_concat
     if_
     eq_
-);
-
-sub _value_op {
-    my ($name) = shift;
-    no strict 'refs';
-    push @EXPORT, $name;
-    *{"$name"} = sub {
-        $name =~ s/_$//;
-        +{
-            type => 'SARU_NODE_' . uc($name),
-            value => @_,
-        }
-    };
-}
-
-_value_op($_) for qw(
     string
     ident
     number
     int_
     variable
 );
-
-sub filter(&) {
-    $FILTER = $_[0];
-}
 
 sub test {
     my ($src, $expected) = @_;
@@ -83,14 +61,14 @@ sub test {
     }
     is_deeply(
         $got,
-        $FILTER->($expected),
+        $expected,
         "code: $src"
     ) or do {
         $Data::Dumper::Sortkeys=1;
         diag "GOT:";
         diag Dumper($got);
         diag "EXPECTED:";
-        diag Dumper(statements($expected));
+        diag Dumper($expected);
     };
 }
 

@@ -126,6 +126,7 @@ value =
     | string
     | '(' e:expr ')' { $$ = e; }
     | variable
+    | '[' { $$.set_children(SARU_NODE_ARRAY); } ( e:expr { $$.push_child(e); } ( ',' e2:expr { $$.push_child(e2); } )* )? ']'
 
 my = 'my' ws v:variable { $$.set(SARU_NODE_MY, v); }
 

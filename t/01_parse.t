@@ -4,48 +4,9 @@ use utf8;
 use Test::More;
 use t::Util;
 
-filter {
-    statements($_[0]);
-};
+test( '"hoge"', statements(string('hoge')));
+test( '"ho\nge"', statements(string("ho\nge")));
 
-test( '33', int_(33));
-test( '.33', number(0.33));
-test( '0.33', number(0.33));
-test( '3.14', number(3.14));
-test( '0b1000', int_(8));
-test( '0b0100', int_(4));
-test( '0b0010', int_(2));
-test( '0b0001', int_(1));
-test( '0xdeadbeef', int_(0xdeadbeef));
-test( '0o755', int_(0755));
-
-test( '-5963', int_(-5963));
-test( '3*4', mul(int_(3), int_(4)));
-test( '3/4', div(int_(3), int_(4)));
-test( '3+4', add(int_(3), int_(4)));
-test( '3-4', sub_(int_(3), int_(4)));
-test( '3-4-2', sub_(sub_(int_(3), int_(4)), int_(2)));
-test( '3+4-2', sub_(add(int_(3), int_(4)), int_(2)));
-test( '3+4*2', add(int_(3), mul(int_(4), int_(2))));
-test( '3==4', eq_(int_(3), int_(4)));
-
-test( 'say()', funcall(ident('say'), args()));
-test( 'say(3)', funcall(ident('say'), args(int_(3))));
-
-test( '"hoge"', string('hoge'));
-test( '"ho\nge"', string("ho\nge"));
-
-test( '(3+4)*2', mul(add(int_(3), int_(4)), int_(2)));
-
-test( '$n', variable('$n'));
-test( 'my $n:=3;', bind_(my_(variable('$n')), int_(3)));
-
-test( '"H" ~ "M"', string_concat(string("H"), string("M")));
-test( 'if 1 {say(4)}', if_(int_(1), statements(funcall(ident('say'), args(int_(4))))));
-test( 'if 1 { say(4)}', if_(int_(1), statements(funcall(ident('say'), args(int_(4))))));
-
-filter { $_[0] };
-test( '1;2"', statements(int_("1"), int_("2")));
 
 done_testing;
 

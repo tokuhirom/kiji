@@ -29,6 +29,7 @@ my @types = qw(
     SARU_NODE_LE
     SARU_NODE_GT
     SARU_NODE_GE
+    SARU_NODE_ARRAY
 );
 
 say qq!/* This file is generated from $0 */!;

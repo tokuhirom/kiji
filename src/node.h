@@ -27,6 +27,7 @@ namespace saru {
       case SARU_NODE_NUMBER:
         this->body_.nv = node.body_.nv;
         break;
+      case SARU_NODE_ARRAY:
       case SARU_NODE_EQ:
       case SARU_NODE_NE:
       case SARU_NODE_LT:
@@ -64,6 +65,7 @@ namespace saru {
         break;
       case SARU_NODE_NUMBER:
         break;
+      case SARU_NODE_ARRAY:
       case SARU_NODE_EQ:
       case SARU_NODE_NE:
       case SARU_NODE_LT:
@@ -169,20 +171,21 @@ namespace saru {
       switch (this->type()) {
       case SARU_NODE_INT:
         indent(depth+1);
-        printf("\"value\":%ld\n", this->iv());
+        printf("\"value\":[%ld]\n", this->iv());
         break;
       case SARU_NODE_NUMBER:
         indent(depth+1);
-        printf("\"value\":%lf\n", this->nv());
+        printf("\"value\":[%lf]\n", this->nv());
         break;
         // Node has a PV
       case SARU_NODE_VARIABLE:
       case SARU_NODE_STRING:
       case SARU_NODE_IDENT:
         indent(depth+1);
-        printf("\"value\":\"%s\"\n", this->pv().c_str()); // TODO need escape
+        printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case SARU_NODE_ARRAY:
       case SARU_NODE_EQ:
       case SARU_NODE_NE:
       case SARU_NODE_LT:
