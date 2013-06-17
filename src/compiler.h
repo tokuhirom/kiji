@@ -350,6 +350,27 @@ namespace saru {
         );
         return dst_reg;
       }
+      case NODE_ARRAY: {
+        // create array
+        auto array_reg = interp_.push_local_type(MVM_reg_obj);
+        assembler_.hlllist(array_reg);
+        assembler_.create(array_reg, array_reg);
+
+        // push elements
+        for (auto n:node.children()) {
+          auto reg = this->box(do_compile(n));
+          assembler_.push_o(array_reg, reg);
+        }
+        return array_reg;
+      }
+      case NODE_ATPOS: {
+        assert(node.children().size() == 2);
+        auto container = do_compile(node.children()[0]);
+        auto idx       = this->to_i(do_compile(node.children()[1]));
+        auto dst = interp_.push_local_type(MVM_reg_obj);
+        assembler_.atpos_o(dst, container, idx);
+        return dst;
+      }
       case NODE_EQ: {
         return this->numeric_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
       }

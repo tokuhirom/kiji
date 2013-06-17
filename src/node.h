@@ -27,6 +27,7 @@ namespace saru {
       case NODE_NUMBER:
         this->body_.nv = node.body_.nv;
         break;
+      case NODE_ATPOS:
       case NODE_ARRAY:
       case NODE_EQ:
       case NODE_NE:
@@ -65,6 +66,7 @@ namespace saru {
         break;
       case NODE_NUMBER:
         break;
+      case NODE_ATPOS:
       case NODE_ARRAY:
       case NODE_EQ:
       case NODE_NE:
@@ -185,6 +187,7 @@ namespace saru {
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case NODE_ATPOS:
       case NODE_ARRAY:
       case NODE_EQ:
       case NODE_NE:

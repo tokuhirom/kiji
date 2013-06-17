@@ -198,3 +198,8 @@ X Japan!
 --- expected
 5
 
+===
+--- code: say([1,2,3][1]);
+--- expected
+2
+

@@ -91,7 +91,11 @@ TODO
 
  * `s/SARU_NODE_/saru::NODE_/g`
 
-## Step 2.01
+## Step 2.01 Done at 2013-06-17
+
+ * `say([1,2,3][1]);`
+
+## Step 2.5
 
  * str comparation operators
 

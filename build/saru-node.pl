@@ -30,6 +30,7 @@ my @types = qw(
     NODE_GT
     NODE_GE
     NODE_ARRAY
+    NODE_ATPOS
 );
 
 say qq!/* This file is generated from $0 */!;

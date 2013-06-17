@@ -58,16 +58,22 @@ args =
 
 expr = cmp_expr
 
-cmp_expr = f1:funcall_expr - (
-          '==' - f2:funcall_expr { $$.set(saru::NODE_EQ, f1, f2); f1=$$; }
-        | '!=' - f2:funcall_expr { $$.set(saru::NODE_NE, f1, f2); f1=$$; }
-        | '<'  - f2:funcall_expr { $$.set(saru::NODE_LT, f1, f2); f1=$$; }
-        | '<=' - f2:funcall_expr { $$.set(saru::NODE_LE, f1, f2); f1=$$; }
-        | '>'  - f2:funcall_expr { $$.set(saru::NODE_GT, f1, f2); f1=$$; }
-        | '>=' - f2:funcall_expr { $$.set(saru::NODE_GE, f1, f2); f1=$$; }
+cmp_expr = f1:atpos_expr - (
+          '==' - f2:atpos_expr { $$.set(saru::NODE_EQ, f1, f2); f1=$$; }
+        | '!=' - f2:atpos_expr { $$.set(saru::NODE_NE, f1, f2); f1=$$; }
+        | '<'  - f2:atpos_expr { $$.set(saru::NODE_LT, f1, f2); f1=$$; }
+        | '<=' - f2:atpos_expr { $$.set(saru::NODE_LE, f1, f2); f1=$$; }
+        | '>'  - f2:atpos_expr { $$.set(saru::NODE_GT, f1, f2); f1=$$; }
+        | '>=' - f2:atpos_expr { $$.set(saru::NODE_GE, f1, f2); f1=$$; }
     )* {
         $$ = f1;
     }
+
+atpos_expr =
+    f1:funcall_expr - '[' - f2:funcall_expr - ']' {
+        $$.set(saru::NODE_ATPOS, f1, f2);
+    }
+    | funcall_expr
 
 funcall_expr =
     i:ident '(' - a:args - ')' - {
