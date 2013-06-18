@@ -33,9 +33,9 @@ sub parse {
     my $tmp = File::Temp->new();
     print {$tmp} $src;
 
-    my $json = `./_build/saru-parser < $tmp`;
+    my $json = `./saru --dump-ast $tmp`;
     unless ($json =~ /\A\{/) {
-        die "Cannot get json from '$src'";
+        die "Cannot get json from '$src': $json";
     }
     my $got = eval {
         JSON::PP->new->decode($json)

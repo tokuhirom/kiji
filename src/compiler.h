@@ -558,6 +558,7 @@ namespace saru {
             assembler().say(reg_num);
             return -1; // TODO: Is there a result?
           }
+          return -1; // TODO: Is there a result?
         } else {
           auto reg_no = interp_.push_local_type(MVM_reg_obj);
           int outer = 0;
