@@ -101,11 +101,14 @@ TODO
 
 ## Step 2.5
 
+ * `sub foo() { 55 } say(foo());`
  * str comparation operators
  * eq, ne, gt,ge,lt,le
 
 ## Step 3.
 
+ * for loop
+ * `loop { }`
  * apr command parsing
  * abs(-3), abs(3)
  * Array operations

@@ -127,6 +127,7 @@ namespace saru {
     std::vector<MVMString*> strings_;
     std::vector<std::shared_ptr<Frame>> frames_;
     std::list<std::shared_ptr<Frame>> used_frames_;
+    std::vector<MVMCallsite*> callsites_;
 
   protected:
     // Copy data to CompUnit.
@@ -172,17 +173,15 @@ namespace saru {
       cu_->hll_config = MVM_hll_get_config_for(tc, str);
 
       // setup callsite
-      // TODO: flexible method call
-      cu_->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*2);
-      cu_->callsites[0] = (MVMCallsite*)malloc(sizeof(MVMCallsite));
-      memset(cu_->callsites[0], 0, sizeof(MVMCallsite));
-      cu_->callsites[0]->arg_count=1;
-      cu_->callsites[0]->num_pos=1;
-      cu_->callsites[0]->arg_flags=new MVMCallsiteEntry[1];
-      cu_->callsites[0]->arg_flags[0]=MVM_CALLSITE_ARG_OBJ;;
-      cu_->callsites[1] = (MVMCallsite*)malloc(sizeof(MVMCallsite));
-      memset(cu_->callsites[1], 0, sizeof(MVMCallsite));
-      cu_->num_callsites = 2;
+      cu_->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*callsites_.size());
+      {
+        int i=0;
+        for (auto callsite: callsites_) {
+          cu_->callsites[i] = callsite;
+          ++i;
+        }
+      }
+      cu_->num_callsites = callsites_.size();
     }
   public:
     Interpreter() {
@@ -258,6 +257,12 @@ namespace saru {
     }
     void pop_frame() {
       frames_.pop_back();
+    }
+
+    size_t push_callsite(MVMCallsite *callsite) {
+      // TODO: Make it unique?
+      callsites_.push_back(callsite);
+      return callsites_.size() - 1;
     }
 
     void run() {
@@ -471,9 +476,20 @@ namespace saru {
         auto str = interp_.push_string(node.children()[1].pv());
         auto meth = interp_.push_local_type(MVM_reg_obj);
         auto ret = interp_.push_local_type(MVM_reg_obj);
+
         // TODO process args
         assembler().findmeth(meth, obj, str);
-        assembler().prepargs(0);
+
+        MVMCallsite* callsite = new MVMCallsite;
+        memset(callsite, 0, sizeof(MVMCallsite));
+        callsite->arg_count = 1;
+        callsite->num_pos = 1;
+        callsite->arg_flags = new MVMCallsiteEntry[1];
+        callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;;
+
+        auto callsite_no = interp_.push_callsite(callsite);
+        assembler().prepargs(callsite_no);
+
         assembler().arg_o(0, obj);
         assembler().invoke_o(ret, meth);
         return ret;
@@ -530,7 +546,20 @@ namespace saru {
             lex_no,
             outer // outer frame
           );
-          assembler().prepargs(1); // TODO
+
+          {
+            MVMCallsite* callsite = new MVMCallsite;
+            memset(callsite, 0, sizeof(MVMCallsite));
+            callsite->arg_count = 0;
+            callsite->num_pos = 0;
+            // callsite->arg_flags = new MVMCallsiteEntry[1];
+            // callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;;
+
+            // TODO
+
+            auto callsite_no = interp_.push_callsite(callsite);
+            assembler().prepargs(callsite_no);
+          }
           auto dest_reg = interp_.push_local_type(MVM_reg_obj);
           assembler().invoke_o(
               dest_reg,
