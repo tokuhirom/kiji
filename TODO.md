@@ -99,9 +99,13 @@ TODO
 
  * `sub foo() { say(55) } foo();`
 
-## Step 2.5
+## Step 2.2  Done at 2013-06-18
 
  * `sub foo() { return 55 } say(foo());`
+
+## Step 2.5
+
+ * `sub foo($n) { return $n*2 } say(foo(4));`
  * `sub foo() { 55 } say(foo());`
  * str comparation operators
  * eq, ne, gt,ge,lt,le
