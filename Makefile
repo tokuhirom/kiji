@@ -2,7 +2,7 @@
 EXE = 
 O   = .o
 
-CXXFLAGS=-g -Wno-unused-function
+CXXFLAGS=-g -D_GLIBCXX_DEBUG
 
 CXX=clang++
 CINCLUDE = -I3rd/MoarVM/3rdparty/apr/include -I3rd/MoarVM/3rdparty/libatomic_ops/src -I3rd/MoarVM/3rdparty/libtommath/ -I3rd/MoarVM/3rdparty/sha1/ -I3rd/MoarVM/src -I3rd/MoarVM/3rdparty

@@ -22,11 +22,15 @@ namespace saru {
         this->body_.pv = new std::string(*(node.body_.pv));
         break;
       case NODE_INT:
+        this->body_.pv = NULL;
         this->body_.iv = node.body_.iv;
         break;
       case NODE_NUMBER:
+        this->body_.pv = NULL;
         this->body_.nv = node.body_.nv;
         break;
+      case NODE_FUNC:
+      case NODE_PARAMS:
       case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:
@@ -48,6 +52,7 @@ namespace saru {
       case NODE_ADD:
       case NODE_SUB:
       case NODE_MOD:
+        this->body_.pv = NULL;
         this->body_.children = new std::vector<saru::Node>();
         *(this->body_.children) = *(node.body_.children);
         break;
@@ -67,6 +72,8 @@ namespace saru {
         break;
       case NODE_NUMBER:
         break;
+      case NODE_FUNC:
+      case NODE_PARAMS:
       case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:
@@ -169,6 +176,7 @@ namespace saru {
     }
     NODE_TYPE type() const { return type_; }
     const std::string pv() const {
+      assert(this->type_ == NODE_IDENT || this->type_ == NODE_VARIABLE || this->type_ == NODE_STRING);
       return *(this->body_.pv);
     }
     const char* type_name() const {
@@ -196,6 +204,8 @@ namespace saru {
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case NODE_FUNC:
+      case NODE_PARAMS:
       case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:

@@ -209,3 +209,9 @@ X Japan!
 --- expected
 4
 
+===
+--- code
+sub foo() { say(55) }
+foo();
+--- expected
+55

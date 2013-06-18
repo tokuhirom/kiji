@@ -231,3 +231,13 @@ __END__
 (statements
     (array (int 1) (int 2) (int 3)))
 
+===
+--- code
+sub foo() { 4 }
+--- expected
+(statements
+    (func
+        (ident "foo")
+        (params)
+        (statements (int 4))))
+

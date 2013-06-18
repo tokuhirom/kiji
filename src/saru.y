@@ -35,6 +35,7 @@ statementlist = s1:statement {
 # TODO
 statement = b:bind_stmt eat_terminator { $$ = b; }
           | if_stmt
+          | funcdef -
 
 if_stmt = 'if' - cond:expr - '{' - sl:statementlist - '}' {
             $$.set(saru::NODE_IF, cond, sl);
@@ -138,7 +139,26 @@ value =
     | string
     | '(' e:expr ')' { $$ = e; }
     | variable
-    | '[' e:expr { $$.set(saru::NODE_ARRAY, e); e=$$; } ( ',' e2:expr { e.push_child(e2); $$=e; } )* ']' { $$=e; }
+    | array
+
+funcdef =
+    'sub' - i:ident - '(' - p:params - ')' - b:block {
+        $$.set(saru::NODE_FUNC, i, p, b);
+    }
+
+params =
+    (
+        v:value { $$.set(saru::NODE_PARAMS, v); }
+        ( - ',' - v1:value { v.push_child(v1); $$=v; } )*
+        { $$=v; }
+    )
+    | '' { $$.set_children(saru::NODE_PARAMS); }
+
+block = 
+    '{' - statementlist - '}'
+
+array =
+    '[' e:expr { $$.set(saru::NODE_ARRAY, e); e=$$; } ( ',' e2:expr { e.push_child(e2); $$=e; } )* ']' { $$=e; }
     | '[' - ']' { $$.set_children(saru::NODE_ARRAY); }
 
 my = 'my' ws v:variable { $$.set(saru::NODE_MY, v); }
