@@ -135,6 +135,9 @@ TODO
 
  * basic i/o
  * multi assign like `my ($x, $y) = (1,2)`
+ * require
+ * use
+ * `my @ary := 1,2,3; say($ary[0])`
 
 ## Step 20
 

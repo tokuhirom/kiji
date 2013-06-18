@@ -11,6 +11,7 @@ extern "C" {
 int main(int argc, char** argv) {
   GREG g;
   line_number=0;
+  global_input_stream = &std::cin;
   yyinit(&g);
   if (!yyparse(&g)) {
     fprintf(stderr, "** Syntax error at line %d\n", line_number);
