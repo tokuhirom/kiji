@@ -221,3 +221,9 @@ foo();
 sub foo() { return 5963 } say(foo());
 --- expected
 5963
+
+===
+--- code
+sub foo() { 5963 } say(foo());
+--- expected
+5963

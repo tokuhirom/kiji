@@ -367,13 +367,25 @@ namespace saru {
         // Compile function body
         auto frame = interp_.push_frame(name);
         assembler().checkarity(0,0);
-        do_compile(node.children()[2]);
+        bool returned = false;
         {
+          const Node &stmts = node.children()[2];
+          assert(stmts.type() == NODE_STATEMENTS);
+          for (auto iter=stmts.children().begin()
+              ; iter!=stmts.children().end() ; ++iter) {
+            int reg = do_compile(*iter);
+            if (iter==stmts.children().end()-1 && reg >= 0) {
+              assembler().return_i(reg);
+              returned = true;
+            }
+          }
           // return null
           // TODO support return value
-          int reg = interp_.push_local_type(MVM_reg_obj);
-          assembler().null(reg);
-          assembler().return_o(reg);
+          if (!returned) {
+            int reg = interp_.push_local_type(MVM_reg_obj);
+            assembler().null(reg);
+            assembler().return_o(reg);
+          }
         }
         interp_.pop_frame();
 

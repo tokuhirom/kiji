@@ -103,10 +103,17 @@ TODO
 
  * `sub foo() { return 55 } say(foo());`
 
+## Step 2.3  Done at 2013-06-18
+
+ * Support -e option
+
+## Step 2.4  Done at 2013-06-18
+
+ * `sub foo() { 55 } say(foo());`
+
 ## Step 2.5
 
  * `sub foo($n) { return $n*2 } say(foo(4));`
- * `sub foo() { 55 } say(foo());`
  * str comparation operators
  * eq, ne, gt,ge,lt,le
 
@@ -142,7 +149,6 @@ TODO
 ## Step 20
 
  * Support most of features in Perl5 without regexp, grammar, OOP
- * Support -e option
 
 ## Step 30.
 

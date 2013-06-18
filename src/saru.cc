@@ -102,6 +102,7 @@ int main(int argc, char** argv) {
 
   if (dump_ast) {
     node_global.dump_json();
+    return 0;
   }
 
   saru::Compiler compiler(interp);
