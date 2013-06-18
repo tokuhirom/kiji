@@ -100,6 +100,18 @@ int main(int argc, char** argv) {
   }
   yydeinit(&g);
 
+  if (!global_input_stream->eof()) {
+    printf("Syntax error! Around:\n");
+    for (int i=0; !global_input_stream->eof() && i<24; i++) {
+      char ch = global_input_stream->get();
+      if (ch != EOF) {
+        printf("%c", ch);
+      }
+    }
+    printf("\n");
+    exit(1);
+  }
+
   if (dump_ast) {
     node_global.dump_json();
     return 0;
