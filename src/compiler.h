@@ -304,6 +304,27 @@ namespace saru {
     int do_compile(const saru::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
+      case NODE_RETURN: {
+        assert(node.children().size() ==1);
+        auto reg = do_compile(node.children()[0]);
+        if (reg < 0) {
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
+        }
+        switch (interp_.get_local_type(reg)) {
+        case MVM_reg_int64:
+          assembler().return_i(reg);
+          break;
+        case MVM_reg_str:
+          assembler().return_s(reg);
+          break;
+        case MVM_reg_obj:
+          assembler().return_o(reg);
+          break;
+        default:
+          abort();
+        }
+        return -1;
+      }
       case NODE_STRING: {
         int str_num = interp_.push_string(node.pv());
         int reg_num = interp_.push_local_type(MVM_reg_str);

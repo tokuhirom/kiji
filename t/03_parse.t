@@ -7,6 +7,7 @@ use Test::Base::Less;
 use Data::Dumper;
 use File::Temp;
 use JSON::PP;
+# use Test::Difflet qw(is_deeply);
 
 for my $block (blocks) {
     subtest 'T: ' . $block->code => sub {
@@ -14,6 +15,8 @@ for my $block (blocks) {
         my $expected = convert_expected($block->expected);
         is_deeply($got, $expected, 'Test: ' . $block->code) or do {
             $Data::Dumper::Sortkeys=1;
+            $Data::Dumper::Indent=1;
+            $Data::Dumper::Terse=1;
             diag "GOT:";
             diag Dumper($got);
             diag "EXPECTED:";
@@ -241,3 +244,30 @@ sub foo() { 4 }
         (params)
         (statements (int 4))))
 
+===
+--- code
+sub foo() { return 5963 } say(foo());
+--- expected
+(statements
+    (func
+        (ident "foo")
+        (params)
+        (statements (return (int 5963))))
+    (funcall
+        (ident "say")
+        (args (funcall (ident "foo") (args))))
+)
+
+===
+--- code
+sub foo() { return 5963 }; say(foo());
+--- expected
+(statements
+    (func
+        (ident "foo")
+        (params)
+        (statements (return (int 5963))))
+    (funcall
+        (ident "say")
+        (args (funcall (ident "foo") (args))))
+)

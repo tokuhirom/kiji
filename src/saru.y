@@ -34,8 +34,11 @@ statementlist = s1:statement {
 
 # TODO
 statement = b:bind_stmt eat_terminator { $$ = b; }
+          | b:return_stmt eat_terminator { $$ = b; }
           | if_stmt
-          | funcdef -
+          | funcdef - ';'*
+
+return_stmt = 'return' ws v:value { $$.set(saru::NODE_RETURN, v); }
 
 if_stmt = 'if' - cond:expr - '{' - sl:statementlist - '}' {
             $$.set(saru::NODE_IF, cond, sl);

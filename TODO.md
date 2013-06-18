@@ -101,6 +101,7 @@ TODO
 
 ## Step 2.5
 
+ * `sub foo() { return 55 } say(foo());`
  * `sub foo() { 55 } say(foo());`
  * str comparation operators
  * eq, ne, gt,ge,lt,le

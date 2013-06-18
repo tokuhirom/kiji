@@ -34,6 +34,7 @@ my @types = qw(
     NODE_METHODCALL
     NODE_FUNC
     NODE_PARAMS
+    NODE_RETURN
 );
 
 say qq!/* This file is generated from $0 */!;
