@@ -161,14 +161,15 @@ funcdef =
 
 params =
     (
-        v:value { $$.set(saru::NODE_PARAMS, v); }
+        v:value { $$.set(saru::NODE_PARAMS, v); v=$$; }
         ( - ',' - v1:value { v.push_child(v1); $$=v; } )*
         { $$=v; }
     )
     | '' { $$.set_children(saru::NODE_PARAMS); }
 
 block = 
-    '{' - statementlist - '}'
+    ('{' - s:statementlist - '}') { $$=s; }
+    | ('{' - '}' ) { $$.set_children(saru::NODE_STATEMENTS); }
 
 array =
     '[' e:expr { $$.set(saru::NODE_ARRAY, e); e=$$; } ( ',' e2:expr { e.push_child(e2); $$=e; } )* ']' { $$=e; }
@@ -221,7 +222,7 @@ string = '"' { $$.init_string(); } (
 # white space
 ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
     | '#' [^\n]*
-- = ws?
+- = ws*
 end-of-line = ( '\r\n' | '\n' | '\r' ) {
     line_number++;
 }

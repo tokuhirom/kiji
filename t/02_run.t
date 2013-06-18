@@ -227,3 +227,9 @@ sub foo() { return 5963 } say(foo());
 sub foo() { 5963 } say(foo());
 --- expected
 5963
+
+===
+--- code
+sub foo($n) { $n*2 } say(foo(5963));
+--- expected
+11926

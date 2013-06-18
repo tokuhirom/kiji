@@ -271,3 +271,14 @@ sub foo() { return 5963 }; say(foo());
         (ident "say")
         (args (funcall (ident "foo") (args))))
 )
+
+===
+--- code
+sub foo ($n) {  }
+--- expected
+(statements
+    (func
+        (ident "foo")
+        (params (variable "$n"))
+        (statements))
+)

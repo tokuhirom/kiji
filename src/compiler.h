@@ -362,11 +362,28 @@ namespace saru {
       case NODE_FUNC: {
         const std::string& name = node.children()[0].pv();
 
-        // TODO process params
 
         // Compile function body
         auto frame = interp_.push_frame(name);
-        assembler().checkarity(0,0);
+
+        // TODO process named params
+        // TODO process types
+        {
+          assembler().checkarity(
+              node.children()[1].children().size(),
+              node.children()[1].children().size()
+          );
+
+          int i=0;
+          for (auto n: node.children()[1].children()) {
+            int reg = interp_.push_local_type(MVM_reg_obj);
+            int lex = interp_.push_lexical(n.pv(), MVM_reg_obj);
+            assembler().param_rp_o(reg, i);
+            assembler().bindlex(lex, 0, reg);
+            ++i;
+          }
+        }
+
         bool returned = false;
         {
           const Node &stmts = node.children()[2];
@@ -375,12 +392,26 @@ namespace saru {
               ; iter!=stmts.children().end() ; ++iter) {
             int reg = do_compile(*iter);
             if (iter==stmts.children().end()-1 && reg >= 0) {
-              assembler().return_i(reg);
+              switch (interp_.get_local_type(reg)) {
+              case MVM_reg_int64:
+                assembler().return_i(reg);
+                break;
+              case MVM_reg_str:
+                assembler().return_s(reg);
+                break;
+              case MVM_reg_obj:
+                assembler().return_o(reg);
+                break;
+              case MVM_reg_num64:
+                assembler().return_n(reg);
+                break;
+              default: abort();
+              }
               returned = true;
             }
           }
+
           // return null
-          // TODO support return value
           if (!returned) {
             int reg = interp_.push_local_type(MVM_reg_obj);
             assembler().null(reg);
@@ -584,15 +615,44 @@ namespace saru {
           {
             MVMCallsite* callsite = new MVMCallsite;
             memset(callsite, 0, sizeof(MVMCallsite));
-            callsite->arg_count = 0;
-            callsite->num_pos = 0;
-            // callsite->arg_flags = new MVMCallsiteEntry[1];
-            // callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;;
-
-            // TODO
+            // TODO support named params
+            callsite->arg_count = args.children().size();
+            callsite->num_pos   = args.children().size();
 
             auto callsite_no = interp_.push_callsite(callsite);
             assembler().prepargs(callsite_no);
+
+            callsite->arg_flags = new MVMCallsiteEntry[args.children().size()];
+
+            int i=0;
+            for (auto a:args.children()) {
+              auto reg = do_compile(a);
+              if (reg<0) {
+                MVM_panic(MVM_exitcode_compunit, "Compilation error. You should not pass void function as an argument: %s", a.type_name());
+              }
+
+              switch (interp_.get_local_type(reg)) {
+              case MVM_reg_int64:
+                callsite->arg_flags[i] = MVM_CALLSITE_ARG_INT;
+                assembler().arg_i(i, reg);
+                break;
+              case MVM_reg_num64:
+                callsite->arg_flags[i] = MVM_CALLSITE_ARG_NUM;
+                assembler().arg_n(i, reg);
+                break;
+              case MVM_reg_str:
+                callsite->arg_flags[i] = MVM_CALLSITE_ARG_STR;
+                assembler().arg_s(i, reg);
+                break;
+              case MVM_reg_obj:
+                callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
+                assembler().arg_o(i, reg);
+                break;
+              default:
+                abort();
+              }
+              ++i;
+            }
           }
           auto dest_reg = interp_.push_local_type(MVM_reg_obj);
           assembler().invoke_o(

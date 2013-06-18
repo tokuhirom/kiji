@@ -160,6 +160,10 @@ namespace saru {
       return this->body_.nv;
     } 
     const std::vector<saru::Node> & children() const {
+      assert(this->type_ != NODE_INT);
+      assert(this->type_ != NODE_NUMBER);
+      assert(this->type_ != NODE_IDENT);
+      assert(this->type_ != NODE_VARIABLE);
       return *(this->body_.children);
     }
     void push_child(saru::Node &child) {

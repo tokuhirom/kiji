@@ -106,6 +106,7 @@ TODO
 ## Step 2.3  Done at 2013-06-18
 
  * Support -e option
+ * apr command parsing
 
 ## Step 2.4  Done at 2013-06-18
 
@@ -121,12 +122,12 @@ TODO
 
  * for loop
  * `loop { }`
- * apr command parsing
  * abs(-3), abs(3)
  * Array operations
  * Hash operations
  * die
  * catch
+ * `<< >>` = qw()
 
 ## Step 3.10
 
@@ -141,10 +142,12 @@ TODO
 ## Step 10.
 
  * basic i/o
+ * `open('hoge.pl').slurp`
  * multi assign like `my ($x, $y) = (1,2)`
  * require
  * use
  * `my @ary := 1,2,3; say($ary[0])`
+ * @ARGS
 
 ## Step 20
 
@@ -155,6 +158,7 @@ TODO
  * Support OOP
  * read code from file
  * ? :
+ * Support XSUB?
 
 ## Step 40.
 
