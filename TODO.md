@@ -114,6 +114,8 @@ TODO
 
 ## Step 2.5
 
+ * if-else
+ * if-elsif-else
  * `sub foo($n) { return $n*2 } say(foo(4));`
  * str comparation operators
  * eq, ne, gt,ge,lt,le
@@ -159,6 +161,7 @@ TODO
  * read code from file
  * ? :
  * Support XSUB?
+ * if statement should return value.
 
 ## Step 40.
 

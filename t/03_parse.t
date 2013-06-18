@@ -282,3 +282,15 @@ sub foo ($n) {  }
         (params (variable "$n"))
         (statements))
 )
+
+===
+--- code: if 1 {4} else {5}
+--- expected
+(statements
+    (if
+        (int 1)
+        (statements
+            (int 4))
+        (else
+            (int 5)))
+)

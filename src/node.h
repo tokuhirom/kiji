@@ -29,6 +29,7 @@ namespace saru {
         this->body_.pv = NULL;
         this->body_.nv = node.body_.nv;
         break;
+      case NODE_ELSE:
       case NODE_RETURN:
       case NODE_FUNC:
       case NODE_PARAMS:
@@ -73,6 +74,7 @@ namespace saru {
         break;
       case NODE_NUMBER:
         break;
+      case NODE_ELSE:
       case NODE_RETURN:
       case NODE_FUNC:
       case NODE_PARAMS:
@@ -102,6 +104,10 @@ namespace saru {
       case NODE_UNDEF:
         break;
       }
+    }
+
+    void change_type(NODE_TYPE type) {
+      this->type_ = type;
     }
 
     void set(NODE_TYPE type, const saru::Node &child) {
@@ -210,6 +216,7 @@ namespace saru {
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case NODE_ELSE:
       case NODE_RETURN:
       case NODE_FUNC:
       case NODE_PARAMS:

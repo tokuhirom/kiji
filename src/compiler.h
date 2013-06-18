@@ -457,41 +457,54 @@ namespace saru {
         return idx;
       }
       case NODE_IF: {
-        auto cond  = node.children()[0];
-        auto stmts = node.children()[1];
-        auto cond_reg = do_compile(cond);
-        switch (interp_.get_local_type(cond_reg)) {
-        case MVM_reg_int64: {
-          uint16_t pos = assembler().bytecode_size() + 2 + 2;
-          assembler().unless_i(cond_reg, 0);
-          (void)do_compile(stmts);
-          assembler().write_uint32_t(assembler().bytecode_size(), pos);
-          return -1;
+        auto if_body = node.children()[1];
+        auto if_cond_reg = do_compile(node.children()[0]);
+        //   if_cond
+        //   if_o if_cond, label_if
+        //   elsif1_cond
+        //   if_o elsif1_cond, label_elsif1
+        //   elsif2_cond
+        //   if_o elsif2_cond, label_elsif2
+        // label_else:
+        //   else_body
+        //   goto label_end
+        // label_if:
+        //   if_body
+        //   goto lable_end
+        // label_elsif1:
+        //   elsif2_body
+        //   goto lable_end
+        // label_elsif2:
+        //   elsif1_body
+        //   goto lable_end
+        // label_end:
+        uint16_t if_pos = assembler().bytecode_size() + 2 + 2;
+        assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(if_cond_reg), if_cond_reg, 0);
+
+        if (node.children().size() > 2 && node.children()[2].type() == NODE_ELSE) {
+          for (auto n: node.children()[2].children()) {
+            do_compile(n);
+          }
         }
-        case MVM_reg_num64: {
-          uint16_t pos = assembler().bytecode_size() + 2 + 2;
-          assembler().unless_n(cond_reg, 0);
-          (void)do_compile(stmts);
-          assembler().write_uint32_t(assembler().bytecode_size(), pos);
-          return -1;
-        }
-        case MVM_reg_str: {
-          uint16_t pos = assembler().bytecode_size() + 2 + 2;
-          assembler().unless_s(cond_reg, 0);
-          (void)do_compile(stmts);
-          assembler().write_uint32_t(assembler().bytecode_size(), pos);
-          return -1;
-        }
-        case MVM_reg_obj: {
-          uint16_t pos = assembler().bytecode_size() + 2 + 2;
-          assembler().unless_o(cond_reg, 0);
-          (void)do_compile(stmts);
-          assembler().write_uint32_t(assembler().bytecode_size(), pos);
-          return -1;
-        }
-        default:
-          abort(); // should not reach here?
-        }
+
+        uint16_t end_pos = assembler().bytecode_size() + 2;
+        assembler().goto_(0);
+
+        // update if_label
+        assembler().write_uint32_t(assembler().bytecode_size(), if_pos); // label_if:
+        (void)do_compile(if_body);
+
+        uint16_t end_pos2 = assembler().bytecode_size() + 2;
+        assembler().goto_(0);
+
+        // update end label
+        assembler().write_uint32_t(assembler().bytecode_size(), end_pos); // label_end:
+        assembler().write_uint32_t(assembler().bytecode_size(), end_pos2); // label_end:
+
+        return -1;
+      }
+      case NODE_ELSE: {
+        abort();
       }
       case NODE_IDENT:
         break;
@@ -812,6 +825,20 @@ namespace saru {
           // NOT IMPLEMENTED
           abort();
         }
+    }
+    uint16_t if_op(uint16_t cond_reg) {
+      switch (interp_.get_local_type(cond_reg)) {
+      case MVM_reg_int64:
+        return MVM_OP_if_i;
+      case MVM_reg_num64:
+        return MVM_OP_if_n;
+      case MVM_reg_str:
+        return MVM_OP_if_s;
+      case MVM_reg_obj:
+        return MVM_OP_if_o;
+      default:
+        abort();
+      }
     }
   public:
     Compiler(Interpreter &interp): interp_(interp) { }

@@ -233,3 +233,13 @@ sub foo() { 5963 } say(foo());
 sub foo($n) { $n*2 } say(foo(5963));
 --- expected
 11926
+
+===
+--- code: if 1 { say(4) } else { say(5) }
+--- expected
+4
+
+===
+--- code: if 0 { say(4) } else { say(5) }
+--- expected
+5

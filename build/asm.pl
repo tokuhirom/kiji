@@ -150,6 +150,11 @@ namespace saru {
       write_u16(op1);
       write_u16(op2);
     }
+    void op_u16_u32(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, uint16_t op2) {
+      op(bank_num, op_num);
+      write_u16(op1);
+      write_uint32_t(op2);
+    }
     void op_u16_u16_u16(MVMuint8 bank_num, MVMuint8 op_num, uint16_t op1, uint16_t op2, uint16_t op3) {
       op(bank_num, op_num);
       write_u16(op1);

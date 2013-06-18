@@ -50,9 +50,15 @@ statement = b:bind_stmt eat_terminator { $$ = b; }
 
 return_stmt = 'return' ws v:value { $$.set(saru::NODE_RETURN, v); }
 
-if_stmt = 'if' - cond:expr - '{' - sl:statementlist - '}' {
-            $$.set(saru::NODE_IF, cond, sl);
-        }
+if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
+            $$.set(saru::NODE_IF, if_cond, if_body);
+            if_cond=$$;
+        } (
+            - 'else' ws+ - '{' - else_body:statementlist - '}' {
+                else_body.change_type(saru::NODE_ELSE);
+                if_cond.push_child(else_body);
+            }
+        )? { $$=if_cond; }
 
 bind_stmt = e1:my - ':=' - e2:expr { $$.set(saru::NODE_BIND, e1, e2); }
         | e3:expr { $$ = e3; }
