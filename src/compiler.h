@@ -340,6 +340,7 @@ namespace saru {
 
         // Compile function body
         auto frame = interp_.push_frame(name);
+        assembler().checkarity(0,0);
         do_compile(node.children()[2]);
         {
           // return null

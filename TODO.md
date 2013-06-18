@@ -95,9 +95,9 @@ TODO
 
  * `say([1,2,3][1]);`
 
-## Step 2.10
+## Step 2.02 Done at 2013-06-18
 
- * `say([4,5,6].shift())`
+ * `sub foo() { say(55) } foo();`
 
 ## Step 2.5
 
@@ -112,6 +112,10 @@ TODO
  * Hash operations
  * die
  * catch
+
+## Step 3.10
+
+ * `say([4,5,6].shift())`
 
 ## Step 4.
 
