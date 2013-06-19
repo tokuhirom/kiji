@@ -146,6 +146,8 @@ TODO
  * `<< >>` = qw()
  * bit or, bit and, bit xor
  * logical xor, logical and, logical or
+ * sprintf
+ * printf
 
 ## Step 4.9
 

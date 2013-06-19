@@ -708,10 +708,15 @@ namespace saru {
         const saru::Node &args  = node.children()[1];
         assert(args.type() == NODE_ARGS);
         if (ident.pv() == "say") {
+          int i=0;
           for (auto a:args.children()) {
             uint16_t reg_num = stringify(do_compile(a));
-            assembler().say(reg_num);
-            return UNKNOWN_REG; // TODO: Is there a result?
+            if (i==args.children().size()-1) {
+              assembler().say(reg_num);
+            } else {
+              assembler().print(reg_num);
+            }
+            ++i;
           }
           return UNKNOWN_REG; // TODO: Is there a result?
         } else {
