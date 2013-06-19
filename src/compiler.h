@@ -576,22 +576,22 @@ namespace saru {
         return ret;
       }
       case NODE_EQ: {
-        return this->numeric_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
+        return this->numeric_cmp_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
       }
       case NODE_NE: {
-        return this->numeric_binop(node, MVM_OP_ne_i, MVM_OP_ne_n);
+        return this->numeric_cmp_binop(node, MVM_OP_ne_i, MVM_OP_ne_n);
       }
       case NODE_LT: {
-        return this->numeric_binop(node, MVM_OP_lt_i, MVM_OP_lt_n);
+        return this->numeric_cmp_binop(node, MVM_OP_lt_i, MVM_OP_lt_n);
       }
       case NODE_LE: {
-        return this->numeric_binop(node, MVM_OP_le_i, MVM_OP_le_n);
+        return this->numeric_cmp_binop(node, MVM_OP_le_i, MVM_OP_le_n);
       }
       case NODE_GT: {
-        return this->numeric_binop(node, MVM_OP_gt_i, MVM_OP_gt_n);
+        return this->numeric_cmp_binop(node, MVM_OP_gt_i, MVM_OP_gt_n);
       }
       case NODE_GE: {
-        return this->numeric_binop(node, MVM_OP_ge_i, MVM_OP_ge_n);
+        return this->numeric_cmp_binop(node, MVM_OP_ge_i, MVM_OP_ge_n);
       }
       case NODE_MUL: {
         return this->numeric_binop(node, MVM_OP_mul_i, MVM_OP_mul_n);
@@ -820,6 +820,36 @@ namespace saru {
         MVM_panic(MVM_exitcode_compunit, "Not implemented, stringify %d", interp_.get_local_type(reg_num));
         break;
       }
+    }
+    int numeric_cmp_binop(const saru::Node& node, uint16_t op_i, uint16_t op_n) {
+        assert(node.children().size() == 2);
+
+        int reg_num1 = do_compile(node.children()[0]);
+        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
+        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
+          int reg_num2 = this->to_i(do_compile(node.children()[1]));
+          assert(interp_.get_local_type(reg_num1) == MVM_reg_int64);
+          assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
+          return reg_num_dst;
+        } else if (interp_.get_local_type(reg_num1) == MVM_reg_num64) {
+          int reg_num2 = this->to_n(do_compile(node.children()[1]));
+          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
+          return reg_num_dst;
+        } else if (interp_.get_local_type(reg_num1) == MVM_reg_obj) {
+          // TODO should I use intify instead if the object is int?
+          int dst_num = interp_.push_local_type(MVM_reg_num64);
+          assembler().op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
+
+          int reg_num2 = this->to_n(do_compile(node.children()[1]));
+          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
+          return reg_num_dst;
+        } else {
+          // NOT IMPLEMENTED
+          abort();
+        }
     }
     int numeric_binop(const saru::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);

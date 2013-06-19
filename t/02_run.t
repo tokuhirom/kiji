@@ -264,3 +264,7 @@ sub foo($n) { $n*2 } say(foo(5963));
 --- expected
 4
 
+===
+--- code: sub foo($n) { if $n==4 { say(5) } }; foo(4)
+--- expected
+5
