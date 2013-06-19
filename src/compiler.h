@@ -316,6 +316,54 @@ namespace saru {
   private:
     Interpreter &interp_;
 
+    class Label {
+    private:
+      Compiler *compiler_;
+      ssize_t address_;
+      std::vector<ssize_t> reserved_addresses_;
+    public:
+      Label(Compiler *compiler) :compiler_(compiler), address_(-1) { }
+      Label(Compiler *compiler, ssize_t address) :compiler_(compiler), address_(address) { }
+      ~Label() {
+        assert(address_ != -1 && "Unsolved label");
+      }
+      ssize_t address() const {
+        return address_;
+      }
+      void put() {
+        assert(address_ == -1);
+        address_ = compiler_->assembler().bytecode_size();
+
+        // rewrite reserved addresses
+        for (auto r: reserved_addresses_) {
+          compiler_->assembler().write_uint32_t(address_, r);
+        }
+        reserved_addresses_.empty();
+      }
+      void reserve(ssize_t address) {
+        reserved_addresses_.push_back(address);
+      }
+      bool is_solved() const { return address_!=-1; }
+    };
+
+    Label label() { return Label(this, assembler().bytecode_size()); }
+    Label label_unsolved() {
+      return Label(this);
+    }
+
+    void goto_(Label &label) {
+      if (!label.is_solved()) {
+        label.reserve(assembler().bytecode_size() + 2);
+      }
+      assembler().goto_(label.address());
+    }
+    void unless_any(uint16_t reg, Label &label) {
+      if (!label.is_solved()) {
+        label.reserve(assembler().bytecode_size() + 2 + 2);
+      }
+      assembler().op_u16_u32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
+    }
+
     Assembler& assembler() {
       return interp_.assembler(); // FIXME ugly
     }
@@ -363,14 +411,14 @@ namespace saru {
          *    body
          *  label_end:
          */
-        auto label_while = assembler().bytecode_size();
-        int reg = do_compile(node.children()[0]);
-        assert(reg != UNKNOWN_REG);
-        auto end_pos = assembler().bytecode_size() + 2 + 2;
-        assembler().op_u16_u32(MVM_OP_BANK_primitives, unless_op(reg), reg, 0);
-        do_compile(node.children()[1]);
-        assembler().goto_(label_while);
-        assembler().write_uint32_t(assembler().bytecode_size(), end_pos); // label_end:
+        auto label_while = label();
+          int reg = do_compile(node.children()[0]);
+          assert(reg != UNKNOWN_REG);
+          auto label_end = label_unsolved();
+          unless_any(reg, label_end);
+          do_compile(node.children()[1]);
+          goto_(label_while);
+        label_end.put();
         return UNKNOWN_REG;
       }
       case NODE_STRING: {
