@@ -125,6 +125,7 @@ TODO
 ## Step 3.1 Done at 2013-06-19
 
  * `my $i:=0; while $i < 3 { say($i:=$i+1) }`
+ * die
 
 ## Step 3.2 Done at 2013-06-19
 
@@ -132,6 +133,7 @@ TODO
 
 ## Step 4.
 
+ * next, last
  * `q<ok 7>`
  * "\x6f\x6b 8"
  * postfix if
@@ -140,7 +142,6 @@ TODO
  * abs(-3), abs(3)
  * Array operations
  * Hash operations
- * die
  * catch
  * `<< >>` = qw()
  * bit or, bit and, bit xor

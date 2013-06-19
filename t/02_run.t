@@ -353,3 +353,10 @@ OK
 if 0 { say("FAIL") } elsif (0) { say("FAIL") } else { say("OK") }
 --- expected
 OK
+
+====
+--- code
+my @a := 1,5,3;
+say(@a[1]);
+--- expected
+5

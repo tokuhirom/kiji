@@ -36,6 +36,7 @@ namespace saru {
       case NODE_RETURN:
       case NODE_FUNC:
       case NODE_PARAMS:
+      case NODE_LIST:
       case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:
@@ -84,6 +85,7 @@ namespace saru {
       case NODE_RETURN:
       case NODE_FUNC:
       case NODE_PARAMS:
+      case NODE_LIST:
       case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:
@@ -229,6 +231,7 @@ namespace saru {
       case NODE_RETURN:
       case NODE_FUNC:
       case NODE_PARAMS:
+      case NODE_LIST:
       case NODE_METHODCALL:
       case NODE_ATPOS:
       case NODE_ARRAY:

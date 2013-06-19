@@ -76,8 +76,16 @@ if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             }
         )? { $$=if_cond; }
 
-bind_stmt = e1:my - ':=' - e2:expr { $$.set(saru::NODE_BIND, e1, e2); }
-        | e3:expr { $$ = e3; }
+# FIXME: simplify the code
+bind_stmt =
+          e1:my - ':=' - e2:list_expr { $$.set(saru::NODE_BIND, e1, e2); }
+        | e3:my - ':=' - e4:expr { $$.set(saru::NODE_BIND, e3, e4); }
+        | e5:expr { $$ = e5; }
+
+list_expr =
+    (a:methodcall_expr { $$.set(saru::NODE_LIST, a); a = $$; }
+        (- ','  - b:methodcall_expr { a.push_child(b); $$ = a; } )+
+    ) { $$=a }
 
 args =
     (
@@ -203,7 +211,11 @@ array =
 
 my = 'my' ws v:variable { $$.set(saru::NODE_MY, v); }
 
-variable = < '$' [a-zA-Z] [a-zA-Z0-9]* > { assert(yyleng > 0); $$.set_variable(yytext, yyleng); }
+variable = scalar | array_var
+
+array_var = < '@' [a-zA-Z] [a-zA-Z0-9]* > { $$.set_variable(yytext, yyleng); }
+
+scalar = < '$' [a-zA-Z] [a-zA-Z0-9]* > { assert(yyleng > 0); $$.set_variable(yytext, yyleng); }
 
 #  <?MARKED('endstmt')>
 #  <?terminator>

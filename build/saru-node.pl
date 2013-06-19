@@ -39,6 +39,7 @@ my @types = qw(
     NODE_WHILE
     NODE_DIE
     NODE_ELSIF
+    NODE_LIST
 );
 
 say qq!/* This file is generated from $0 */!;

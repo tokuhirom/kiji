@@ -623,6 +623,7 @@ namespace saru {
         );
         return dst_reg;
       }
+      case NODE_LIST:
       case NODE_ARRAY: {
         // create array
         auto array_reg = interp_.push_local_type(MVM_reg_obj);
