@@ -45,6 +45,7 @@ statementlist = s1:statement {
 statement = b:bind_stmt eat_terminator { $$ = b; }
           | b:return_stmt eat_terminator { $$ = b; }
           | if_stmt
+          | for_stmt
           | while_stmt
           | die_stmt
           | funcdef - ';'*
@@ -56,6 +57,8 @@ die_stmt = 'die' ws e:expr eat_terminator { $$.set(saru::NODE_DIE, e); }
 while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_WHILE, cond, body);
         }
+
+for_stmt = 'for' - src:array_var - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
 
 if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             $$.set(saru::NODE_IF, if_cond, if_body);
@@ -213,9 +216,9 @@ my = 'my' ws v:variable { $$.set(saru::NODE_MY, v); }
 
 variable = scalar | array_var
 
-array_var = < '@' [a-zA-Z] [a-zA-Z0-9]* > { $$.set_variable(yytext, yyleng); }
+array_var = < '@' [a-zA-Z_] [a-zA-Z0-9]* > { $$.set_variable(yytext, yyleng); }
 
-scalar = < '$' [a-zA-Z] [a-zA-Z0-9]* > { assert(yyleng > 0); $$.set_variable(yytext, yyleng); }
+scalar = < '$' [a-zA-Z_] [a-zA-Z0-9]* > { assert(yyleng > 0); $$.set_variable(yytext, yyleng); }
 
 #  <?MARKED('endstmt')>
 #  <?terminator>

@@ -319,3 +319,11 @@ sub foo ($n) {  }
 (statements
     (return (add (int 1) (int 2)))
 )
+
+====
+--- code
+for @a { 1; }
+--- expected
+(statements
+    (for (variable "@a") (statements (int 1)))
+)

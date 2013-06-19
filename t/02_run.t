@@ -367,3 +367,13 @@ say(1,2,3); say(1,2,3);
 --- expected
 123
 123
+
+====
+--- SKIP
+--- code
+my @a:=1,2,3;
+for @a { say($_); }
+--- expected
+1
+2
+3

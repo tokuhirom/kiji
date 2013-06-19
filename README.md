@@ -1,5 +1,5 @@
-saru - -Ofun interpreter on MoarVM
-==================================
+saru - -Ofun calcurator on MoarVM
+=================================
 
 This is a new great toy for Perl hackers.
 
@@ -20,7 +20,7 @@ It's running on MoarVM.
 Why?
 ----
 
-I need lightweight Perl6 sub set interpreter for daily hacking.
+I need lightweight Perl6 like interpreter for daily hacking.
 
 Build time dependencies
 -----------------------

@@ -506,6 +506,17 @@ namespace saru {
         );
         return reg_no;
       }
+      case NODE_FOR: {
+        //   init_iter
+        // label_for:
+        //   next_iter
+        //   unless_o label_end
+        //   body
+        //   goto label_for
+        // label_end:
+        abort(); // not implemented
+        return UNKNOWN_REG;
+      }
       case NODE_MY: {
         if (node.children().size() != 1) {
           printf("NOT IMPLEMENTED\n");

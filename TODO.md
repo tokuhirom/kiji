@@ -131,6 +131,10 @@ TODO
 
  * if-elsif-else
 
+## Step 3.3
+
+ * `my @a:=1,2,3; for @a { say($_) }`
+
 ## Step 4.
 
  * next, last
