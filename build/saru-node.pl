@@ -37,6 +37,7 @@ my @types = qw(
     NODE_RETURN
     NODE_ELSE
     NODE_WHILE
+    NODE_DIE
 );
 
 say qq!/* This file is generated from $0 */!;

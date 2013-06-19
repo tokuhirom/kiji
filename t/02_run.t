@@ -334,3 +334,10 @@ while $i < 3 { say($i:=$i+1) }
 1
 2
 3
+
+===
+--- code
+my $i := "25" + 10;
+say($i);
+--- expected
+35

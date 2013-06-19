@@ -42,14 +42,16 @@ statementlist = s1:statement {
 #       | if_stmt
 #   )* eat_terminator?
 
-# TODO
 statement = b:bind_stmt eat_terminator { $$ = b; }
           | b:return_stmt eat_terminator { $$ = b; }
           | if_stmt
           | while_stmt
+          | die_stmt
           | funcdef - ';'*
 
 return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
+
+die_stmt = 'die' ws e:expr eat_terminator { $$.set(saru::NODE_DIE, e); }
 
 while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_WHILE, cond, body);

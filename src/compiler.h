@@ -311,6 +311,7 @@ namespace saru {
    * OP map is 3rd/MoarVM/src/core/oplist
    * interp code is 3rd/MoarVM/src/core/interp.c
    */
+  enum { MVM_reg_void = 0 };
   class Compiler {
   private:
     Interpreter &interp_;
@@ -345,6 +346,13 @@ namespace saru {
         default:
           MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", interp_.get_local_type(reg));
         }
+        return -1;
+      }
+      case NODE_DIE: {
+        int msg_reg = stringify(do_compile(node.children()[0]));
+        int dst_reg = interp_.push_local_type(MVM_reg_obj);
+        assert(msg_reg >= 0);
+        assembler().die(dst_reg, msg_reg);
         return -1;
       }
       case NODE_WHILE: {
@@ -930,8 +938,16 @@ namespace saru {
           assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
           return reg_num_dst;
+        } else if (interp_.get_local_type(reg_num1) == MVM_reg_str) {
+          int dst_num = interp_.push_local_type(MVM_reg_num64);
+          assembler().coerce_sn(dst_num, reg_num1);
+
+          int reg_num_dst = interp_.push_local_type(MVM_reg_num64);
+          int reg_num2 = this->to_n(do_compile(node.children()[1]));
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
+
+          return reg_num_dst;
         } else {
-          // NOT IMPLEMENTED
           abort();
         }
     }

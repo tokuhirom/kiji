@@ -144,6 +144,7 @@ TODO
  * if-elsif-else
  * str comparation operators
  * eq, ne, gt,ge,lt,le
+ * MOP things
 
 ## Step 4.10
 
@@ -177,6 +178,7 @@ TODO
  * read code from file
  * ? :
  * Support XSUB?
+   * use MVMCFunction
  * if statement should return value.
 
 ## Step 40.
