@@ -96,16 +96,15 @@ methodcall_expr =
     | atpos_expr
 
 atpos_expr =
-    f1:funcall_expr - '[' - f2:funcall_expr - ']' {
+    f1:add_expr - '[' - f2:add_expr - ']' {
         $$.set(saru::NODE_ATPOS, f1, f2);
     }
-    | funcall_expr
+    | add_expr
 
-funcall_expr =
-    i:ident '(' - a:args - ')' - {
+funcall =
+    i:ident '(' - a:args - ')' {
         $$.set(saru::NODE_FUNCALL, i, a);
     }
-    | add_expr
 
 add_expr =
     l:mul_expr - (
@@ -159,6 +158,7 @@ value =
     | '(' e:expr ')' { $$ = e; }
     | variable
     | array
+    | funcall
 
 funcdef =
     'sub' - i:ident - '(' - p:params - ')' - b:block {

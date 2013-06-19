@@ -294,3 +294,12 @@ sub foo ($n) {  }
         (else
             (int 5)))
 )
+
+===
+--- code: fib()+fib()
+--- expected
+(statements
+    (add
+        (funcall (ident "fib") (args))
+        (funcall (ident "fib") (args)))
+)

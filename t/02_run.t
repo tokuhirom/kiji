@@ -268,3 +268,19 @@ sub foo($n) { $n*2 } say(foo(5963));
 --- code: sub foo($n) { if $n==4 { say(5) } }; foo(4)
 --- expected
 5
+
+===
+--- code
+sub foo($n) {
+    if $n <= 2 {
+        return 1;
+    } else {
+        return 8;
+    }
+}
+
+say(foo(1));
+say(foo(3));
+--- expected
+1
+8
