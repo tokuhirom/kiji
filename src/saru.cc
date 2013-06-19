@@ -68,6 +68,10 @@ int main(int argc, char** argv) {
     global_input_stream = &std::cin;
   } else {
     global_input_stream = new std::ifstream((char *)opt->argv[processed_args++]);
+    if (!*global_input_stream) {
+      std::cerr << "Cannot open file: " << opt->argv[processed_args-1] << std::endl;
+      exit(1);
+    }
   }
   // stash the rest of the raw command line args in the instance
   /*
