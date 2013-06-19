@@ -118,13 +118,11 @@ TODO
  * `sub foo($n) { return $n*2 } say(foo(4));`
  * funcall
 
-## Step 2.9
+## Step 3 Done at 2013-06-19
 
- * if-elsif-else
- * str comparation operators
- * eq, ne, gt,ge,lt,le
+ * Run fib(n)
 
-## Step 3.
+## Step 4.
 
  * for loop
  * `loop { }`
@@ -134,14 +132,22 @@ TODO
  * die
  * catch
  * `<< >>` = qw()
+ * bit or, bit and, bit xor
+ * logical xor, logical and, logical or
 
-## Step 3.10
+## Step 4.9
+
+ * if-elsif-else
+ * str comparation operators
+ * eq, ne, gt,ge,lt,le
+
+
+## Step 4.10
 
  * `say([4,5,6].shift())`
 
-## Step 4.
+## Step 5.
 
- * Run fib(n)
  * Range object
 
 ## Step 10.
@@ -154,6 +160,10 @@ TODO
  * `my @ary := 1,2,3; say($ary[0])`
  * @ARGS
  * `"foo { 3+2 }"`
+ * ++$i
+ * $i++
+ * --$i
+ * $i--
 
 ## Step 20
 
