@@ -346,14 +346,14 @@ namespace saru {
         default:
           MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", interp_.get_local_type(reg));
         }
-        return -1;
+        return MVM_reg_void;
       }
       case NODE_DIE: {
         int msg_reg = stringify(do_compile(node.children()[0]));
         int dst_reg = interp_.push_local_type(MVM_reg_obj);
-        assert(msg_reg >= 0);
+        assert(msg_reg != MVM_reg_void);
         assembler().die(dst_reg, msg_reg);
-        return -1;
+        return MVM_reg_void;
       }
       case NODE_WHILE: {
         /*
@@ -371,7 +371,7 @@ namespace saru {
         do_compile(node.children()[1]);
         assembler().goto_(label_while);
         assembler().write_uint32_t(assembler().bytecode_size(), end_pos); // label_end:
-        return -1;
+        return MVM_reg_void;
       }
       case NODE_STRING: {
         int str_num = interp_.push_string(node.pv());
@@ -564,7 +564,7 @@ namespace saru {
         assembler().write_uint32_t(assembler().bytecode_size(), end_pos); // label_end:
         assembler().write_uint32_t(assembler().bytecode_size(), end_pos2); // label_end:
 
-        return -1;
+        return MVM_reg_void;
       }
       case NODE_ELSE: {
         abort();
@@ -575,7 +575,7 @@ namespace saru {
         for (auto n: node.children()) {
           do_compile(n);
         }
-        return -1;
+        return MVM_reg_void;
       case NODE_STRING_CONCAT: {
         auto dst_reg = interp_.push_local_type(MVM_reg_str);
         auto lhs = node.children()[0];
@@ -676,9 +676,9 @@ namespace saru {
           for (auto a:args.children()) {
             uint16_t reg_num = stringify(do_compile(a));
             assembler().say(reg_num);
-            return -1; // TODO: Is there a result?
+            return MVM_reg_void; // TODO: Is there a result?
           }
-          return -1; // TODO: Is there a result?
+          return MVM_reg_void; // TODO: Is there a result?
         } else {
           auto reg_no = interp_.push_local_type(MVM_reg_obj);
           int outer = 0;
