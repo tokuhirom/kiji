@@ -126,8 +126,15 @@ TODO
 
  * `my $i:=0; while $i < 3 { say($i:=$i+1) }`
 
+## Step 3.2 Done at 2013-06-19
+
+ * if-elsif-else
+
 ## Step 4.
 
+ * `q<ok 7>`
+ * "\x6f\x6b 8"
+ * postfix if
  * for loop
  * `loop { }`
  * abs(-3), abs(3)
@@ -141,7 +148,6 @@ TODO
 
 ## Step 4.9
 
- * if-elsif-else
  * str comparation operators
  * eq, ne, gt,ge,lt,le
  * MOP things

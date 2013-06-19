@@ -341,3 +341,15 @@ my $i := "25" + 10;
 say($i);
 --- expected
 35
+
+===
+--- code
+if 0 { say("FAIL") } elsif (1) { say("OK") }
+--- expected
+OK
+
+===
+--- code
+if 0 { say("FAIL") } elsif (0) { say("FAIL") } else { say("OK") }
+--- expected
+OK

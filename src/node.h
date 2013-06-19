@@ -31,6 +31,7 @@ namespace saru {
         break;
       case NODE_DIE:
       case NODE_WHILE:
+      case NODE_ELSIF:
       case NODE_ELSE:
       case NODE_RETURN:
       case NODE_FUNC:
@@ -78,6 +79,7 @@ namespace saru {
         break;
       case NODE_DIE:
       case NODE_WHILE:
+      case NODE_ELSIF:
       case NODE_ELSE:
       case NODE_RETURN:
       case NODE_FUNC:
@@ -222,6 +224,7 @@ namespace saru {
         // Node has children
       case NODE_DIE:
       case NODE_WHILE:
+      case NODE_ELSIF:
       case NODE_ELSE:
       case NODE_RETURN:
       case NODE_FUNC:

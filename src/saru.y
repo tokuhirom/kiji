@@ -60,8 +60,17 @@ while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
 if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             $$.set(saru::NODE_IF, if_cond, if_body);
             if_cond=$$;
-        } (
-            - 'else' ws+ - '{' - else_body:statementlist - '}' {
+        }
+        (
+            ws+ 'elsif' - elsif_cond:expr - '{' - elsif_body:statementlist - '}' {
+                // elsif_body.change_type(saru::NODE_ELSIF);
+                $$.set(saru::NODE_ELSIF, elsif_cond, elsif_body);
+                // if_cond.push_child(elsif_cond);
+                if_cond.push_child($$);
+            }
+        )*
+        (
+            ws+ 'else' ws+ - '{' - else_body:statementlist - '}' {
                 else_body.change_type(saru::NODE_ELSE);
                 if_cond.push_child(else_body);
             }

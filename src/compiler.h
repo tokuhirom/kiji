@@ -311,7 +311,7 @@ namespace saru {
    * OP map is 3rd/MoarVM/src/core/oplist
    * interp code is 3rd/MoarVM/src/core/interp.c
    */
-  enum { MVM_reg_void = 0 };
+  enum { UNKNOWN_REG = -1 };
   class Compiler {
   private:
     Interpreter &interp_;
@@ -346,14 +346,14 @@ namespace saru {
         default:
           MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", interp_.get_local_type(reg));
         }
-        return MVM_reg_void;
+        return UNKNOWN_REG;
       }
       case NODE_DIE: {
         int msg_reg = stringify(do_compile(node.children()[0]));
         int dst_reg = interp_.push_local_type(MVM_reg_obj);
-        assert(msg_reg != MVM_reg_void);
+        assert(msg_reg != UNKNOWN_REG);
         assembler().die(dst_reg, msg_reg);
-        return MVM_reg_void;
+        return UNKNOWN_REG;
       }
       case NODE_WHILE: {
         /*
@@ -365,13 +365,13 @@ namespace saru {
          */
         auto label_while = assembler().bytecode_size();
         int reg = do_compile(node.children()[0]);
-        assert(reg >= 0);
+        assert(reg != UNKNOWN_REG);
         auto end_pos = assembler().bytecode_size() + 2 + 2;
         assembler().op_u16_u32(MVM_OP_BANK_primitives, unless_op(reg), reg, 0);
         do_compile(node.children()[1]);
         assembler().goto_(label_while);
         assembler().write_uint32_t(assembler().bytecode_size(), end_pos); // label_end:
-        return MVM_reg_void;
+        return UNKNOWN_REG;
       }
       case NODE_STRING: {
         int str_num = interp_.push_string(node.pv());
@@ -544,28 +544,61 @@ namespace saru {
         uint16_t if_pos = assembler().bytecode_size() + 2 + 2;
         assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(if_cond_reg), if_cond_reg, 0);
 
-        if (node.children().size() > 2 && node.children()[2].type() == NODE_ELSE) {
-          for (auto n: node.children()[2].children()) {
-            do_compile(n);
+        // put else if condtions
+        std::list<uint32_t> elsif_poses;
+        for (auto iter=node.children().begin()+2; iter!=node.children().end(); ++iter) {
+          if (iter->type() == NODE_ELSE) {
+            break;
           }
+          auto reg = do_compile(iter->children()[0]);
+          elsif_poses.push_back(assembler().bytecode_size() + 2 + 2);
+          assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(reg), reg, 0);
         }
 
-        uint16_t end_pos = assembler().bytecode_size() + 2;
+        // compile else clause
+        if (node.children().back().type() == NODE_ELSE) {
+            for (auto n: node.children().back().children()) {
+              // TODO return data
+              do_compile(n);
+            }
+        }
+
+        std::vector<uint16_t> end_poses;
+        end_poses.push_back(assembler().bytecode_size() + 2);
         assembler().goto_(0);
 
-        // update if_label
+        // update if_label and compile if body
         assembler().write_uint32_t(assembler().bytecode_size(), if_pos); // label_if:
         (void)do_compile(if_body);
-
-        uint16_t end_pos2 = assembler().bytecode_size() + 2;
+        end_poses.push_back(assembler().bytecode_size() + 2);
         assembler().goto_(0);
 
-        // update end label
-        assembler().write_uint32_t(assembler().bytecode_size(), end_pos); // label_end:
-        assembler().write_uint32_t(assembler().bytecode_size(), end_pos2); // label_end:
+        // compile else body
+        for (auto iter=node.children().begin()+2; iter!=node.children().end(); ++iter) {
+          if (iter->type() == NODE_ELSE) {
+            break;
+          }
 
-        return MVM_reg_void;
+          auto elsif_pos = elsif_poses.front();
+          assembler().write_uint32_t(assembler().bytecode_size(), elsif_pos); // label_elsif\d:
+          elsif_poses.pop_back();
+          for (auto n: iter->children()[1].children()) {
+            // TODO return data
+            do_compile(n);
+          }
+          end_poses.push_back(assembler().bytecode_size() + 2);
+          assembler().goto_(0);
+        }
+
+
+        // update end label
+        for (auto e: end_poses) {
+          assembler().write_uint32_t(assembler().bytecode_size(), e); // label_end:
+        }
+
+        return -1;
       }
+      case NODE_ELSIF:
       case NODE_ELSE: {
         abort();
       }
@@ -573,9 +606,10 @@ namespace saru {
         break;
       case NODE_STATEMENTS:
         for (auto n: node.children()) {
+          // should i return values?
           do_compile(n);
         }
-        return MVM_reg_void;
+        return UNKNOWN_REG;
       case NODE_STRING_CONCAT: {
         auto dst_reg = interp_.push_local_type(MVM_reg_str);
         auto lhs = node.children()[0];
@@ -676,9 +710,9 @@ namespace saru {
           for (auto a:args.children()) {
             uint16_t reg_num = stringify(do_compile(a));
             assembler().say(reg_num);
-            return MVM_reg_void; // TODO: Is there a result?
+            return UNKNOWN_REG; // TODO: Is there a result?
           }
-          return MVM_reg_void; // TODO: Is there a result?
+          return UNKNOWN_REG; // TODO: Is there a result?
         } else {
           auto reg_no = interp_.push_local_type(MVM_reg_obj);
           int outer = 0;
@@ -773,7 +807,7 @@ namespace saru {
   private:
     // objectify the register.
     int box(int reg_num) {
-      assert(reg_num >= 0);
+      assert(reg_num != UNKNOWN_REG);
       auto reg_type = interp_.get_local_type(reg_num);
       if (reg_type == MVM_reg_obj) {
         return reg_num;
@@ -800,7 +834,7 @@ namespace saru {
       }
     }
     int to_n(int reg_num) {
-      assert(reg_num >= 0);
+      assert(reg_num != UNKNOWN_REG);
       switch (interp_.get_local_type(reg_num)) {
       case MVM_reg_str: {
         int dst_num = interp_.push_local_type(MVM_reg_num64);
@@ -827,7 +861,7 @@ namespace saru {
       }
     }
     int to_i(int reg_num) {
-      assert(reg_num >= 0);
+      assert(reg_num != UNKNOWN_REG);
       switch (interp_.get_local_type(reg_num)) {
       case MVM_reg_str: {
         int dst_num = interp_.push_local_type(MVM_reg_int64);
@@ -854,7 +888,7 @@ namespace saru {
       }
     }
     int stringify(int reg_num) {
-      assert(reg_num >= 0);
+      assert(reg_num != UNKNOWN_REG);
       switch (interp_.get_local_type(reg_num)) {
       case MVM_reg_str:
         // nop
