@@ -122,6 +122,10 @@ TODO
 
  * Run fib(n)
 
+## Step 3.1 Done at 2013-06-19
+
+ * `my $i:=0; while $i < 3 { say($i:=$i+1) }`
+
 ## Step 4.
 
  * for loop
@@ -141,7 +145,6 @@ TODO
  * str comparation operators
  * eq, ne, gt,ge,lt,le
 
-
 ## Step 4.10
 
  * `say([4,5,6].shift())`
@@ -160,10 +163,9 @@ TODO
  * `my @ary := 1,2,3; say($ary[0])`
  * @ARGS
  * `"foo { 3+2 }"`
- * ++$i
- * $i++
- * --$i
- * $i--
+ * ++$i , $i++ , --$i , $i--
+ * heredocs?
+  * needs 'assignment'
 
 ## Step 20
 
@@ -189,6 +191,7 @@ TODO
  * REPL
  * One liner support
  * constant folding optimization
+ * Optimize register allocation
  * $?LINE
 
 ## Step 50.

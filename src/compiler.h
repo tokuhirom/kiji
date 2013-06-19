@@ -347,6 +347,24 @@ namespace saru {
         }
         return -1;
       }
+      case NODE_WHILE: {
+        /*
+         *  label_while:
+         *    cond
+         *    unless_o label_end
+         *    body
+         *  label_end:
+         */
+        auto label_while = assembler().bytecode_size();
+        int reg = do_compile(node.children()[0]);
+        assert(reg >= 0);
+        auto end_pos = assembler().bytecode_size() + 2 + 2;
+        assembler().op_u16_u32(MVM_OP_BANK_primitives, unless_op(reg), reg, 0);
+        do_compile(node.children()[1]);
+        assembler().goto_(label_while);
+        assembler().write_uint32_t(assembler().bytecode_size(), end_pos); // label_end:
+        return -1;
+      }
       case NODE_STRING: {
         int str_num = interp_.push_string(node.pv());
         int reg_num = interp_.push_local_type(MVM_reg_str);
@@ -368,18 +386,31 @@ namespace saru {
       case NODE_BIND: {
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
-        if (lhs.type() != NODE_MY) {
+        if (lhs.type() == NODE_MY) {
+          // my $var := foo;
+          int lex_no = do_compile(lhs);
+          int val    = this->box(do_compile(rhs));
+          assembler().bindlex(
+            lex_no, // lex number
+            0,      // frame outer count
+            val     // value
+          );
+          return val;
+        } else if (lhs.type() == NODE_VARIABLE) {
+          int outer;
+          auto lex_no = interp_.find_lexical_by_name(lhs.pv(), outer);
+          int val    = this->box(do_compile(rhs));
+          assembler().bindlex(
+            lex_no, // lex number
+            outer,      // frame outer count
+            val     // value
+          );
+          return val;
+          // $var := foo;
+        } else {
           printf("You can't bind value to %s, currently.\n", lhs.type_name());
           abort();
         }
-        int lex_no = do_compile(lhs);
-        int val    = this->box(do_compile(rhs));
-        assembler().bindlex(
-          lex_no, // lex number
-          0,      // frame outer count
-          val     // value
-        );
-        return -1;
       }
       case NODE_FUNC: {
         const std::string& name = node.children()[0].pv();
@@ -903,6 +934,20 @@ namespace saru {
           // NOT IMPLEMENTED
           abort();
         }
+    }
+    uint16_t unless_op(uint16_t cond_reg) {
+      switch (interp_.get_local_type(cond_reg)) {
+      case MVM_reg_int64:
+        return MVM_OP_unless_i;
+      case MVM_reg_num64:
+        return MVM_OP_unless_n;
+      case MVM_reg_str:
+        return MVM_OP_unless_s;
+      case MVM_reg_obj:
+        return MVM_OP_unless_o;
+      default:
+        abort();
+      }
     }
     uint16_t if_op(uint16_t cond_reg) {
       switch (interp_.get_local_type(cond_reg)) {

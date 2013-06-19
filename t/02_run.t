@@ -325,3 +325,12 @@ my $a := [1,2,3];
 say($a[1]);
 --- expected
 2
+
+===
+--- code
+my $i:=0;
+while $i < 3 { say($i:=$i+1) }
+--- expected
+1
+2
+3

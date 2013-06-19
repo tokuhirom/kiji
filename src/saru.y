@@ -46,9 +46,14 @@ statementlist = s1:statement {
 statement = b:bind_stmt eat_terminator { $$ = b; }
           | b:return_stmt eat_terminator { $$ = b; }
           | if_stmt
+          | while_stmt
           | funcdef - ';'*
 
 return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
+
+while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
+            $$.set(saru::NODE_WHILE, cond, body);
+        }
 
 if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             $$.set(saru::NODE_IF, if_cond, if_body);
@@ -76,7 +81,11 @@ args =
     )
     | '' { $$.set_children(saru::NODE_ARGS); }
 
-expr = cmp_expr
+expr = bind_expr
+
+bind_expr =
+    (v:variable ':=' e:cmp_expr) { $$.set(saru::NODE_BIND, v, e); }
+    | cmp_expr
 
 cmp_expr = f1:methodcall_expr - (
           '==' - f2:methodcall_expr { $$.set(saru::NODE_EQ, f1, f2); f1=$$; }
