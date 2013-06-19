@@ -112,11 +112,15 @@ TODO
 
  * `sub foo() { 55 } say(foo());`
 
-## Step 2.5
+## Step 2.5  Done at 2013-06-19
 
  * if-else
- * if-elsif-else
  * `sub foo($n) { return $n*2 } say(foo(4));`
+ * funcall
+
+## Step 2.9
+
+ * if-elsif-else
  * str comparation operators
  * eq, ne, gt,ge,lt,le
 
@@ -137,7 +141,6 @@ TODO
 
 ## Step 4.
 
- * funcall
  * Run fib(n)
  * Range object
 
@@ -150,6 +153,7 @@ TODO
  * use
  * `my @ary := 1,2,3; say($ary[0])`
  * @ARGS
+ * `"foo { 3+2 }"`
 
 ## Step 20
 
@@ -181,6 +185,11 @@ TODO
 
  * Support all statements in NQP
  * Pass NQP test cases
+
+    say(foo());
+
+    sub foo() { bar() }
+    sub bar() { 3 }
 
 ## Step ∞. Will done in 2999-12-31
 

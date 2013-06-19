@@ -303,3 +303,19 @@ sub foo ($n) {  }
         (funcall (ident "fib") (args))
         (funcall (ident "fib") (args)))
 )
+
+===
+--- code: fib($n-1)+fib($n-2)
+--- expected
+(statements
+    (add
+        (funcall (ident "fib") (args (sub (variable "$n") (int 1))))
+        (funcall (ident "fib") (args (sub (variable "$n") (int 2)))))
+)
+
+===
+--- code: return 1+2;
+--- expected
+(statements
+    (return (add (int 1) (int 2)))
+)

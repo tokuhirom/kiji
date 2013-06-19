@@ -43,9 +43,7 @@ namespace saru {
       return assembler_;
     }
 
-    void finalize(MVMStaticFrame * frame) {
-      assert(frame);
-
+    MVMStaticFrame* finalize() {
       frame_.local_types = local_types_.data();
       frame_.num_locals  = local_types_.size();
 
@@ -68,7 +66,7 @@ namespace saru {
       frame_.bytecode      = assembler_.bytecode();
       frame_.bytecode_size = assembler_.bytecode_size();
 
-      memcpy(frame, &frame_, sizeof(MVMStaticFrame));
+      return &frame_;
     }
 
     // reserve register
@@ -86,6 +84,7 @@ namespace saru {
       assert(n<local_types_.size());
       return local_types_[n];
     }
+
     // Push lexical variable.
     int push_lexical(const std::string&name_cc, MVMuint16 type) {
       lexical_types_.push_back(type);
@@ -104,19 +103,28 @@ namespace saru {
       return idx;
     }
 
+    void set_outer(const std::shared_ptr<Frame>&frame) {
+      frame_.outer = &(frame->frame_);
+    }
+
     // lexical variable number by name
-    // TODO: find from outer frame?
     int find_lexical_by_name(const std::string &name_cc, int &outer) {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      MVMLexicalHashEntry *lexical_names = frame_.lexical_names;
-      MVMLexicalHashEntry *entry;
-      MVM_HASH_GET(tc_, lexical_names, name, entry);
-      if (entry) {
-        return entry->value;
-      } else {
-        printf("Unknown lexical variable: %s\n", name_cc.c_str());
-        abort();
+      MVMStaticFrame *f = &frame_;
+      outer = 0;
+      while (f) {
+        MVMLexicalHashEntry *lexical_names = f->lexical_names;
+        MVMLexicalHashEntry *entry;
+        MVM_HASH_GET(tc_, lexical_names, name, entry);
+
+        if (entry) {
+          return entry->value;
+        }
+        f = f->outer;
+        ++outer;
       }
+      printf("Unknown lexical variable: %s\n", name_cc.c_str());
+      exit(0);
     }
   };
 
@@ -146,8 +154,7 @@ namespace saru {
       {
         int i=0;
         for (auto frame: used_frames_) {
-          cu_->frames[i] = (MVMStaticFrame*)malloc(sizeof(MVMStaticFrame));
-          frame->finalize(cu_->frames[i]);
+          cu_->frames[i] = frame->finalize();
           cu_->frames[i]->cu = cu_;
           cu_->frames[i]->work_size = 0;
           ++i;
@@ -255,12 +262,19 @@ namespace saru {
     }
 
     int push_frame(const std::string & name) {
-      frames_.push_back(std::make_shared<Frame>(vm_->main_thread, name));
+      std::shared_ptr<Frame> frame = std::make_shared<Frame>(vm_->main_thread, name);
+      if (frames_.size() != 0) {
+        frame->set_outer(frames_.back());
+      }
+      frames_.push_back(frame);
       used_frames_.push_back(frames_.back());
       return frames_.size()-1;
     }
     void pop_frame() {
       frames_.pop_back();
+    }
+    size_t frame_size() const {
+      return frames_.size();
     }
 
     size_t push_callsite(MVMCallsite *callsite) {
@@ -314,6 +328,8 @@ namespace saru {
         if (reg < 0) {
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
         }
+        assembler().return_o(this->box(reg));
+        /*
         switch (interp_.get_local_type(reg)) {
         case MVM_reg_int64:
           assembler().return_i(reg);
@@ -322,11 +338,15 @@ namespace saru {
           assembler().return_s(reg);
           break;
         case MVM_reg_obj:
-          assembler().return_o(reg);
+          assembler().return_o(this->box(reg));
+          break;
+        case MVM_reg_num64:
+          assembler().return_n(reg);
           break;
         default:
-          abort();
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", interp_.get_local_type(reg));
         }
+        */
         return -1;
       }
       case NODE_STRING: {
@@ -366,9 +386,18 @@ namespace saru {
       case NODE_FUNC: {
         const std::string& name = node.children()[0].pv();
 
+        auto funcreg = interp_.push_local_type(MVM_reg_obj);
+        auto funclex = interp_.push_lexical(std::string("&") + name, MVM_reg_obj);
+        auto func_pos = assembler().bytecode_size() + 2 + 2;
+        assembler().getcode(funcreg, 0);
+        assembler().bindlex(
+            funclex,
+            0, // frame outer count
+            funcreg
+        );
 
         // Compile function body
-        auto frame = interp_.push_frame(name);
+        auto frame_no = interp_.push_frame(name);
 
         // TODO process named params
         // TODO process types
@@ -424,14 +453,7 @@ namespace saru {
         }
         interp_.pop_frame();
 
-        auto funcreg = interp_.push_local_type(MVM_reg_obj);
-        auto funclex = interp_.push_lexical(std::string("&") + name, MVM_reg_obj);
-        assembler().getcode(funcreg, frame);
-        assembler().bindlex(
-            funclex,
-            0, // frame outer count
-            funcreg
-        );
+        assembler().write_uint16_t(frame_no, func_pos);
 
         return funcreg;
       }
@@ -758,7 +780,7 @@ namespace saru {
       }
       case MVM_reg_obj: {
         int dst_num = interp_.push_local_type(MVM_reg_num64);
-        assembler().unbox_n(dst_num, reg_num);
+        assembler().smrt_numify(dst_num, reg_num);
         return dst_num;
       }
       default:

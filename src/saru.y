@@ -48,7 +48,7 @@ statement = b:bind_stmt eat_terminator { $$ = b; }
           | if_stmt
           | funcdef - ';'*
 
-return_stmt = 'return' ws v:value { $$.set(saru::NODE_RETURN, v); }
+return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
 
 if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             $$.set(saru::NODE_IF, if_cond, if_body);
@@ -107,16 +107,16 @@ funcall =
     }
 
 add_expr =
-    l:mul_expr - (
-          '+' r1:mul_expr {
+    l:mul_expr (
+          - '+' - r1:mul_expr {
             $$.set(saru::NODE_ADD, l, r1);
             l = $$;
           }
-        | '-' r2:mul_expr {
+        | - '-' - r2:mul_expr {
             $$.set(saru::NODE_SUB, l, r2);
             l = $$;
           }
-        | '~' - r2:mul_expr {
+        | - '~' - r2:mul_expr {
             $$.set(saru::NODE_STRING_CONCAT, l, r2);
             l = $$;
           }

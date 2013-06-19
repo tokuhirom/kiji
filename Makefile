@@ -182,7 +182,7 @@ test: saru
 	cd 3rd/MoarVM/ && make
 
 clean:
-	rm -rf saru src/gen.* 3rd/greg/greg 3rd/greg/*.o
+	rm -rf saru src/gen.* 3rd/greg/greg 3rd/greg/*.o vgcore.* core
 
 src/gen.stdafx.pch: src/stdafx.h
 	clang++ -cc1 -emit-pch -x c++-header ./src/stdafx.h -o src/gen.stdafx.pch

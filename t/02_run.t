@@ -284,3 +284,37 @@ say(foo(3));
 --- expected
 1
 8
+
+===
+--- code
+sub foo($n) {
+    if $n <= 2 {
+        return 1;
+    } else {
+        return foo($n-1);
+    }
+}
+
+say(foo(1));
+say(foo(3));
+--- expected
+1
+1
+
+===
+--- code
+sub foo($n) {
+    if $n <= 2 {
+        return 1;
+    } else {
+        return foo($n-1)+foo($n-2);
+    }
+}
+
+say(foo(1));
+say(foo(3));
+say(foo(5));
+--- expected
+1
+2
+5
