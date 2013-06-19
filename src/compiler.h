@@ -328,8 +328,7 @@ namespace saru {
         if (reg < 0) {
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
         }
-        assembler().return_o(this->box(reg));
-        /*
+        // assembler().return_o(this->box(reg));
         switch (interp_.get_local_type(reg)) {
         case MVM_reg_int64:
           assembler().return_i(reg);
@@ -346,7 +345,6 @@ namespace saru {
         default:
           MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", interp_.get_local_type(reg));
         }
-        */
         return -1;
       }
       case NODE_STRING: {
