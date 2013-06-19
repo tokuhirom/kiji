@@ -347,15 +347,19 @@ namespace saru {
     };
 
     Label label() { return Label(this, assembler().bytecode_size()); }
-    Label label_unsolved() {
-      return Label(this);
-    }
+    Label label_unsolved() { return Label(this); }
 
     void goto_(Label &label) {
       if (!label.is_solved()) {
         label.reserve(assembler().bytecode_size() + 2);
       }
       assembler().goto_(label.address());
+    }
+    void if_any(uint16_t reg, Label &label) {
+      if (!label.is_solved()) {
+        label.reserve(assembler().bytecode_size() + 2 + 2);
+      }
+      assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(reg), reg, label.address());
     }
     void unless_any(uint16_t reg, Label &label) {
       if (!label.is_solved()) {
@@ -579,8 +583,6 @@ namespace saru {
         return idx;
       }
       case NODE_IF: {
-        auto if_body = node.children()[1];
-        auto if_cond_reg = do_compile(node.children()[0]);
         //   if_cond
         //   if_o if_cond, label_if
         //   elsif1_cond
@@ -600,18 +602,24 @@ namespace saru {
         //   elsif1_body
         //   goto lable_end
         // label_end:
-        uint16_t if_pos = assembler().bytecode_size() + 2 + 2;
-        assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(if_cond_reg), if_cond_reg, 0);
 
-        // put else if condtions
-        std::list<uint32_t> elsif_poses;
+        auto if_body = node.children()[1];
+        auto if_cond_reg = do_compile(node.children()[0]);
+
+        auto label_if = label_unsolved();
+        if_any(if_cond_reg, label_if);
+
+        // put else if conditions
+        std::list<Label> elsif_poses;
         for (auto iter=node.children().begin()+2; iter!=node.children().end(); ++iter) {
           if (iter->type() == NODE_ELSE) {
             break;
           }
           auto reg = do_compile(iter->children()[0]);
-          elsif_poses.push_back(assembler().bytecode_size() + 2 + 2);
-          assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(reg), reg, 0);
+          // elsif_poses.push_back(assembler().bytecode_size() + 2 + 2);
+          // assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(reg), reg, 0);
+          elsif_poses.emplace_back(this);
+          if_any(reg, elsif_poses.back());
         }
 
         // compile else clause
@@ -622,15 +630,13 @@ namespace saru {
             }
         }
 
-        std::vector<uint16_t> end_poses;
-        end_poses.push_back(assembler().bytecode_size() + 2);
-        assembler().goto_(0);
+        auto label_end = label_unsolved();
+        goto_(label_end);
 
         // update if_label and compile if body
-        assembler().write_uint32_t(assembler().bytecode_size(), if_pos); // label_if:
-        (void)do_compile(if_body);
-        end_poses.push_back(assembler().bytecode_size() + 2);
-        assembler().goto_(0);
+        label_if.put();
+          (void)do_compile(if_body);
+          goto_(label_end);
 
         // compile else body
         for (auto iter=node.children().begin()+2; iter!=node.children().end(); ++iter) {
@@ -638,22 +644,18 @@ namespace saru {
             break;
           }
 
-          auto elsif_pos = elsif_poses.front();
-          assembler().write_uint32_t(assembler().bytecode_size(), elsif_pos); // label_elsif\d:
+          // assembler().write_uint32_t(assembler().bytecode_size(), elsif_pos); // label_elsif\d:
+          elsif_poses.front().put();
           elsif_poses.pop_back();
           for (auto n: iter->children()[1].children()) {
             // TODO return data
             do_compile(n);
           }
-          end_poses.push_back(assembler().bytecode_size() + 2);
-          assembler().goto_(0);
+          goto_(label_end);
         }
+        assert(elsif_poses.size() == 0);
 
-
-        // update end label
-        for (auto e: end_poses) {
-          assembler().write_uint32_t(assembler().bytecode_size(), e); // label_end:
-        }
+        label_end.put();
 
         return -1;
       }
