@@ -1,5 +1,5 @@
-saru - -Ofun prototype of Perl6 interpreter
-===========================================
+saru - -Ofun interpreter on MoarVM
+==================================
 
 This is a new great toy for Perl hackers.
 
@@ -14,7 +14,8 @@ Win32 patch makes hard to maintain. Please do it before first stable release.
 What's this?
 -------------
 
-This is a interpreter for subset of Perl6. It's running on MoarVM.
+saru aims to be the language of the backward compatibility of Perl6.
+It's running on MoarVM.
 
 Why?
 ----
@@ -28,6 +29,11 @@ These things are not required at run time.
 
  * Perl5
  * C++ compiler supports C++11
+
+Environment
+-----------
+
+saru is tested on ubuntu 12.04.
 
 Use case
 --------

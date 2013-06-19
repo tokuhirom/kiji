@@ -182,6 +182,10 @@ namespace saru {
         }
       }
       cu_->num_callsites = callsites_.size();
+      cu_->max_callsite_size = 0;
+      for (auto callsite: callsites_) {
+        cu_->max_callsite_size = std::max(cu_->max_callsite_size, callsite->arg_count);
+      }
     }
   public:
     Interpreter() {
@@ -608,6 +612,7 @@ namespace saru {
         assert(node.children().size() == 2);
         const saru::Node &ident = node.children()[0];
         const saru::Node &args  = node.children()[1];
+        assert(args.type() == NODE_ARGS);
         if (ident.pv() == "say") {
           for (auto a:args.children()) {
             uint16_t reg_num = stringify(do_compile(a));
@@ -633,9 +638,9 @@ namespace saru {
             callsite->num_pos   = args.children().size();
 
             auto callsite_no = interp_.push_callsite(callsite);
-            assembler().prepargs(callsite_no);
-
             callsite->arg_flags = new MVMCallsiteEntry[args.children().size()];
+
+            std::vector<uint16_t> arg_regs;
 
             int i=0;
             for (auto a:args.children()) {
@@ -647,18 +652,41 @@ namespace saru {
               switch (interp_.get_local_type(reg)) {
               case MVM_reg_int64:
                 callsite->arg_flags[i] = MVM_CALLSITE_ARG_INT;
-                assembler().arg_i(i, reg);
+                arg_regs.push_back(reg);
                 break;
               case MVM_reg_num64:
                 callsite->arg_flags[i] = MVM_CALLSITE_ARG_NUM;
-                assembler().arg_n(i, reg);
+                arg_regs.push_back(reg);
                 break;
               case MVM_reg_str:
                 callsite->arg_flags[i] = MVM_CALLSITE_ARG_STR;
-                assembler().arg_s(i, reg);
+                arg_regs.push_back(reg);
                 break;
               case MVM_reg_obj:
                 callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
+                arg_regs.push_back(reg);
+                break;
+              default:
+                abort();
+              }
+              ++i;
+            }
+
+            assembler().prepargs(callsite_no);
+
+            i=0;
+            for (auto reg:arg_regs) {
+              switch (interp_.get_local_type(reg)) {
+              case MVM_reg_int64:
+                assembler().arg_i(i, reg);
+                break;
+              case MVM_reg_num64:
+                assembler().arg_n(i, reg);
+                break;
+              case MVM_reg_str:
+                assembler().arg_s(i, reg);
+                break;
+              case MVM_reg_obj:
                 assembler().arg_o(i, reg);
                 break;
               default:
