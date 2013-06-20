@@ -450,3 +450,13 @@ say("o1") unless 0;
 say("o2") unless 1;
 --- expected
 o1
+
+===
+--- code
+say("OK1") if "o" eq "o";
+say("FAIL1") if "o" eq "b";
+say("OK2") if "o" ne "b";
+say("FAIL2") if "o" ne "o";
+--- expected
+OK1
+OK2

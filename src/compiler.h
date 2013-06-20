@@ -825,6 +825,18 @@ namespace saru {
       case NODE_MOD: {
         return this->numeric_binop(node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
+      case NODE_STREQ:
+        return this->str_binop(node, MVM_OP_eq_s);
+      case NODE_STRNE:
+        return this->str_binop(node, MVM_OP_ne_s);
+      case NODE_STRGT:
+        return this->str_binop(node, MVM_OP_gt_s);
+      case NODE_STRGE:
+        return this->str_binop(node, MVM_OP_ge_s);
+      case NODE_STRLT:
+        return this->str_binop(node, MVM_OP_lt_s);
+      case NODE_STRLE:
+        return this->str_binop(node, MVM_OP_le_s);
       case NODE_NOP:
         return -1;
       case NODE_FUNCALL: {
@@ -1019,6 +1031,7 @@ namespace saru {
         break;
       }
     }
+    int to_s(int reg_num) { return stringify(reg_num); }
     int stringify(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
       switch (interp_.get_local_type(reg_num)) {
@@ -1075,6 +1088,15 @@ namespace saru {
           // NOT IMPLEMENTED
           abort();
         }
+    }
+    int str_binop(const saru::Node& node, uint16_t op) {
+        assert(node.children().size() == 2);
+
+        int reg_num1 = to_s(do_compile(node.children()[0]));
+        int reg_num2 = to_s(do_compile(node.children()[1]));
+        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
+        assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
+        return reg_num_dst;
     }
     int numeric_binop(const saru::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);

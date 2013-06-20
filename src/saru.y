@@ -124,6 +124,12 @@ cmp_expr = f1:methodcall_expr - (
         | '<=' - f2:methodcall_expr { $$.set(saru::NODE_LE, f1, f2); f1=$$; }
         | '>'  - f2:methodcall_expr { $$.set(saru::NODE_GT, f1, f2); f1=$$; }
         | '>=' - f2:methodcall_expr { $$.set(saru::NODE_GE, f1, f2); f1=$$; }
+        | 'eq' - f2:methodcall_expr { $$.set(saru::NODE_STREQ, f1, f2); f1=$$; }
+        | 'ne' - f2:methodcall_expr { $$.set(saru::NODE_STRNE, f1, f2); f1=$$; }
+        | 'gt' - f2:methodcall_expr { $$.set(saru::NODE_STRGT, f1, f2); f1=$$; }
+        | 'ge' - f2:methodcall_expr { $$.set(saru::NODE_STRGE, f1, f2); f1=$$; }
+        | 'lt' - f2:methodcall_expr { $$.set(saru::NODE_STRLT, f1, f2); f1=$$; }
+        | 'le' - f2:methodcall_expr { $$.set(saru::NODE_STRLE, f1, f2); f1=$$; }
     )* {
         $$ = f1;
     }

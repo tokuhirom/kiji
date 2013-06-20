@@ -152,12 +152,21 @@ TODO
 
  * Basic REPL
 
+## Step 3.8 2013-06-20
+
+ * postfix if/unless
+
+## Step 3.9 2013-06-20
+
+ * str comparation operators
+ * eq, ne, gt,ge,lt,le
+
 ## Step 4.
 
+ * postfix for
  * next, last
  * `q<ok 7>`
  * "\x6f\x6b 8"
- * postfix if
  * `loop { }`
  * abs(-3), abs(3)
  * Array operations
@@ -174,8 +183,6 @@ TODO
 
 ## Step 4.9
 
- * str comparation operators
- * eq, ne, gt,ge,lt,le
  * MOP things
 
 ## Step 4.10
