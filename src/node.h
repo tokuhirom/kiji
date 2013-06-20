@@ -10,135 +10,69 @@
 #include "gen.node.h"
 
 namespace saru {
+  enum node_type_t {
+    NODE_TYPE_UNDEF,
+    NODE_TYPE_INT,
+    NODE_TYPE_NUM,
+    NODE_TYPE_STR,
+    NODE_TYPE_CHILDREN
+  };
   class Node {
+  private:
+    NODE_TYPE type_;
+    union {
+        int64_t iv; // integer value
+        double nv; // number value
+        std::string *pv;
+        std::vector<saru::Node> *children;
+    } body_;
+    static void indent(int n) {
+      for (int i=0; i<n*4; i++) {
+          printf(" ");
+      }
+    }
   public:
     Node() : type_(NODE_UNDEF) { }
     Node(const saru::Node &node) {
       this->type_ = node.type_;
-      switch (type_) {
-      case NODE_VARIABLE:
-      case NODE_IDENT:
-      case NODE_STRING:
+      switch (this->node_type()) {
+      case NODE_TYPE_STR:
         this->body_.pv = new std::string(*(node.body_.pv));
         break;
-      case NODE_INT:
+      case NODE_TYPE_INT:
         this->body_.pv = NULL;
         this->body_.iv = node.body_.iv;
         break;
-      case NODE_NUMBER:
+      case NODE_TYPE_NUM:
         this->body_.pv = NULL;
         this->body_.nv = node.body_.nv;
         break;
-      case NODE_CLARGS:
-      case NODE_POW:
-      case NODE_STREQ:
-      case NODE_STRNE:
-      case NODE_STRGT:
-      case NODE_STRGE:
-      case NODE_STRLT:
-      case NODE_STRLE:
-      case NODE_NOP:
-      case NODE_NOT:
-      case NODE_CONDITIONAL:
-      case NODE_UNLESS:
-      case NODE_FOR:
-      case NODE_DIE:
-      case NODE_WHILE:
-      case NODE_ELSIF:
-      case NODE_ELSE:
-      case NODE_RETURN:
-      case NODE_FUNC:
-      case NODE_PARAMS:
-      case NODE_LIST:
-      case NODE_METHODCALL:
-      case NODE_ATPOS:
-      case NODE_ARRAY:
-      case NODE_EQ:
-      case NODE_NE:
-      case NODE_LT:
-      case NODE_LE:
-      case NODE_GT:
-      case NODE_GE:
-      case NODE_IF:
-      case NODE_STRING_CONCAT:
-      case NODE_BIND:
-      case NODE_MY:
-      case NODE_ARGS:
-      case NODE_FUNCALL:
-      case NODE_STATEMENTS:
-      case NODE_MUL:
-      case NODE_DIV:
-      case NODE_ADD:
-      case NODE_SUB:
-      case NODE_MOD:
+      case NODE_TYPE_CHILDREN:
         this->body_.pv = NULL;
         this->body_.children = new std::vector<saru::Node>();
         *(this->body_.children) = *(node.body_.children);
         break;
-      case NODE_UNDEF:
+      default:
         abort();
-        break;
       }
     }
-    ~Node() {
+    node_type_t node_type() const {
       switch (type_) {
       case NODE_VARIABLE:
+      case NODE_IDENT:
       case NODE_STRING:
-      case NODE_IDENT: {
-        break;
-      }
+        return NODE_TYPE_STR;
       case NODE_INT:
-        break;
+        return NODE_TYPE_INT;
       case NODE_NUMBER:
-        break;
-      case NODE_CLARGS:
-      case NODE_POW:
-      case NODE_STREQ:
-      case NODE_STRNE:
-      case NODE_STRGT:
-      case NODE_STRGE:
-      case NODE_STRLT:
-      case NODE_STRLE:
-      case NODE_NOP:
-      case NODE_NOT:
-      case NODE_CONDITIONAL:
-      case NODE_UNLESS:
-      case NODE_FOR:
-      case NODE_DIE:
-      case NODE_WHILE:
-      case NODE_ELSIF:
-      case NODE_ELSE:
-      case NODE_RETURN:
-      case NODE_FUNC:
-      case NODE_PARAMS:
-      case NODE_LIST:
-      case NODE_METHODCALL:
-      case NODE_ATPOS:
-      case NODE_ARRAY:
-      case NODE_EQ:
-      case NODE_NE:
-      case NODE_LT:
-      case NODE_LE:
-      case NODE_GT:
-      case NODE_GE:
-      case NODE_IF:
-      case NODE_STRING_CONCAT:
-      case NODE_MY:
-      case NODE_BIND:
-      case NODE_ARGS:
-      case NODE_FUNCALL:
-      case NODE_STATEMENTS:
-      case NODE_MUL:
-      case NODE_DIV:
-      case NODE_MOD:
-      case NODE_ADD:
-      case NODE_SUB:
-        // delete this->body_.children;
-        break;
+        return NODE_TYPE_NUM;
       case NODE_UNDEF:
-        break;
+        return NODE_TYPE_UNDEF;
+      default:
+        return NODE_TYPE_CHILDREN;
       }
     }
+    ~Node() { }
 
     void change_type(NODE_TYPE type) {
       this->type_ = type;
@@ -204,28 +138,23 @@ namespace saru {
     }
 
     long int iv() const {
-      assert(this->type_ == NODE_INT);
+      assert(node_type() == NODE_TYPE_INT);
       return this->body_.iv;
     } 
     double nv() const {
-      assert(this->type_ == NODE_NUMBER);
+      assert(node_type() == NODE_TYPE_NUM);
       return this->body_.nv;
     } 
     const std::vector<saru::Node> & children() const {
-      assert(this->type_ != NODE_INT);
-      assert(this->type_ != NODE_NUMBER);
-      assert(this->type_ != NODE_IDENT);
-      assert(this->type_ != NODE_VARIABLE);
+      assert(node_type() == NODE_TYPE_CHILDREN);
       return *(this->body_.children);
     }
     void push_child(saru::Node &child) {
-      assert(this->type_ != NODE_INT);
-      assert(this->type_ != NODE_NUMBER);
-      assert(this->type_ != NODE_IDENT);
-      assert(this->type_ != NODE_VARIABLE);
+      assert(node_type() == NODE_TYPE_CHILDREN);
       this->body_.children->push_back(child);
     }
     void negate() {
+      assert(node_type() != NODE_TYPE_CHILDREN);
       if (this->type_ == NODE_INT) {
         this->body_.iv = - this->body_.iv;
       } else {
@@ -234,7 +163,7 @@ namespace saru {
     }
     NODE_TYPE type() const { return type_; }
     const std::string pv() const {
-      assert(this->type_ == NODE_IDENT || this->type_ == NODE_VARIABLE || this->type_ == NODE_STRING);
+      assert(node_type() == NODE_TYPE_STR);
       return *(this->body_.pv);
     }
     const char* type_name() const {
@@ -245,65 +174,20 @@ namespace saru {
       printf("{\n");
       indent(depth+1);
       printf("\"type\":\"%s\",\n", nqpc_node_type2name(this->type()));
-      switch (this->type()) {
-      case NODE_INT:
+      switch (this->node_type()) {
+      case NODE_TYPE_INT:
         indent(depth+1);
         printf("\"value\":[%ld]\n", this->iv());
         break;
-      case NODE_NUMBER:
+      case NODE_TYPE_NUM:
         indent(depth+1);
         printf("\"value\":[%lf]\n", this->nv());
         break;
-        // Node has a PV
-      case NODE_VARIABLE:
-      case NODE_STRING:
-      case NODE_IDENT:
+      case NODE_TYPE_STR:
         indent(depth+1);
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
-        // Node has children
-      case NODE_CLARGS:
-      case NODE_POW:
-      case NODE_STREQ:
-      case NODE_STRNE:
-      case NODE_STRGT:
-      case NODE_STRGE:
-      case NODE_STRLT:
-      case NODE_STRLE:
-      case NODE_NOP:
-      case NODE_NOT:
-      case NODE_CONDITIONAL:
-      case NODE_UNLESS:
-      case NODE_FOR:
-      case NODE_DIE:
-      case NODE_WHILE:
-      case NODE_ELSIF:
-      case NODE_ELSE:
-      case NODE_RETURN:
-      case NODE_FUNC:
-      case NODE_PARAMS:
-      case NODE_LIST:
-      case NODE_METHODCALL:
-      case NODE_ATPOS:
-      case NODE_ARRAY:
-      case NODE_EQ:
-      case NODE_NE:
-      case NODE_LT:
-      case NODE_LE:
-      case NODE_GT:
-      case NODE_GE:
-      case NODE_IF:
-      case NODE_BIND:
-      case NODE_STRING_CONCAT:
-      case NODE_MY:
-      case NODE_ARGS:
-      case NODE_FUNCALL:
-      case NODE_MUL:
-      case NODE_ADD:
-      case NODE_SUB:
-      case NODE_DIV:
-      case NODE_MOD:
-      case NODE_STATEMENTS: {
+      case NODE_TYPE_CHILDREN: {
         indent(depth+1);
         printf("\"value\":[\n");
         int i=0;
@@ -321,7 +205,7 @@ namespace saru {
         printf("]\n");
         break;
       }
-      case NODE_UNDEF:
+      case NODE_TYPE_UNDEF:
         break;
       default:
         abort();
@@ -335,20 +219,6 @@ namespace saru {
 
     void dump_json() const {
       this->dump_json(0);
-    }
-
-  private:
-    NODE_TYPE type_;
-    union {
-        int64_t iv; // integer value
-        double nv; // number value
-        std::string *pv;
-        std::vector<saru::Node> *children;
-    } body_;
-    static void indent(int n) {
-      for (int i=0; i<n*4; i++) {
-          printf(" ");
-      }
     }
   };
 
