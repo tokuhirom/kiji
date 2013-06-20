@@ -161,7 +161,11 @@ TODO
  * str comparation operators
  * eq, ne, gt,ge,lt,le
 
-## Step 4.
+## Step 4 2013-06-20
+
+ * pow operator
+
+## Step 5.
 
  * postfix for
  * next, last
@@ -181,15 +185,15 @@ TODO
     * sprintf
     * printf
 
-## Step 4.9
+## Step 5.9
 
  * MOP things
 
-## Step 4.10
+## Step 5.10
 
  * `say([4,5,6].shift())`
 
-## Step 5.
+## Step 6.
 
  * Range object
 
@@ -215,7 +219,6 @@ TODO
 
  * Support OOP
  * read code from file
- * ? :
  * Support XSUB?
    * use MVMCFunction
  * if statement should return value.
