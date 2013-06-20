@@ -37,6 +37,7 @@ statementlist =
 statement =
             e:postfix_if_stmt eat_terminator { $$ = e; }
           | e:postfix_unless_stmt eat_terminator { $$ = e; }
+          | e:postfix_for_stmt eat_terminator { $$ = e; }
           | b:normal_stmt eat_terminator { $$ = b; }
           | if_stmt
           | for_stmt
@@ -83,6 +84,8 @@ if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
 postfix_if_stmt = body:normal_stmt - 'if' - cond:expr { $$.set(saru::NODE_IF, cond, body); }
 
 postfix_unless_stmt = body:normal_stmt - 'unless' - cond:expr { $$.set(saru::NODE_UNLESS, cond, body); }
+
+postfix_for_stmt = body:normal_stmt - 'for' - ( src:array_var | src:list_expr | src:qw ) { $$.set(saru::NODE_FOR, src, body); }
 
 # FIXME: simplify the code
 bind_stmt =

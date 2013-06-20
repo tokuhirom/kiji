@@ -205,9 +205,18 @@ TODO
  * require
  * use
  * `my @ary := 1,2,3; say($ary[0])`
- * @ARGS
+ * `@*ARGS`
  * `"foo { 3+2 }"`
  * ++$i , $i++ , --$i , $i--
+ * fix the variable scopes
+   {
+    my $i:=0;
+    {
+      my $i:=3;
+      say($i); # 3
+    }
+    say($i); # 0
+   }
  * heredocs?
   * needs 'assignment'
 
