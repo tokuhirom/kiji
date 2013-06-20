@@ -47,6 +47,7 @@ statement = b:bind_stmt eat_terminator { $$ = b; }
           | if_stmt
           | for_stmt
           | while_stmt
+          | unless_stmt
           | die_stmt
           | funcdef - ';'*
 
@@ -59,6 +60,10 @@ while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
         }
 
 for_stmt = 'for' - src:array_var - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
+
+unless_stmt = 'unless' - cond:expr - '{' - body:statementlist - '}' {
+            $$.set(saru::NODE_UNLESS, cond, body);
+        }
 
 if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             $$.set(saru::NODE_IF, if_cond, if_body);

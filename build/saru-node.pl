@@ -41,6 +41,7 @@ my @types = qw(
     NODE_ELSIF
     NODE_LIST
     NODE_FOR
+    NODE_UNLESS
 );
 
 say qq!/* This file is generated from $0 */!;

@@ -582,6 +582,18 @@ namespace saru {
         int idx = interp_.push_lexical(n.pv(), MVM_reg_obj);
         return idx;
       }
+      case NODE_UNLESS: {
+        //   cond
+        //   if_o label_end
+        //   body
+        // label_end:
+        auto cond_reg = do_compile(node.children()[0]);
+        auto label_end = label_unsolved();
+        if_any(cond_reg, label_end);
+        auto dst_reg = do_compile(node.children()[1]);
+        label_end.put();
+        return dst_reg;
+      }
       case NODE_IF: {
         //   if_cond
         //   if_o if_cond, label_if
@@ -603,8 +615,8 @@ namespace saru {
         //   goto lable_end
         // label_end:
 
-        auto if_body = node.children()[1];
         auto if_cond_reg = do_compile(node.children()[0]);
+        auto if_body = node.children()[1];
 
         auto label_if = label_unsolved();
         if_any(if_cond_reg, label_if);
@@ -616,8 +628,6 @@ namespace saru {
             break;
           }
           auto reg = do_compile(iter->children()[0]);
-          // elsif_poses.push_back(assembler().bytecode_size() + 2 + 2);
-          // assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(reg), reg, 0);
           elsif_poses.emplace_back(this);
           if_any(reg, elsif_poses.back());
         }
@@ -644,7 +654,6 @@ namespace saru {
             break;
           }
 
-          // assembler().write_uint32_t(assembler().bytecode_size(), elsif_pos); // label_elsif\d:
           elsif_poses.front().put();
           elsif_poses.pop_back();
           for (auto n: iter->children()[1].children()) {

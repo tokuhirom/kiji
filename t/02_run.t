@@ -377,3 +377,10 @@ for @a { say($_); }
 1
 2
 3
+
+====
+--- code
+unless 1 { say("UNLESS 1"); }
+unless 0 { say("UNLESS 2"); }
+--- expected
+UNLESS 2
