@@ -179,6 +179,7 @@ TODO
  * abs(-3), abs(3)
  * Array operations
  * Hash operations
+ * `my %hash = { a => 3 }; say(%hash<a>);`
  * catch
  * bit or, bit and, bit xor
  * logical xor, logical and, logical or

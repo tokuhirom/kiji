@@ -222,6 +222,15 @@ namespace saru {
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
       cu_->scs[0] = sc;
+
+      // initialize hllconfig
+      /*
+      MVMString *name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"saru");
+      MVMObject *cache = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
+      MVMObject *key = (MVMObject *)MVM_string_utf8_decode((tc), (tc)->instance->VMString, "list", strlen("list");
+      MVM_HASH_BIND(tc, frames[i]->lexical_names, key, entry);
+      MVM_hll_set_config(tc, name, config);
+      */
     }
   public:
     Interpreter() {
@@ -276,7 +285,6 @@ namespace saru {
 
     // reserve register
     int push_local_type(MVMuint16 reg_type) {
-      // TODO deprecate
       return frames_.back()->push_local_type(reg_type);
     }
     // Get register type at 'n'
@@ -289,7 +297,6 @@ namespace saru {
     }
 
     // lexical variable number by name
-    // TODO: find from outer frame?
     int find_lexical_by_name(const std::string &name_cc, int &outer) {
       return frames_.back()->find_lexical_by_name(name_cc, outer);
     }
@@ -405,6 +412,11 @@ namespace saru {
       return interp_.assembler(); // FIXME ugly
     }
 
+    int reg_obj() { return interp_.push_local_type(MVM_reg_obj); }
+    int reg_str() { return interp_.push_local_type(MVM_reg_str); }
+    int reg_int64() { return interp_.push_local_type(MVM_reg_int64); }
+    int reg_num64() { return interp_.push_local_type(MVM_reg_num64); }
+
     int do_compile(const saru::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
@@ -434,8 +446,8 @@ namespace saru {
         return UNKNOWN_REG;
       }
       case NODE_DIE: {
-        int msg_reg = stringify(do_compile(node.children()[0]));
-        int dst_reg = interp_.push_local_type(MVM_reg_obj);
+        int msg_reg = to_s(do_compile(node.children()[0]));
+        int dst_reg = reg_obj();
         assert(msg_reg != UNKNOWN_REG);
         assembler().die(dst_reg, msg_reg);
         return UNKNOWN_REG;
