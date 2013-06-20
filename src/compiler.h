@@ -561,12 +561,28 @@ namespace saru {
       case NODE_FOR: {
         //   init_iter
         // label_for:
-        //   next_iter
-        //   unless_o label_end
         //   body
-        //   goto label_for
+        //   shift iter
+        //   if_o label_for
         // label_end:
-        abort(); // not implemented
+          auto src_reg = box(do_compile(node.children()[0]));
+          auto iter_reg = interp_.push_local_type(MVM_reg_obj);
+          assembler().iter(iter_reg, src_reg);
+
+        auto label_for = label();
+
+          auto tmp = interp_.push_local_type(MVM_reg_obj);
+          auto val = interp_.push_local_type(MVM_reg_obj);
+          assembler().shift_o(tmp, iter_reg);
+          assembler().iterval(val, iter_reg);
+
+          int it = interp_.push_lexical("$_", MVM_reg_obj);
+          assembler().bindlex(it, 0, val);
+
+          do_compile(node.children()[1]);
+
+          if_any(iter_reg, label_for);
+
         return UNKNOWN_REG;
       }
       case NODE_MY: {
