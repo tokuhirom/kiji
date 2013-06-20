@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <fstream>
+#ifdef __unix__
+#include <unistd.h>
+#endif
 #include "node.h"
 #include "gen.saru.y.cc"
 extern "C" {
@@ -9,8 +12,61 @@ extern "C" {
 }
 #include "compiler.h"
 
-int main(int argc, char** argv) {
+bool parse() {
+  bool retval = true;
   GREG g;
+  yyinit(&g);
+  if (!yyparse(&g)) {
+    fprintf(stderr, "** Syntax error at line %d\n", line_number);
+    if (g.text[0]) {
+      fprintf(stderr, "** near %s\n", g.text);
+    }
+    if (g.pos < g.limit || !feof(stdin)) {
+      g.buf[g.limit]= '\0';
+      fprintf(stderr, " before text \"");
+      while (g.pos < g.limit) {
+        if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
+        fputc(g.buf[g.pos++], stderr);
+      }
+      if (g.pos == g.limit) {
+        int c;
+        while (EOF != (c= fgetc(stdin)) && '\n' != c && '\r' != c)
+        fputc(c, stderr);
+      }
+      fputc('\"', stderr);
+    }
+    fprintf(stderr, "\n");
+    retval = false;
+  }
+  yydeinit(&g);
+  return retval;
+}
+
+void run_repl() {
+  std::string src;
+  while (!std::cin.eof()) {
+    std::cout << "> ";
+    std::cin >> src;
+
+    {
+      std::unique_ptr<std::istringstream> iss(new std::istringstream(src));
+      global_input_stream = &(*iss);
+
+      if (!parse()) {
+        continue;
+      }
+
+      saru::Interpreter interp;
+      interp.initialize();
+      saru::Compiler compiler(interp);
+      compiler.compile(node_global);
+      interp.run();
+    }
+    std::cout << std::endl;
+  }
+}
+
+int main(int argc, char** argv) {
   line_number=0;
 
   // This include apr_initialize().
@@ -64,7 +120,13 @@ int main(int argc, char** argv) {
   if (eval) {
     global_input_stream = new std::istringstream(eval);
   } else if (processed_args == argc) {
-    // TODO REPL by default
+#ifdef __unix__
+    if (isatty(fileno(stdin))) {
+      run_repl();
+      exit(0);
+    }
+#endif
+
     global_input_stream = &std::cin;
   } else {
     global_input_stream = new std::ifstream((char *)opt->argv[processed_args++]);
@@ -79,30 +141,9 @@ int main(int argc, char** argv) {
   instance->raw_clargs = (char **)(opt->argv + processed_args);
   */
 
-  yyinit(&g);
-  if (!yyparse(&g)) {
-    fprintf(stderr, "** Syntax error at line %d\n", line_number);
-    if (g.text[0]) {
-      fprintf(stderr, "** near %s\n", g.text);
-    }
-    if (g.pos < g.limit || !feof(stdin)) {
-      g.buf[g.limit]= '\0';
-      fprintf(stderr, " before text \"");
-      while (g.pos < g.limit) {
-        if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
-        fputc(g.buf[g.pos++], stderr);
-      }
-      if (g.pos == g.limit) {
-        int c;
-        while (EOF != (c= fgetc(stdin)) && '\n' != c && '\r' != c)
-        fputc(c, stderr);
-      }
-      fputc('\"', stderr);
-    }
-    fprintf(stderr, "\n");
+  if (!parse()) {
     exit(1);
   }
-  yydeinit(&g);
 
   if (!global_input_stream->eof()) {
     printf("Syntax error! Around:\n");

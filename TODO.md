@@ -148,6 +148,10 @@ TODO
 
  * x ?? y !! z(conditional expression)
 
+## Step 3.7 2013-06-20
+
+ * Basic REPL
+
 ## Step 4.
 
  * next, last
@@ -215,7 +219,6 @@ TODO
 ## Step 41.
 
  * Grammars
- * REPL
  * One liner support
  * constant folding optimization
  * Optimize register allocation
