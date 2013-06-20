@@ -165,9 +165,12 @@ TODO
  * catch
  * bit or, bit and, bit xor
  * logical xor, logical and, logical or
- * sprintf
- * printf
  * `%*ENV`
+ * `@_` special variable
+ * socket operation
+ * implement builtin functions
+    * sprintf
+    * printf
 
 ## Step 4.9
 
