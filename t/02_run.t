@@ -460,3 +460,13 @@ say("FAIL2") if "o" ne "o";
 --- expected
 OK1
 OK2
+
+===
+--- code
+say(3**2);
+say(3**3);
+say(2**10);
+--- expected
+9
+27
+1024

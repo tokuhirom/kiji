@@ -29,6 +29,7 @@ namespace saru {
         this->body_.pv = NULL;
         this->body_.nv = node.body_.nv;
         break;
+      case NODE_POW:
       case NODE_STREQ:
       case NODE_STRNE:
       case NODE_STRGT:
@@ -89,6 +90,7 @@ namespace saru {
         break;
       case NODE_NUMBER:
         break;
+      case NODE_POW:
       case NODE_STREQ:
       case NODE_STRNE:
       case NODE_STRGT:
@@ -254,6 +256,7 @@ namespace saru {
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case NODE_POW:
       case NODE_STREQ:
       case NODE_STRNE:
       case NODE_STRGT:

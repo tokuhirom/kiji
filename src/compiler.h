@@ -825,6 +825,9 @@ namespace saru {
       case NODE_MOD: {
         return this->numeric_binop(node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
+      case NODE_POW: {
+        return this->numeric_binop(node, MVM_OP_pow_i, MVM_OP_pow_n);
+      }
       case NODE_STREQ:
         return this->str_binop(node, MVM_OP_eq_s);
       case NODE_STRNE:
