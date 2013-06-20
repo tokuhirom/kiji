@@ -10,6 +10,25 @@
 #include "gen.assembler.h"
 
 namespace saru {
+  // see bootstrap.c about argument operation.
+  static void Array_shift(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
+    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
+    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
+    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
+    MVM_args_proc_cleanup(tc, &arg_ctx);
+
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&self);
+
+    MVMRegister result;
+
+    REPR(self)->pos_funcs->shift(tc, STABLE(self), self,
+                                    OBJECT_BODY(self), &result, MVM_reg_obj);
+
+    MVM_args_set_result_obj(tc, result.o, MVM_RETURN_CURRENT_FRAME);
+
+    MVM_gc_root_temp_pop_n(tc, 1);
+  }
+
   class Frame {
   private:
     MVMStaticFrame frame_; // frame itself
@@ -226,9 +245,41 @@ namespace saru {
           MVM_sc_set_object(tc, sc, 0, clargs);
         });
       });
+
+      // hacking hll
+      {
+        MVMObject *array_t = cu_->hll_config->slurpy_array_type;
+        MVMObject *cache = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
+        MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, "shift", strlen("shift"));
+        MVMObject * BOOTCCode = tc->instance->boot_types->BOOTCCode;
+        MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc, STABLE(BOOTCCode));
+        ((MVMCFunction *)code_obj)->body.func = Array_shift;
+        REPR(cache)->ass_funcs->bind_key_boxed(
+            tc,
+            STABLE(cache),
+            cache,
+            OBJECT_BODY(cache),
+            (MVMObject*)string,
+            code_obj);
+        STABLE(array_t)->method_cache = cache;
+      }
+
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
       cu_->scs[0] = sc;
+    }
+    MVMObject * mk_boxed_string(const char *name, size_t len) {
+      MVMThreadContext *tc = vm_->main_thread;
+      MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, name, len);
+      MVMObject*type = cu_->hll_config->str_box_type;
+      MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
+      MVMROOT(tc, box, {
+          if (REPR(box)->initialize)
+              REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
+          REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
+              OBJECT_BODY(box), string);
+      });
+      return box;
     }
   public:
     Interpreter() {
@@ -1224,6 +1275,23 @@ namespace saru {
     Compiler(Interpreter &interp): interp_(interp) { }
     void compile(saru::Node &node) {
       assembler().checkarity(0, -1);
+
+
+      /*
+      int code = reg_obj();
+      int dest_reg = reg_obj();
+      assembler().wval(code, 0, 1);
+      MVMCallsite* callsite = new MVMCallsite;
+      memset(callsite, 0, sizeof(MVMCallsite));
+      callsite->arg_count = 0;
+      callsite->num_pos = 0;
+      callsite->arg_flags = new MVMCallsiteEntry[0];
+      // callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;;
+
+      auto callsite_no = interp_.push_callsite(callsite);
+      assembler().prepargs(callsite_no);
+      assembler().invoke_o( dest_reg, code);
+      */
 
       do_compile(node);
 

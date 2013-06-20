@@ -478,3 +478,14 @@ say($_) for 1,2,3;
 1
 2
 3
+
+===
+--- code
+my @a:=1,2,3;
+say(@a.shift());
+say(@a.shift());
+say(@a.shift());
+--- expected
+1
+2
+3

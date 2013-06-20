@@ -169,6 +169,10 @@ TODO
 
  * `@*ARGS`
 
+## Step 6 2013-06-20
+
+ * `say([4,5,6].shift())`
+
 ## Step 5.
 
  * postfix for
@@ -178,6 +182,7 @@ TODO
  * `loop { }`
  * abs(-3), abs(3)
  * Array operations
+  * ref http://doc.perl6.org/type/Array#elems
  * Hash operations
  * `my %hash = { a => 3 }; say(%hash<a>);`
  * catch
@@ -196,7 +201,6 @@ TODO
 
 ## Step 5.10
 
- * `say([4,5,6].shift())`
 
 ## Step 6.
 
