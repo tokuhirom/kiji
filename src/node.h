@@ -30,6 +30,7 @@ namespace saru {
         this->body_.nv = node.body_.nv;
         break;
       case NODE_NOT:
+      case NODE_CONDITIONAL:
       case NODE_UNLESS:
       case NODE_FOR:
       case NODE_DIE:
@@ -82,6 +83,7 @@ namespace saru {
       case NODE_NUMBER:
         break;
       case NODE_NOT:
+      case NODE_CONDITIONAL:
       case NODE_UNLESS:
       case NODE_FOR:
       case NODE_DIE:
@@ -235,6 +237,7 @@ namespace saru {
         break;
         // Node has children
       case NODE_NOT:
+      case NODE_CONDITIONAL:
       case NODE_UNLESS:
       case NODE_FOR:
       case NODE_DIE:

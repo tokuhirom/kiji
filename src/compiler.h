@@ -755,6 +755,37 @@ namespace saru {
         assembler().invoke_o(ret, meth);
         return ret;
       }
+      case NODE_CONDITIONAL: {
+        /*
+         *   cond
+         *   unless_o cond, :label_else
+         *   if_body
+         *   copy dst_reg, result
+         *   goto :label_end
+         * label_else:
+         *   else_bdoy
+         *   copy dst_reg, result
+         * label_end:
+         */
+        auto label_end  = label_unsolved();
+        auto label_else = label_unsolved();
+        auto dst_reg = interp_.push_local_type(MVM_reg_obj);
+
+          auto cond_reg = do_compile(node.children()[0]);
+          unless_any(cond_reg, label_else);
+
+          auto if_reg = do_compile(node.children()[1]);
+          assembler().set(dst_reg, to_o(if_reg));
+          goto_(label_end);
+
+        label_else.put();
+          auto else_reg = do_compile(node.children()[2]);
+          assembler().set(dst_reg, to_o(else_reg));
+
+        label_end.put();
+
+        return dst_reg;
+      }
       case NODE_NOT: {
         auto src_reg = this->to_i(do_compile(node.children()[0]));
         auto dst_reg = interp_.push_local_type(MVM_reg_int64);
@@ -904,6 +935,7 @@ namespace saru {
     }
   private:
     // objectify the register.
+    int to_o(int reg_num) { return box(reg_num); }
     int box(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
       auto reg_type = interp_.get_local_type(reg_num);

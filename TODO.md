@@ -144,6 +144,10 @@ TODO
 
  * `<< >>` = qw()
 
+## Step 3.6 2013-06-20
+
+ * x ?? y !! z(conditional expression)
+
 ## Step 4.
 
  * next, last

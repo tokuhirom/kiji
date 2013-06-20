@@ -416,3 +416,12 @@ for <<a b c >> { say($_); }
 a
 b
 c
+
+===
+--- code
+say(1 ?? 2 !! 3);
+say(0 ?? 2 !! 3);
+--- expected
+2
+3
+

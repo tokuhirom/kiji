@@ -111,8 +111,11 @@ args =
 expr = bind_expr
 
 bind_expr =
-    (v:variable ':=' e:cmp_expr) { $$.set(saru::NODE_BIND, v, e); }
-    | cmp_expr
+    (v:variable ':=' e:conditional_expr) { $$.set(saru::NODE_BIND, v, e); }
+    | conditional_expr
+
+conditional_expr = e1:cmp_expr - '??' - e2:cmp_expr - '!!' - e3:cmp_expr { $$.set(saru::NODE_CONDITIONAL, e1, e2, e3); }
+                | cmp_expr
 
 cmp_expr = f1:methodcall_expr - (
           '==' - f2:methodcall_expr { $$.set(saru::NODE_EQ, f1, f2); f1=$$; }

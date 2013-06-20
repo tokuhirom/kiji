@@ -43,6 +43,7 @@ my @types = qw(
     NODE_FOR
     NODE_UNLESS
     NODE_NOT
+    NODE_CONDITIONAL
 );
 
 say qq!/* This file is generated from $0 */!;
