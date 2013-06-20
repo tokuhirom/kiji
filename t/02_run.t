@@ -383,3 +383,12 @@ unless 1 { say("UNLESS 1"); }
 unless 0 { say("UNLESS 2"); }
 --- expected
 UNLESS 2
+
+====
+--- code
+for 1,2,3 { say($_); }
+--- expected
+1
+2
+3
+

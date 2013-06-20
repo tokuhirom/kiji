@@ -59,7 +59,7 @@ while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_WHILE, cond, body);
         }
 
-for_stmt = 'for' - src:array_var - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
+for_stmt = 'for' - ( src:array_var | src:list_expr) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
 
 unless_stmt = 'unless' - cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_UNLESS, cond, body);
