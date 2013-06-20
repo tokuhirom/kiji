@@ -29,6 +29,7 @@ namespace saru {
         this->body_.pv = NULL;
         this->body_.nv = node.body_.nv;
         break;
+      case NODE_NOP:
       case NODE_NOT:
       case NODE_CONDITIONAL:
       case NODE_UNLESS:
@@ -82,6 +83,7 @@ namespace saru {
         break;
       case NODE_NUMBER:
         break;
+      case NODE_NOP:
       case NODE_NOT:
       case NODE_CONDITIONAL:
       case NODE_UNLESS:
@@ -126,6 +128,10 @@ namespace saru {
       this->type_ = type;
     }
 
+    void set_nop() {
+      this->type_ = NODE_NOP;
+      this->body_.children = new std::vector<saru::Node>();
+    }
     void set(NODE_TYPE type, const saru::Node &child) {
       this->type_ = type;
       this->body_.children = new std::vector<saru::Node>();
@@ -236,6 +242,7 @@ namespace saru {
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case NODE_NOP:
       case NODE_NOT:
       case NODE_CONDITIONAL:
       case NODE_UNLESS:

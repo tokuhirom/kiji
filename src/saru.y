@@ -20,36 +20,32 @@ comp_init = e:statementlist end-of-file {
     $$ = (node_global = e);
 }
 
-statementlist = s1:statement {
-        $$.set(saru::NODE_STATEMENTS, s1);
-        s1 = $$;
-            }
+statementlist =
     (
-        - s2:statement {
-            s1.push_child(s2);
-            $$ = s1;
+        s1:statement {
+            $$.set(saru::NODE_STATEMENTS, s1);
+            s1 = $$;
         }
-    )* eat_terminator?
-#   s1:statement {
-#       $$.set(saru::NODE_STATEMENTS, s1);
-#       s1 = $$;
-#   }
-#   (
-#       eat_terminator s2:statement {
-#           s1.push_child(s2);
-#           $$ = s1;
-#       }
-#       | if_stmt
-#   )* eat_terminator?
+        (
+            - s2:statement {
+                s1.push_child(s2);
+                $$ = s1;
+            }
+        )* eat_terminator?
+    )
 
-statement = b:bind_stmt eat_terminator { $$ = b; }
-          | b:return_stmt eat_terminator { $$ = b; }
+statement =
+            e:postfix_if_stmt eat_terminator { $$ = e; }
+          | e:postfix_unless_stmt eat_terminator { $$ = e; }
+          | b:normal_stmt eat_terminator { $$ = b; }
           | if_stmt
           | for_stmt
           | while_stmt
           | unless_stmt
           | die_stmt
           | funcdef - ';'*
+
+normal_stmt = bind_stmt | return_stmt
 
 return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
 
@@ -83,6 +79,10 @@ if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
                 if_cond.push_child(else_body);
             }
         )? { $$=if_cond; }
+
+postfix_if_stmt = body:normal_stmt - 'if' - cond:expr { $$.set(saru::NODE_IF, cond, body); }
+
+postfix_unless_stmt = body:normal_stmt - 'unless' - cond:expr { $$.set(saru::NODE_UNLESS, cond, body); }
 
 # FIXME: simplify the code
 bind_stmt =
@@ -246,7 +246,7 @@ scalar = < '$' [a-zA-Z_] [a-zA-Z0-9]* > { assert(yyleng > 0); $$.set_variable(yy
 #  <?MARKED('endstmt')>
 #  <?terminator>
 eat_terminator =
-    ';' - | end-of-file
+    (';' -) | end-of-file
 
 dec_number =
     <([.][0-9]+)> {

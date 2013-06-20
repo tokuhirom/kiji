@@ -825,6 +825,8 @@ namespace saru {
       case NODE_MOD: {
         return this->numeric_binop(node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
+      case NODE_NOP:
+        return -1;
       case NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const saru::Node &ident = node.children()[0];

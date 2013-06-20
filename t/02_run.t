@@ -425,3 +425,28 @@ say(0 ?? 2 !! 3);
 2
 3
 
+===
+--- code
+say("o2") if 1
+--- expected
+o2
+
+===
+--- code
+say("o2") if 1;
+--- expected
+o2
+
+===
+--- code
+say("o1") if 0;
+say("o2") if 1;
+--- expected
+o2
+
+===
+--- code
+say("o1") unless 0;
+say("o2") unless 1;
+--- expected
+o1
