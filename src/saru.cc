@@ -136,6 +136,7 @@ int main(int argc, char** argv) {
     }
   }
   // stash the rest of the raw command line args in the instance
+  interp.set_clargs(argc - processed_args, (char **)(opt->argv + processed_args));
   /*
   instance->num_clargs = argc - processed_args;
   instance->raw_clargs = (char **)(opt->argv + processed_args);

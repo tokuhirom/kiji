@@ -29,6 +29,7 @@ namespace saru {
         this->body_.pv = NULL;
         this->body_.nv = node.body_.nv;
         break;
+      case NODE_CLARGS:
       case NODE_POW:
       case NODE_STREQ:
       case NODE_STRNE:
@@ -90,6 +91,7 @@ namespace saru {
         break;
       case NODE_NUMBER:
         break;
+      case NODE_CLARGS:
       case NODE_POW:
       case NODE_STREQ:
       case NODE_STRNE:
@@ -142,6 +144,10 @@ namespace saru {
       this->type_ = type;
     }
 
+    void set_clargs() {
+      this->type_ = NODE_CLARGS;
+      this->body_.children = new std::vector<saru::Node>();
+    }
     void set_nop() {
       this->type_ = NODE_NOP;
       this->body_.children = new std::vector<saru::Node>();
@@ -256,6 +262,7 @@ namespace saru {
         printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
         break;
         // Node has children
+      case NODE_CLARGS:
       case NODE_POW:
       case NODE_STREQ:
       case NODE_STRNE:

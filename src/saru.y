@@ -56,7 +56,7 @@ while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_WHILE, cond, body);
         }
 
-for_stmt = 'for' - ( src:array_var | src:list_expr | src:qw ) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
+for_stmt = 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
 
 unless_stmt = 'unless' - cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_UNLESS, cond, body);
@@ -85,7 +85,7 @@ postfix_if_stmt = body:normal_stmt - 'if' - cond:expr { $$.set(saru::NODE_IF, co
 
 postfix_unless_stmt = body:normal_stmt - 'unless' - cond:expr { $$.set(saru::NODE_UNLESS, cond, body); }
 
-postfix_for_stmt = body:normal_stmt - 'for' - ( src:array_var | src:list_expr | src:qw ) { $$.set(saru::NODE_FOR, src, body); }
+postfix_for_stmt = body:normal_stmt - 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) { $$.set(saru::NODE_FOR, src, body); }
 
 # FIXME: simplify the code
 bind_stmt =
@@ -216,6 +216,9 @@ value =
     | array
     | funcall
     | qw
+    | twargs
+
+twargs='@*ARGS' { $$.set_clargs(); }
 
 qw =
     '<<' -

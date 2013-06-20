@@ -204,6 +204,10 @@ namespace saru {
       MVM_vm_destroy_instance(vm_);
       free(cu_);
     }
+    void set_clargs(int n, char**args) {
+      vm_->num_clargs = n;
+      vm_->raw_clargs = args;
+    }
     static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
       /* Dummy, 0-arg callsite. */
       static MVMCallsite no_arg_callsite;
@@ -558,6 +562,33 @@ namespace saru {
         );
         return reg_no;
       }
+      case NODE_CLARGS: {
+        // There is no reason to shallow copy. but clargs is BOOTStrArray.
+        // I should change it to...
+        // Yes. It's not mutable... It's a bug.
+        // I should not use clargs op and just keep it to SC?
+        int sa_reg = interp_.push_local_type(MVM_reg_obj);
+        assembler().clargs(sa_reg);
+
+        auto array_reg = interp_.push_local_type(MVM_reg_obj);
+        assembler().hlllist(array_reg);
+        assembler().create(array_reg, array_reg);
+
+          auto iter = interp_.push_local_type(MVM_reg_obj);
+          assembler().iter(iter, sa_reg);
+
+          auto label_end = label_unsolved();
+          unless_any(iter, label_end);
+
+        auto label_start = label();
+          auto tmp = interp_.push_local_type(MVM_reg_str);
+          assembler().shift_s(tmp, iter);
+          assembler().push_o(array_reg, to_o(tmp));
+          if_any(iter, label_start);
+        label_end.put();
+
+        return array_reg;
+      }
       case NODE_FOR: {
         //   init_iter
         // label_for:
@@ -567,14 +598,14 @@ namespace saru {
         // label_end:
           auto src_reg = box(do_compile(node.children()[0]));
           auto iter_reg = interp_.push_local_type(MVM_reg_obj);
+          auto label_end = label_unsolved();
           assembler().iter(iter_reg, src_reg);
+          unless_any(iter_reg, label_end);
 
         auto label_for = label();
 
-          auto tmp = interp_.push_local_type(MVM_reg_obj);
           auto val = interp_.push_local_type(MVM_reg_obj);
-          assembler().shift_o(tmp, iter_reg);
-          assembler().iterval(val, iter_reg);
+          assembler().shift_o(val, iter_reg);
 
           int it = interp_.push_lexical("$_", MVM_reg_obj);
           assembler().bindlex(it, 0, val);
@@ -582,6 +613,8 @@ namespace saru {
           do_compile(node.children()[1]);
 
           if_any(iter_reg, label_for);
+
+        label_end.put();
 
         return UNKNOWN_REG;
       }
