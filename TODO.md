@@ -165,6 +165,10 @@ TODO
 
  * pow operator
 
+## Step 5 2013-06-20
+
+ * `@*ARGS`
+
 ## Step 5.
 
  * postfix for
@@ -205,7 +209,6 @@ TODO
  * require
  * use
  * `my @ary := 1,2,3; say($ary[0])`
- * `@*ARGS`
  * `"foo { 3+2 }"`
  * ++$i , $i++ , --$i , $i--
  * fix the variable scopes

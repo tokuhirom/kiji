@@ -193,6 +193,35 @@ namespace saru {
       for (auto callsite: callsites_) {
         cu_->max_callsite_size = std::max(cu_->max_callsite_size, callsite->arg_count);
       }
+
+      // Initialize @*ARGS
+      MVMObject *clargs = MVM_repr_alloc_init(tc, tc->instance->boot_types->BOOTArray);
+      MVM_gc_root_add_permanent(tc, (MVMCollectable **)&clargs);
+      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CORE__");
+      auto sc = (MVMSerializationContext *)MVM_sc_create(tc, handle);
+      MVMROOT(tc, sc, {
+        MVMROOT(tc, clargs, {
+          MVMint64 count;
+          for (count = 0; count < vm_->num_clargs; count++) {
+            MVMString *string = MVM_string_utf8_decode(tc,
+              tc->instance->VMString,
+              vm_->raw_clargs[count], strlen(vm_->raw_clargs[count]));
+            MVMObject*type = cu_->hll_config->str_box_type;
+            MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
+            MVMROOT(tc, box, {
+                if (REPR(box)->initialize)
+                    REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
+                REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
+                    OBJECT_BODY(box), string);
+            });
+            MVM_repr_push_o(tc, clargs, box);
+          }
+          MVM_sc_set_object(tc, sc, 0, clargs);
+        });
+      });
+      cu_->num_scs = 1;
+      cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
+      cu_->scs[0] = sc;
     }
   public:
     Interpreter() {
@@ -562,32 +591,10 @@ namespace saru {
         );
         return reg_no;
       }
-      case NODE_CLARGS: {
-        // There is no reason to shallow copy. but clargs is BOOTStrArray.
-        // I should change it to...
-        // Yes. It's not mutable... It's a bug.
-        // I should not use clargs op and just keep it to SC?
-        int sa_reg = interp_.push_local_type(MVM_reg_obj);
-        assembler().clargs(sa_reg);
-
-        auto array_reg = interp_.push_local_type(MVM_reg_obj);
-        assembler().hlllist(array_reg);
-        assembler().create(array_reg, array_reg);
-
-          auto iter = interp_.push_local_type(MVM_reg_obj);
-          assembler().iter(iter, sa_reg);
-
-          auto label_end = label_unsolved();
-          unless_any(iter, label_end);
-
-        auto label_start = label();
-          auto tmp = interp_.push_local_type(MVM_reg_str);
-          assembler().shift_s(tmp, iter);
-          assembler().push_o(array_reg, to_o(tmp));
-          if_any(iter, label_start);
-        label_end.put();
-
-        return array_reg;
+      case NODE_CLARGS: { // @*ARGS
+        auto retval = interp_.push_local_type(MVM_reg_obj);
+        assembler().wval(retval, 0,0);
+        return retval;
       }
       case NODE_FOR: {
         //   init_iter
