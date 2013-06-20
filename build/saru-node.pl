@@ -42,6 +42,7 @@ my @types = qw(
     NODE_LIST
     NODE_FOR
     NODE_UNLESS
+    NODE_NOT
 );
 
 say qq!/* This file is generated from $0 */!;

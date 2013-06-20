@@ -392,3 +392,9 @@ for 1,2,3 { say($_); }
 2
 3
 
+===
+--- code
+if !1 { say("FAIL") }
+if !0 { say("OK") }
+--- expected
+OK

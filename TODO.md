@@ -131,9 +131,14 @@ TODO
 
  * if-elsif-else
 
-## Step 3.3
+## Step 3.3 2013-06-20
 
+ * for loop
  * `my @a:=1,2,3; for @a { say($_) }`
+
+## Step 3.4 2013-06-20
+
+ * ! operator
 
 ## Step 4.
 
@@ -141,7 +146,6 @@ TODO
  * `q<ok 7>`
  * "\x6f\x6b 8"
  * postfix if
- * for loop
  * `loop { }`
  * abs(-3), abs(3)
  * Array operations

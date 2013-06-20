@@ -755,6 +755,12 @@ namespace saru {
         assembler().invoke_o(ret, meth);
         return ret;
       }
+      case NODE_NOT: {
+        auto src_reg = this->to_i(do_compile(node.children()[0]));
+        auto dst_reg = interp_.push_local_type(MVM_reg_int64);
+        assembler().not_i(dst_reg, src_reg);
+        return dst_reg;
+      }
       case NODE_EQ: {
         return this->numeric_cmp_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
       }

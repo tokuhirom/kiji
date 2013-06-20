@@ -132,15 +132,19 @@ methodcall_expr =
     | atpos_expr
 
 atpos_expr =
-    f1:add_expr - '[' - f2:add_expr - ']' {
+    f1:not_expr - '[' - f2:not_expr - ']' {
         $$.set(saru::NODE_ATPOS, f1, f2);
     }
-    | add_expr
+    | not_expr
 
 funcall =
     i:ident '(' - a:args - ')' {
         $$.set(saru::NODE_FUNCALL, i, a);
     }
+
+not_expr =
+    ( '!' a:add_expr ) { $$.set(saru::NODE_NOT, a); }
+    | add_expr
 
 add_expr =
     l:mul_expr (
