@@ -162,6 +162,10 @@ namespace saru {
       this->type_ = NODE_VARIABLE;
       this->body_.pv = new std::string(txt, length);
     }
+    void set_string(const char *txt, int length) {
+      this->type_ = NODE_STRING;
+      this->body_.pv = new std::string(txt, length);
+    }
     void init_string() {
       this->type_ = NODE_STRING;
       this->body_.pv = new std::string();

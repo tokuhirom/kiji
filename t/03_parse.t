@@ -327,3 +327,12 @@ for @a { 1; }
 (statements
     (for (variable "@a") (statements (int 1)))
 )
+
+====
+--- code
+<< a b c >>
+--- expected
+(statements
+    (list (string "a") (string "b") (string "c"))
+)
+

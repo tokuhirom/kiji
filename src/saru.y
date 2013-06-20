@@ -59,7 +59,7 @@ while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_WHILE, cond, body);
         }
 
-for_stmt = 'for' - ( src:array_var | src:list_expr) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
+for_stmt = 'for' - ( src:array_var | src:list_expr | src:qw ) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
 
 unless_stmt = 'unless' - cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_UNLESS, cond, body);
@@ -199,6 +199,17 @@ value =
     | variable
     | array
     | funcall
+    | qw
+
+qw =
+    '<<' -
+        a:qw_item { $$.set(saru::NODE_LIST, a); a = $$; }
+        ( ws+ b:qw_item { a.push_child(b); $$ = a; } )*
+    - '>>' { $$=a }
+
+# I want to use [^ ] but greg does not support it...
+# https://github.com/nddrylliog/greg/issues/12
+qw_item = < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
 
 funcdef =
     'sub' - i:ident - '(' - p:params - ')' - b:block {

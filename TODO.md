@@ -140,6 +140,10 @@ TODO
 
  * ! operator
 
+## Step 3.5 2013-06-20
+
+ * `<< >>` = qw()
+
 ## Step 4.
 
  * next, last
@@ -151,11 +155,11 @@ TODO
  * Array operations
  * Hash operations
  * catch
- * `<< >>` = qw()
  * bit or, bit and, bit xor
  * logical xor, logical and, logical or
  * sprintf
  * printf
+ * `%*ENV`
 
 ## Step 4.9
 

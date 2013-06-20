@@ -398,3 +398,21 @@ if !1 { say("FAIL") }
 if !0 { say("OK") }
 --- expected
 OK
+
+===
+--- code
+say(<< a b c >>[0]);
+say(<< a b c >>[1]);
+say(<< a b c >>[2]);
+--- expected
+a
+b
+c
+
+===
+--- code
+for <<a b c >> { say($_); }
+--- expected
+a
+b
+c
