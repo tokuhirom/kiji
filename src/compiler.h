@@ -176,8 +176,15 @@ namespace saru {
       }
 
       // setup hllconfig
-      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, "nqp", 4);
-      cu_->hll_config = MVM_hll_get_config_for(tc, str);
+      {
+        MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"saru");
+        cu_->hll_config = MVM_hll_get_config_for(tc, hll_name);
+
+        MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
+        // MVMObject *key = (MVMObject *)MVM_string_utf8_decode((tc), (tc)->instance->VMString, "list", strlen("list");
+        // MVM_HASH_BIND(tc, frames[i]->lexical_names, key, entry);
+        MVM_hll_set_config(tc, hll_name, config);
+      }
 
       // setup callsite
       cu_->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*callsites_.size());
@@ -222,15 +229,6 @@ namespace saru {
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
       cu_->scs[0] = sc;
-
-      // initialize hllconfig
-      /*
-      MVMString *name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"saru");
-      MVMObject *cache = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
-      MVMObject *key = (MVMObject *)MVM_string_utf8_decode((tc), (tc)->instance->VMString, "list", strlen("list");
-      MVM_HASH_BIND(tc, frames[i]->lexical_names, key, entry);
-      MVM_hll_set_config(tc, name, config);
-      */
     }
   public:
     Interpreter() {
