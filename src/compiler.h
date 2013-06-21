@@ -10,40 +10,33 @@
 #include "gen.assembler.h"
 
 namespace saru {
-  // see bootstrap.c about argument operation.
-  static void Array_shift(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
-    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
-    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
-    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
-    MVM_args_proc_cleanup(tc, &arg_ctx);
-
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&self);
-
-    MVMRegister result;
-
-    REPR(self)->pos_funcs->shift(tc, STABLE(self), self,
-                                    OBJECT_BODY(self), &result, MVM_reg_obj);
-
-    MVM_args_set_result_obj(tc, result.o, MVM_RETURN_CURRENT_FRAME);
-
-    MVM_gc_root_temp_pop_n(tc, 1);
-  }
-
-  static void Array_elems(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
-    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
-    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
-    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
-    MVM_args_proc_cleanup(tc, &arg_ctx);
-
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&self);
-
-    MVMuint64 elems = REPR(self)->elems(tc, STABLE(self), self,
-                                    OBJECT_BODY(self));
-
-    MVM_args_set_result_int(tc, elems, MVM_RETURN_CURRENT_FRAME);
-
-    MVM_gc_root_temp_pop_n(tc, 1);
-  }
+  void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
+  class ClassBuilder {
+  private:
+    MVMObject*obj_;
+    MVMThreadContext *tc_;
+    MVMObject*cache_;
+  public:
+    ClassBuilder(MVMObject*obj, MVMThreadContext*tc) : obj_(obj), tc_(tc) {
+      cache_ = REPR(tc_->instance->boot_types->BOOTHash)->allocate(tc_, STABLE(tc_->instance->boot_types->BOOTHash));
+    }
+    ~ClassBuilder() {
+      STABLE(obj_)->method_cache = cache_;
+    }
+    void add_method(const char*name_c, size_t name_len, void (*func) (MVMThreadContext *, MVMCallsite *, MVMRegister *)) {
+      MVMString *string = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_c, name_len);
+      MVMObject * BOOTCCode = tc_->instance->boot_types->BOOTCCode;
+      MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc_, STABLE(BOOTCCode));
+      ((MVMCFunction *)code_obj)->body.func = func;
+      REPR(cache_)->ass_funcs->bind_key_boxed(
+          tc_,
+          STABLE(cache_),
+          cache_,
+          OBJECT_BODY(cache_),
+          (MVMObject*)string,
+          code_obj);
+    }
+  };
 
   class Frame {
   private:
@@ -172,6 +165,7 @@ namespace saru {
     std::list<std::shared_ptr<Frame>> used_frames_;
     std::vector<MVMCallsite*> callsites_;
 
+
   protected:
     // Copy data to CompUnit.
     void finalize() {
@@ -263,38 +257,7 @@ namespace saru {
       });
 
       // hacking hll
-      {
-        MVMObject *array_t = cu_->hll_config->slurpy_array_type;
-        MVMObject *cache = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
-        {
-          MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, "shift", strlen("shift"));
-          MVMObject * BOOTCCode = tc->instance->boot_types->BOOTCCode;
-          MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc, STABLE(BOOTCCode));
-          ((MVMCFunction *)code_obj)->body.func = Array_shift;
-          REPR(cache)->ass_funcs->bind_key_boxed(
-              tc,
-              STABLE(cache),
-              cache,
-              OBJECT_BODY(cache),
-              (MVMObject*)string,
-              code_obj);
-        }
-
-        {
-          MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, "elems", strlen("elems"));
-          MVMObject * BOOTCCode = tc->instance->boot_types->BOOTCCode;
-          MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc, STABLE(BOOTCCode));
-          ((MVMCFunction *)code_obj)->body.func = Array_elems;
-          REPR(cache)->ass_funcs->bind_key_boxed(
-              tc,
-              STABLE(cache),
-              cache,
-              OBJECT_BODY(cache),
-              (MVMObject*)string,
-              code_obj);
-        }
-        STABLE(array_t)->method_cache = cache;
-      }
+      bootstrap_Array(cu_, tc);
 
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
@@ -1349,3 +1312,4 @@ namespace saru {
   };
 }
 
+#include "builtin/array.h"
