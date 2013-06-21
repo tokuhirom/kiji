@@ -500,3 +500,14 @@ say(@a.elems());
 3
 1
 2
+
+===
+--- code
+my @a:=423,553,664;
+say(@a.elems());
+say(@a.pop());
+say(@a.elems());
+--- expected
+3
+664
+2

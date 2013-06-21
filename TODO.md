@@ -208,12 +208,12 @@ TODO
 
 ## Step 10.
 
+ * `my @a=1,2,3; while my $n=@a.shift() { say($n) }`
  * basic i/o
  * `open('hoge.pl').slurp`
  * multi assign like `my ($x, $y) = (1,2)`
  * require
  * use
- * `my @ary := 1,2,3; say($ary[0])`
  * `"foo { 3+2 }"`
  * ++$i , $i++ , --$i , $i--
  * fix the variable scopes
@@ -237,7 +237,7 @@ TODO
  * Support OOP
  * read code from file
  * Support XSUB?
-   * use MVMCFunction
+   * use MVMCFunction → it works well
  * if statement should return value.
 
 ## Step 40.
