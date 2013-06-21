@@ -3,6 +3,40 @@
 
 namespace saru {
 
+  // http://doc.perl6.org/type/Str
+
+  // TODO
+  // chop
+  // chomp
+  // uc
+  // fc
+  // tc
+  // tclc
+  // tcuc
+  // wordcase
+  // lcfirst
+  // ucfirst
+  // length
+  // chars
+  // encode
+  // index
+  // rindex
+  // split
+  // comb
+  // lines
+  // words
+  // flip
+  // sprintf
+  // subst
+  // substr
+  // succ
+  // pred
+  // ord
+  // ords
+  // trim
+  // trim-trailing
+  // trim-leading
+
   static void Str_lc(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
     MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
     MVM_args_proc_init(tc, &arg_ctx, callsite, args);

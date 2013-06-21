@@ -1,5 +1,5 @@
-saru - -Ofun calcurator on MoarVM
-=================================
+saru - -Ofun interpreter on MoarVM
+===================================
 
 This is a new great toy for Perl hackers.
 
@@ -30,15 +30,18 @@ These things are not required at run time.
  * Perl5
  * C++ compiler supports C++11
 
-Environment
------------
+Supported Environment
+---------------------
 
-saru is tested on ubuntu 12.04.
+saru is tested on ubuntu 12.04. But saru may works any POSIX compliant environment.
 
-Use case
---------
+Load map
+========
 
- * You can write NQP compiler based on this library.
+ * Version 1.0 with most of nqp features without OOP, Grammar, Regex.
+ * Version 2.0 with P5Regexp support.
+ * Version 3.0 with OOP support.
+ * and more features will be supported.
 
 See also
 --------

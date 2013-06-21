@@ -158,20 +158,25 @@ namespace saru {
     }
   };
 
-  class Interpreter {
+  class CompUnit {
   private:
-    MVMInstance* vm_;
-    MVMCompUnit* cu_;
+    MVMThreadContext *tc_;
+    MVMCompUnit*cu_;
     std::vector<MVMString*> strings_;
     std::vector<std::shared_ptr<Frame>> frames_;
     std::list<std::shared_ptr<Frame>> used_frames_;
     std::vector<MVMCallsite*> callsites_;
-
-
-  protected:
-    // Copy data to CompUnit.
-    void finalize() {
-      MVMThreadContext *tc = vm_->main_thread;
+  public:
+    CompUnit(MVMThreadContext* tc) :tc_(tc) {
+      cu_ = (MVMCompUnit*)malloc(sizeof(MVMCompUnit));
+      memset(cu_, 0, sizeof(MVMCompUnit));
+    }
+    ~CompUnit() {
+      free(cu_);
+    }
+    void finalize(MVMInstance* vm) {
+      MVMThreadContext *tc = tc_; // remove me
+      MVMInstance *vm_ = vm; // remove me
 
       // finalize strings
       cu_->strings     = strings_.data();
@@ -266,43 +271,7 @@ namespace saru {
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
       cu_->scs[0] = sc;
     }
-    MVMObject * mk_boxed_string(const char *name, size_t len) {
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, name, len);
-      MVMObject*type = cu_->hll_config->str_box_type;
-      MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
-      MVMROOT(tc, box, {
-          if (REPR(box)->initialize)
-              REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
-          REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
-              OBJECT_BODY(box), string);
-      });
-      return box;
-    }
-  public:
-    Interpreter() {
-      vm_ = MVM_vm_create_instance();
-      cu_ = (MVMCompUnit*)malloc(sizeof(MVMCompUnit));
-      memset(cu_, 0, sizeof(MVMCompUnit));
-    }
-    ~Interpreter() {
-      MVM_vm_destroy_instance(vm_);
-      free(cu_);
-    }
-    void set_clargs(int n, char**args) {
-      vm_->num_clargs = n;
-      vm_->raw_clargs = args;
-    }
-    static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
-      /* Dummy, 0-arg callsite. */
-      static MVMCallsite no_arg_callsite;
-      no_arg_callsite.arg_flags = NULL;
-      no_arg_callsite.arg_count = 0;
-      no_arg_callsite.num_pos   = 0;
 
-      /* Create initial frame, which sets up all of the interpreter state also. */
-      MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
-    }
     void initialize() {
       // init compunit.
       int apr_return_status;
@@ -314,18 +283,15 @@ namespace saru {
       cu_->pool       = pool;
       this->push_frame("frame_name_0");
     }
-
     int push_string(const std::string &str) {
       return this->push_string(str.c_str(), str.size());
     }
-
     Assembler & assembler() {
       return frames_.back()->assembler();
     }
 
     int push_string(const char*string, int length) {
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMString* str = MVM_string_utf8_decode(tc, tc->instance->VMString, string, length);
+      MVMString* str = MVM_string_utf8_decode(tc_, tc_->instance->VMString, string, length);
       strings_.push_back(str);
       return strings_.size() - 1;
     }
@@ -349,7 +315,7 @@ namespace saru {
     }
 
     int push_frame(const std::string & name) {
-      std::shared_ptr<Frame> frame = std::make_shared<Frame>(vm_->main_thread, name);
+      std::shared_ptr<Frame> frame = std::make_shared<Frame>(tc_, name);
       if (frames_.size() != 0) {
         frame->set_outer(frames_.back());
       }
@@ -369,28 +335,128 @@ namespace saru {
       callsites_.push_back(callsite);
       return callsites_.size() - 1;
     }
+    MVMStaticFrame * get_start_frame() {
+      return cu_->main_frame ? cu_->main_frame : cu_->frames[0];
+    }
+
+    void dump(MVMInstance * vm) {
+      this->finalize(vm);
+
+      // dump it
+      char *dump = MVM_bytecode_dump(tc_, cu_);
+
+      printf("%s", dump);
+      free(dump);
+    }
+  };
+
+  class Interpreter {
+  private:
+    MVMInstance* vm_;
+    CompUnit *cu_;
+
+  protected:
+    // Copy data to CompUnit.
+    void finalize() {
+      cu_->finalize(vm_);
+    }
+    /*
+    MVMObject * mk_boxed_string(const char *name, size_t len) {
+      MVMThreadContext *tc = vm_->main_thread;
+      MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, name, len);
+      MVMObject*type = cu_->hll_config->str_box_type;
+      MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
+      MVMROOT(tc, box, {
+          if (REPR(box)->initialize)
+              REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
+          REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
+              OBJECT_BODY(box), string);
+      });
+      return box;
+    }
+    */
+  public:
+    Interpreter() {
+      vm_ = MVM_vm_create_instance();
+      cu_ = new CompUnit(vm_->main_thread);
+    }
+    ~Interpreter() {
+      MVM_vm_destroy_instance(vm_);
+      delete cu_;
+    }
+    void set_clargs(int n, char**args) {
+      vm_->num_clargs = n;
+      vm_->raw_clargs = args;
+    }
+    static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
+      /* Dummy, 0-arg callsite. */
+      static MVMCallsite no_arg_callsite;
+      no_arg_callsite.arg_flags = NULL;
+      no_arg_callsite.arg_count = 0;
+      no_arg_callsite.num_pos   = 0;
+
+      /* Create initial frame, which sets up all of the interpreter state also. */
+      MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
+    }
+    void initialize() {
+      cu_->initialize();
+    }
+
+    int push_string(const std::string &str) {
+      return cu_->push_string(str);
+      return this->push_string(str.c_str(), str.size());
+    }
+
+    Assembler & assembler() {
+      return cu_->assembler();
+    }
+
+    int push_string(const char*string, int length) {
+      return cu_->push_string(string, length);
+    }
+
+    // reserve register
+    int push_local_type(MVMuint16 reg_type) {
+      return cu_->push_local_type(reg_type);
+    }
+    // Get register type at 'n'
+    uint16_t get_local_type(int n) {
+      return cu_->get_local_type(n);
+    }
+    // Push lexical variable.
+    int push_lexical(const std::string name, MVMuint16 type) {
+      return cu_->push_lexical(name, type);
+    }
+
+    // lexical variable number by name
+    int find_lexical_by_name(const std::string &name_cc, int &outer) {
+      return cu_->find_lexical_by_name(name_cc, outer);
+    }
+
+    int push_frame(const std::string & name) {
+      return cu_->push_frame(name);
+    }
+    void pop_frame() {
+      cu_->pop_frame();
+    }
+    size_t frame_size() const {
+      return cu_->frame_size();
+    }
+
+    size_t push_callsite(MVMCallsite *callsite) {
+      return cu_->push_callsite(callsite);
+    }
 
     void run() {
       this->finalize();
 
-      assert(cu_->main_frame);
-      assert(cu_->main_frame->bytecode);
-      assert(cu_->main_frame->bytecode_size > 0);
-
       MVMThreadContext *tc = vm_->main_thread;
-      MVMStaticFrame *start_frame = cu_->main_frame ? cu_->main_frame : cu_->frames[0];
+      MVMStaticFrame *start_frame = cu_->get_start_frame();
       MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
     }
 
     void dump() {
-      this->finalize();
-
-      MVMThreadContext *tc = vm_->main_thread;
-      // dump it
-      char *dump = MVM_bytecode_dump(tc, cu_);
-
-      printf("%s", dump);
-      free(dump);
+      cu_->dump(vm_);
     }
   };
 
