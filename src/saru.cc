@@ -57,10 +57,10 @@ void run_repl() {
       }
 
       saru::Interpreter interp;
-      interp.initialize();
-      saru::Compiler compiler(interp);
+      saru::CompUnit cu(interp.main_thread());
+      saru::Compiler compiler(cu);
       compiler.compile(node_global);
-      interp.run();
+      interp.run(cu);
     }
     std::cout << std::endl;
   }
@@ -72,7 +72,6 @@ int main(int argc, char** argv) {
   // This include apr_initialize().
   // You need to initialize before `apr_pool_create()`
   saru::Interpreter interp;
-  interp.initialize();
 
   apr_status_t rv;
   apr_pool_t *mp;
@@ -163,12 +162,13 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  saru::Compiler compiler(interp);
+  saru::CompUnit cu(interp.main_thread());
+  saru::Compiler compiler(cu);
   compiler.compile(node_global);
   if (dump_bytecode) {
-    interp.dump();
+    cu.dump(interp.vm());
   } else {
-    interp.run();
+    interp.run(cu);
   }
 
   return 0;

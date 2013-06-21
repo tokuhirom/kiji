@@ -353,13 +353,8 @@ namespace saru {
   class Interpreter {
   private:
     MVMInstance* vm_;
-    CompUnit *cu_;
 
   protected:
-    // Copy data to CompUnit.
-    void finalize() {
-      cu_->finalize(vm_);
-    }
     /*
     MVMObject * mk_boxed_string(const char *name, size_t len) {
       MVMThreadContext *tc = vm_->main_thread;
@@ -378,15 +373,19 @@ namespace saru {
   public:
     Interpreter() {
       vm_ = MVM_vm_create_instance();
-      cu_ = new CompUnit(vm_->main_thread);
     }
     ~Interpreter() {
       MVM_vm_destroy_instance(vm_);
-      delete cu_;
     }
     void set_clargs(int n, char**args) {
       vm_->num_clargs = n;
       vm_->raw_clargs = args;
+    }
+    MVMThreadContext * main_thread() {
+      return vm_->main_thread;
+    }
+    MVMInstance * vm() {
+      return vm_;
     }
     static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
       /* Dummy, 0-arg callsite. */
@@ -398,65 +397,13 @@ namespace saru {
       /* Create initial frame, which sets up all of the interpreter state also. */
       MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
     }
-    void initialize() {
-      cu_->initialize();
-    }
 
-    int push_string(const std::string &str) {
-      return cu_->push_string(str);
-      return this->push_string(str.c_str(), str.size());
-    }
-
-    Assembler & assembler() {
-      return cu_->assembler();
-    }
-
-    int push_string(const char*string, int length) {
-      return cu_->push_string(string, length);
-    }
-
-    // reserve register
-    int push_local_type(MVMuint16 reg_type) {
-      return cu_->push_local_type(reg_type);
-    }
-    // Get register type at 'n'
-    uint16_t get_local_type(int n) {
-      return cu_->get_local_type(n);
-    }
-    // Push lexical variable.
-    int push_lexical(const std::string name, MVMuint16 type) {
-      return cu_->push_lexical(name, type);
-    }
-
-    // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int &outer) {
-      return cu_->find_lexical_by_name(name_cc, outer);
-    }
-
-    int push_frame(const std::string & name) {
-      return cu_->push_frame(name);
-    }
-    void pop_frame() {
-      cu_->pop_frame();
-    }
-    size_t frame_size() const {
-      return cu_->frame_size();
-    }
-
-    size_t push_callsite(MVMCallsite *callsite) {
-      return cu_->push_callsite(callsite);
-    }
-
-    void run() {
-      this->finalize();
+    void run(CompUnit & cu) {
+      cu.finalize(vm_);
 
       MVMThreadContext *tc = vm_->main_thread;
-      MVMStaticFrame *start_frame = cu_->get_start_frame();
+      MVMStaticFrame *start_frame = cu.get_start_frame();
       MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
-    }
-
-    void dump() {
-      cu_->dump(vm_);
     }
   };
 
@@ -467,7 +414,8 @@ namespace saru {
   enum { UNKNOWN_REG = -1 };
   class Compiler {
   private:
-    Interpreter &interp_;
+    // Interpreter &interp_;
+    CompUnit & cu_;
 
     class Label {
     private:
@@ -522,39 +470,39 @@ namespace saru {
     }
 
     Assembler& assembler() {
-      return interp_.assembler(); // FIXME ugly
+      return cu_.assembler(); // FIXME ugly
     }
 
-    int reg_obj() { return interp_.push_local_type(MVM_reg_obj); }
-    int reg_str() { return interp_.push_local_type(MVM_reg_str); }
-    int reg_int64() { return interp_.push_local_type(MVM_reg_int64); }
-    int reg_num64() { return interp_.push_local_type(MVM_reg_num64); }
+    int reg_obj() { return cu_.push_local_type(MVM_reg_obj); }
+    int reg_str() { return cu_.push_local_type(MVM_reg_str); }
+    int reg_int64() { return cu_.push_local_type(MVM_reg_int64); }
+    int reg_num64() { return cu_.push_local_type(MVM_reg_num64); }
 
     uint16_t get_local_type(int n) {
-      return interp_.get_local_type(n);
+      return cu_.get_local_type(n);
     }
     int push_string(const std::string & str) {
-      return interp_.push_string(str.c_str(), str.size());
+      return cu_.push_string(str.c_str(), str.size());
     }
     int push_string(const char*string, int length) {
-      return interp_.push_string(string, length);
+      return cu_.push_string(string, length);
     }
     // lexical variable number by name
     int find_lexical_by_name(const std::string &name_cc, int &outer) {
-      return interp_.find_lexical_by_name(name_cc, outer);
+      return cu_.find_lexical_by_name(name_cc, outer);
     }
     // Push lexical variable.
     int push_lexical(const std::string &name, MVMuint16 type) {
-      return interp_.push_lexical(name, type);
+      return cu_.push_lexical(name, type);
     }
     int push_frame(const std::string & name) {
-      return interp_.push_frame(name);
+      return cu_.push_frame(name);
     }
     void pop_frame() {
-      interp_.pop_frame();
+      cu_.pop_frame();
     }
     size_t push_callsite(MVMCallsite *callsite) {
-      return interp_.push_callsite(callsite);
+      return cu_.push_callsite(callsite);
     }
 
     int do_compile(const saru::Node &node) {
@@ -1363,7 +1311,9 @@ namespace saru {
       }
     }
   public:
-    Compiler(Interpreter &interp): interp_(interp) { }
+    Compiler(CompUnit & cu): cu_(cu) {
+      cu_.initialize();
+    }
     void compile(saru::Node &node) {
       assembler().checkarity(0, -1);
 
