@@ -53,6 +53,9 @@ my @types = qw(
     NODE_STRLE
     NODE_POW
     NODE_CLARGS
+    NODE_HASH
+    NODE_PAIR
+    NODE_ATKEY
 );
 
 say qq!/* This file is generated from $0 */!;

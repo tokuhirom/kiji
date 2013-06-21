@@ -198,11 +198,14 @@ mul_expr =
         $$ = l;
     }
 
-term = value
+term = atkey_expr
 
 ident = < [a-zA-Z] [a-zA-Z0-9]+ ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);
 } -
+
+atkey_expr = ( container:value '{' - k:value - '}' ) { $$.set(saru::NODE_ATKEY, container, k); }
+           | value
 
 value = 
     ( '-' ( integer | dec_number) ) {
@@ -217,6 +220,17 @@ value =
     | funcall
     | qw
     | twargs
+    | hash
+
+hash = '{' -
+    p1:pair { $$.set(saru::NODE_HASH, p1); p1=$$; } ( -  ',' - p2:pair { p1.push_child(p2); $$=p1; } )*
+    - '}' { $$=p1; }
+
+pair = k:hash_key - '=>' - v:expr { $$.set(saru::NODE_PAIR, k, v); }
+
+hash_key =
+    < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
+    | string
 
 twargs='@*ARGS' { $$.set_clargs(); }
 

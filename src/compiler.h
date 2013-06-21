@@ -982,6 +982,27 @@ namespace saru {
         return this->str_binop(node, MVM_OP_le_s);
       case NODE_NOP:
         return -1;
+      case NODE_ATKEY: {
+        assert(node.children().size() == 2);
+        auto dst       = reg_obj();
+        auto container = to_o(do_compile(node.children()[0]));
+        auto key       = to_s(do_compile(node.children()[1]));
+        assembler().atkey_o(dst, container, key);
+        return dst;
+      }
+      case NODE_HASH: {
+        auto hashtype = reg_obj();
+        auto hash     = reg_obj();
+        assembler().hllhash(hashtype);
+        assembler().create(hash, hashtype);
+        for (auto pair: node.children()) {
+          assert(pair.type() == NODE_PAIR);
+          auto k = to_s(do_compile(pair.children()[0]));
+          auto v = to_o(do_compile(pair.children()[1]));
+          assembler().bindkey_o(hash, k, v);
+        }
+        return hash;
+      }
       case NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const saru::Node &ident = node.children()[0];

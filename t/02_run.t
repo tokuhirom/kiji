@@ -517,3 +517,12 @@ say(@a.elems());
 say("hOgE".lc());
 --- expected
 hoge
+
+===
+--- code
+say({abc => "def", geh => "ijk"}{"abc"})
+say({abc => "def", geh => "ijk"}{"geh"})
+--- expected
+def
+ijk
+
