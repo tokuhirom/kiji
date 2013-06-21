@@ -185,6 +185,7 @@ TODO
   * ref http://doc.perl6.org/type/Array#elems
  * Hash operations
  * `my %hash = { a => 3 }; say(%hash<a>);`
+ * Str methods
  * catch
  * bit or, bit and, bit xor
  * logical xor, logical and, logical or

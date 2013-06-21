@@ -27,7 +27,6 @@ namespace saru {
   // sort
   // reduce
   // splice
-  // pop
   // push
   // unshift
 

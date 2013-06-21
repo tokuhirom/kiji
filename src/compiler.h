@@ -11,6 +11,8 @@
 
 namespace saru {
   void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
+  void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);
+
   class ClassBuilder {
   private:
     MVMObject*obj_;
@@ -258,6 +260,7 @@ namespace saru {
 
       // hacking hll
       bootstrap_Array(cu_, tc);
+      bootstrap_Str(cu_, tc);
 
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
@@ -829,7 +832,7 @@ namespace saru {
       }
       case NODE_METHODCALL: {
         assert(node.children().size() == 3);
-        auto obj = do_compile(node.children()[0]);
+        auto obj = to_o(do_compile(node.children()[0]));
         auto str = interp_.push_string(node.children()[1].pv());
         auto meth = interp_.push_local_type(MVM_reg_obj);
         auto ret = interp_.push_local_type(MVM_reg_obj);
@@ -1313,3 +1316,4 @@ namespace saru {
 }
 
 #include "builtin/array.h"
+#include "builtin/str.h"

@@ -511,3 +511,9 @@ say(@a.elems());
 3
 664
 2
+
+===
+--- code
+say("hOgE".lc());
+--- expected
+hoge
