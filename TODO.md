@@ -181,13 +181,14 @@ TODO
 
  * $hash<abc>
 
-## Step 6.3
+## Step 6.3 2013-06-22
 
- * $hash.keys()
+ * postfix for
 
 ## Step 5.
 
- * postfix for
+ * $hash.keys()
+ * +(1,2,3)
  * next, last
  * `q<ok 7>`
  * "\x6f\x6b 8"

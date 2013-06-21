@@ -204,7 +204,6 @@ X Japan!
 2
 
 ===
---- SKIP
 --- code: say([4,5,6].shift());
 --- expected
 4
@@ -539,3 +538,20 @@ my $h:={abc => "def", geh => "ijk"};
 say($h.elems());
 --- expected
 2
+
+===
+--- SKIP
+--- code
+my $h:={abc => "def", geh => "ijk"}; for $h.keys() { say($_); }
+--- expected
+abc
+geh
+
+===
+--- code
+say($_) for 1,2,3;
+--- expected
+1
+2
+3
+
