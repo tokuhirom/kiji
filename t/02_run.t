@@ -393,8 +393,8 @@ for 1,2,3 { say($_); }
 
 ===
 --- code
-if !1 { say("FAIL") }
-if !0 { say("OK") }
+if !1 { say("FAIL"); }
+if !0 { say("OK"); }
 --- expected
 OK
 
@@ -555,3 +555,10 @@ say($_) for 1,2,3;
 2
 3
 
+===
+--- SKIP
+--- code
+sub plan($n) { say($n); }
+plan 3;
+--- expected
+3

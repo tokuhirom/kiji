@@ -38,15 +38,15 @@ statement =
             e:postfix_if_stmt eat_terminator { $$ = e; }
           | e:postfix_unless_stmt eat_terminator { $$ = e; }
           | e:postfix_for_stmt eat_terminator { $$ = e; }
-          | b:normal_stmt eat_terminator { $$ = b; }
           | if_stmt
           | for_stmt
           | while_stmt
           | unless_stmt
           | die_stmt
           | funcdef - ';'*
+          | b:normal_stmt eat_terminator { $$ = b; }
 
-normal_stmt = bind_stmt | return_stmt
+normal_stmt = return_stmt | bind_stmt
 
 return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
 
@@ -150,8 +150,16 @@ atpos_expr =
     | not_expr
 
 funcall =
-    i:ident '(' - a:args - ')' {
+    (i:ident - '(' - a:args - ')') {
         $$.set(saru::NODE_FUNCALL, i, a);
+    }
+    | (i:ident ws+ a:args) {
+        // funcall without parens.
+        if (i.pv()=="return") {
+            $$.set(saru::NODE_RETURN, a);
+        } else {
+            $$.set(saru::NODE_FUNCALL, i, a);
+        }
     }
 
 not_expr =
@@ -202,7 +210,7 @@ term = atkey_expr
 
 ident = < [a-zA-Z] [a-zA-Z0-9]+ ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);
-} -
+}
 
 atkey_expr = ( container:value '{' - k:value - '}' ) { $$.set(saru::NODE_ATKEY, container, k); }
            | ( container:value '<' - k:ident - '>' ) { k.change_type(saru::NODE_STRING); $$.set(saru::NODE_ATKEY, container, k); }
