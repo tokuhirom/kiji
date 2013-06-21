@@ -1,11 +1,6 @@
 Contribution
 ============
 
-## Features
-
-You can add any features from Perl6 spec.
-Every feature from Perl6 is acceptable.
-
 ## Coding style
 
 ### C++

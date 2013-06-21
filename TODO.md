@@ -270,9 +270,6 @@ TODO
 
 ## Step 50.
 
- * Support all statements in NQP
- * Pass NQP test cases
-
     say(foo());
 
     sub foo() { bar() }
@@ -280,5 +277,5 @@ TODO
 
 ## Step ∞. Will done in 2999-12-31
 
- * Support full feature of Perl6
+ * Complete.
 

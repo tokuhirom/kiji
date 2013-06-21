@@ -14,8 +14,7 @@ Win32 patch makes hard to maintain. Please do it before first stable release.
 What's this?
 -------------
 
-saru aims to be the language of the *backward* compatibility of Perl6.
-It's running on MoarVM.
+Tiny interpreter run on MoarVM
 
 Build time dependencies
 -----------------------
