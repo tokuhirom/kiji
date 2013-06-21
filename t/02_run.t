@@ -562,3 +562,17 @@ sub plan($n) { say($n); }
 plan 3;
 --- expected
 3
+
+=== blocks
+--- code
+{ say(1); say(2); }
+--- expected
+1
+2
+
+=== omit semicolon
+--- code
+{ say(1); say(2) }
+--- expected
+1
+2

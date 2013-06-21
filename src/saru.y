@@ -44,6 +44,7 @@ statement =
           | unless_stmt
           | die_stmt
           | funcdef - ';'*
+          | block
           | b:normal_stmt eat_terminator { $$ = b; }
 
 normal_stmt = return_stmt | bind_stmt
