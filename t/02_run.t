@@ -576,3 +576,10 @@ plan 3;
 --- expected
 1
 2
+
+===
+--- code
+sub a() { say 5 }
+a();
+--- expected
+5

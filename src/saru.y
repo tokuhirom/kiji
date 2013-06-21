@@ -209,7 +209,7 @@ mul_expr =
 
 term = atkey_expr
 
-ident = < [a-zA-Z] [a-zA-Z0-9]+ ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
+ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);
 }
 
