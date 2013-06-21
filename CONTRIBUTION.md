@@ -18,7 +18,7 @@ Use 4 space for indent.
 
 ## Commit message
 
-You must write commit message in english.
+You must write commit message in English.
 
 ## Test cases required.
 
