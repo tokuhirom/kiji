@@ -12,6 +12,7 @@
 namespace saru {
   void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);
+  void bootstrap_Hash(MVMCompUnit* cu, MVMThreadContext*tc);
 
   class ClassBuilder {
   private:
@@ -266,6 +267,7 @@ namespace saru {
       // hacking hll
       bootstrap_Array(cu_, tc);
       bootstrap_Str(cu_, tc);
+      bootstrap_Hash(cu_, tc);
 
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
@@ -1381,3 +1383,4 @@ namespace saru {
 
 #include "builtin/array.h"
 #include "builtin/str.h"
+#include "builtin/hash.h"

@@ -533,3 +533,9 @@ say($h<abc>);
 --- expected
 def
 
+===
+--- code
+my $h:={abc => "def", geh => "ijk"};
+say($h.elems());
+--- expected
+2
