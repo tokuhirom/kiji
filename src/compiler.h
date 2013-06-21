@@ -530,6 +530,33 @@ namespace saru {
     int reg_int64() { return interp_.push_local_type(MVM_reg_int64); }
     int reg_num64() { return interp_.push_local_type(MVM_reg_num64); }
 
+    uint16_t get_local_type(int n) {
+      return interp_.get_local_type(n);
+    }
+    int push_string(const std::string & str) {
+      return interp_.push_string(str.c_str(), str.size());
+    }
+    int push_string(const char*string, int length) {
+      return interp_.push_string(string, length);
+    }
+    // lexical variable number by name
+    int find_lexical_by_name(const std::string &name_cc, int &outer) {
+      return interp_.find_lexical_by_name(name_cc, outer);
+    }
+    // Push lexical variable.
+    int push_lexical(const std::string &name, MVMuint16 type) {
+      return interp_.push_lexical(name, type);
+    }
+    int push_frame(const std::string & name) {
+      return interp_.push_frame(name);
+    }
+    void pop_frame() {
+      interp_.pop_frame();
+    }
+    size_t push_callsite(MVMCallsite *callsite) {
+      return interp_.push_callsite(callsite);
+    }
+
     int do_compile(const saru::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
@@ -540,7 +567,7 @@ namespace saru {
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
         }
         // assembler().return_o(this->box(reg));
-        switch (interp_.get_local_type(reg)) {
+        switch (get_local_type(reg)) {
         case MVM_reg_int64:
           assembler().return_i(reg);
           break;
@@ -554,7 +581,7 @@ namespace saru {
           assembler().return_n(reg);
           break;
         default:
-          MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", interp_.get_local_type(reg));
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", get_local_type(reg));
         }
         return UNKNOWN_REG;
       }
@@ -584,19 +611,19 @@ namespace saru {
         return UNKNOWN_REG;
       }
       case NODE_STRING: {
-        int str_num = interp_.push_string(node.pv());
-        int reg_num = interp_.push_local_type(MVM_reg_str);
+        int str_num = push_string(node.pv());
+        int reg_num = reg_str();
         assembler().const_s(reg_num, str_num);
         return reg_num;
       }
       case NODE_INT: {
-        uint16_t reg_num = interp_.push_local_type(MVM_reg_int64);
+        uint16_t reg_num = reg_int64();
         int64_t n = node.iv();
         assembler().const_i64(reg_num, n);
         return reg_num;
       }
       case NODE_NUMBER: {
-        uint16_t reg_num = interp_.push_local_type(MVM_reg_num64);
+        uint16_t reg_num = reg_num64();
         MVMnum64 n = node.nv();
         assembler().const_n64(reg_num, n);
         return reg_num;
@@ -616,7 +643,7 @@ namespace saru {
           return val;
         } else if (lhs.type() == NODE_VARIABLE) {
           int outer;
-          auto lex_no = interp_.find_lexical_by_name(lhs.pv(), outer);
+          auto lex_no = find_lexical_by_name(lhs.pv(), outer);
           int val    = this->box(do_compile(rhs));
           assembler().bindlex(
             lex_no, // lex number
@@ -633,8 +660,8 @@ namespace saru {
       case NODE_FUNC: {
         const std::string& name = node.children()[0].pv();
 
-        auto funcreg = interp_.push_local_type(MVM_reg_obj);
-        auto funclex = interp_.push_lexical(std::string("&") + name, MVM_reg_obj);
+        auto funcreg = reg_obj();
+        auto funclex = push_lexical(std::string("&") + name, MVM_reg_obj);
         auto func_pos = assembler().bytecode_size() + 2 + 2;
         assembler().getcode(funcreg, 0);
         assembler().bindlex(
@@ -644,7 +671,7 @@ namespace saru {
         );
 
         // Compile function body
-        auto frame_no = interp_.push_frame(name);
+        auto frame_no = push_frame(name);
 
         // TODO process named params
         // TODO process types
@@ -656,8 +683,8 @@ namespace saru {
 
           int i=0;
           for (auto n: node.children()[1].children()) {
-            int reg = interp_.push_local_type(MVM_reg_obj);
-            int lex = interp_.push_lexical(n.pv(), MVM_reg_obj);
+            int reg = reg_obj();
+            int lex = push_lexical(n.pv(), MVM_reg_obj);
             assembler().param_rp_o(reg, i);
             assembler().bindlex(lex, 0, reg);
             ++i;
@@ -672,7 +699,7 @@ namespace saru {
               ; iter!=stmts.children().end() ; ++iter) {
             int reg = do_compile(*iter);
             if (iter==stmts.children().end()-1 && reg >= 0) {
-              switch (interp_.get_local_type(reg)) {
+              switch (get_local_type(reg)) {
               case MVM_reg_int64:
                 assembler().return_i(reg);
                 break;
@@ -693,12 +720,12 @@ namespace saru {
 
           // return null
           if (!returned) {
-            int reg = interp_.push_local_type(MVM_reg_obj);
+            int reg = reg_obj();
             assembler().null(reg);
             assembler().return_o(reg);
           }
         }
-        interp_.pop_frame();
+        pop_frame();
 
         assembler().write_uint16_t(frame_no, func_pos);
 
@@ -706,9 +733,9 @@ namespace saru {
       }
       case NODE_VARIABLE: {
         // copy lexical variable to register
-        auto reg_no = interp_.push_local_type(MVM_reg_obj);
+        auto reg_no = reg_obj();
         int outer = 0;
-        auto lex_no = interp_.find_lexical_by_name(node.pv(), outer);
+        auto lex_no = find_lexical_by_name(node.pv(), outer);
         assembler().getlex(
           reg_no,
           lex_no,
@@ -717,7 +744,7 @@ namespace saru {
         return reg_no;
       }
       case NODE_CLARGS: { // @*ARGS
-        auto retval = interp_.push_local_type(MVM_reg_obj);
+        auto retval = reg_obj();
         assembler().wval(retval, 0,0);
         return retval;
       }
@@ -729,17 +756,17 @@ namespace saru {
         //   if_o label_for
         // label_end:
           auto src_reg = box(do_compile(node.children()[0]));
-          auto iter_reg = interp_.push_local_type(MVM_reg_obj);
+          auto iter_reg = reg_obj();
           auto label_end = label_unsolved();
           assembler().iter(iter_reg, src_reg);
           unless_any(iter_reg, label_end);
 
         auto label_for = label();
 
-          auto val = interp_.push_local_type(MVM_reg_obj);
+          auto val = reg_obj();
           assembler().shift_o(val, iter_reg);
 
-          int it = interp_.push_lexical("$_", MVM_reg_obj);
+          int it = push_lexical("$_", MVM_reg_obj);
           assembler().bindlex(it, 0, val);
 
           do_compile(node.children()[1]);
@@ -760,7 +787,7 @@ namespace saru {
           printf("This is variable: %s\n", n.type_name());
           exit(0);
         }
-        int idx = interp_.push_lexical(n.pv(), MVM_reg_obj);
+        int idx = push_lexical(n.pv(), MVM_reg_obj);
         return idx;
       }
       case NODE_UNLESS: {
@@ -862,7 +889,7 @@ namespace saru {
         }
         return UNKNOWN_REG;
       case NODE_STRING_CONCAT: {
-        auto dst_reg = interp_.push_local_type(MVM_reg_str);
+        auto dst_reg = reg_str();
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
         auto l = stringify(do_compile(lhs));
@@ -877,7 +904,7 @@ namespace saru {
       case NODE_LIST:
       case NODE_ARRAY: {
         // create array
-        auto array_reg = interp_.push_local_type(MVM_reg_obj);
+        auto array_reg = reg_obj();
         assembler().hlllist(array_reg);
         assembler().create(array_reg, array_reg);
 
@@ -892,16 +919,16 @@ namespace saru {
         assert(node.children().size() == 2);
         auto container = do_compile(node.children()[0]);
         auto idx       = this->to_i(do_compile(node.children()[1]));
-        auto dst = interp_.push_local_type(MVM_reg_obj);
+        auto dst = reg_obj();
         assembler().atpos_o(dst, container, idx);
         return dst;
       }
       case NODE_METHODCALL: {
         assert(node.children().size() == 3);
         auto obj = to_o(do_compile(node.children()[0]));
-        auto str = interp_.push_string(node.children()[1].pv());
-        auto meth = interp_.push_local_type(MVM_reg_obj);
-        auto ret = interp_.push_local_type(MVM_reg_obj);
+        auto str = push_string(node.children()[1].pv());
+        auto meth = reg_obj();
+        auto ret = reg_obj();
 
         // TODO process args
         assembler().findmeth(meth, obj, str);
@@ -913,7 +940,7 @@ namespace saru {
         callsite->arg_flags = new MVMCallsiteEntry[1];
         callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;;
 
-        auto callsite_no = interp_.push_callsite(callsite);
+        auto callsite_no = push_callsite(callsite);
         assembler().prepargs(callsite_no);
 
         assembler().arg_o(0, obj);
@@ -934,7 +961,7 @@ namespace saru {
          */
         auto label_end  = label_unsolved();
         auto label_else = label_unsolved();
-        auto dst_reg = interp_.push_local_type(MVM_reg_obj);
+        auto dst_reg = reg_obj();
 
           auto cond_reg = do_compile(node.children()[0]);
           unless_any(cond_reg, label_else);
@@ -953,7 +980,7 @@ namespace saru {
       }
       case NODE_NOT: {
         auto src_reg = this->to_i(do_compile(node.children()[0]));
-        auto dst_reg = interp_.push_local_type(MVM_reg_int64);
+        auto dst_reg = reg_int64();
         assembler().not_i(dst_reg, src_reg);
         return dst_reg;
       }
@@ -1025,9 +1052,9 @@ namespace saru {
           }
           return UNKNOWN_REG; // TODO: Is there a result?
         } else {
-          auto reg_no = interp_.push_local_type(MVM_reg_obj);
+          auto reg_no = reg_obj();
           int outer = 0;
-          auto lex_no = interp_.find_lexical_by_name(std::string("&") + ident.pv(), outer);
+          auto lex_no = find_lexical_by_name(std::string("&") + ident.pv(), outer);
           assembler().getlex(
             reg_no,
             lex_no,
@@ -1041,7 +1068,7 @@ namespace saru {
             callsite->arg_count = args.children().size();
             callsite->num_pos   = args.children().size();
 
-            auto callsite_no = interp_.push_callsite(callsite);
+            auto callsite_no = push_callsite(callsite);
             callsite->arg_flags = new MVMCallsiteEntry[args.children().size()];
 
             std::vector<uint16_t> arg_regs;
@@ -1053,7 +1080,7 @@ namespace saru {
                 MVM_panic(MVM_exitcode_compunit, "Compilation error. You should not pass void function as an argument: %s", a.type_name());
               }
 
-              switch (interp_.get_local_type(reg)) {
+              switch (get_local_type(reg)) {
               case MVM_reg_int64:
                 callsite->arg_flags[i] = MVM_CALLSITE_ARG_INT;
                 arg_regs.push_back(reg);
@@ -1080,7 +1107,7 @@ namespace saru {
 
             i=0;
             for (auto reg:arg_regs) {
-              switch (interp_.get_local_type(reg)) {
+              switch (get_local_type(reg)) {
               case MVM_reg_int64:
                 assembler().arg_i(i, reg);
                 break;
@@ -1099,7 +1126,7 @@ namespace saru {
               ++i;
             }
           }
-          auto dest_reg = interp_.push_local_type(MVM_reg_obj);
+          auto dest_reg = reg_obj();
           assembler().invoke_o(
               dest_reg,
               reg_no
@@ -1120,13 +1147,13 @@ namespace saru {
     int to_o(int reg_num) { return box(reg_num); }
     int box(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      auto reg_type = interp_.get_local_type(reg_num);
+      auto reg_type = get_local_type(reg_num);
       if (reg_type == MVM_reg_obj) {
         return reg_num;
       }
 
-      int dst_num = interp_.push_local_type(MVM_reg_obj);
-      int boxtype_reg = interp_.push_local_type(MVM_reg_obj);
+      int dst_num = reg_obj();
+      int boxtype_reg = reg_obj();
       switch (reg_type) {
       case MVM_reg_str:
         assembler().hllboxtype_s(boxtype_reg);
@@ -1141,15 +1168,15 @@ namespace saru {
         assembler().box_n(dst_num, reg_num, boxtype_reg);
         return dst_num;
       default:
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", interp_.get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", get_local_type(reg_num));
         abort();
       }
     }
     int to_n(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      switch (interp_.get_local_type(reg_num)) {
+      switch (get_local_type(reg_num)) {
       case MVM_reg_str: {
-        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        int dst_num = reg_num64();
         assembler().coerce_sn(dst_num, reg_num);
         return dst_num;
       }
@@ -1157,31 +1184,31 @@ namespace saru {
         return reg_num;
       }
       case MVM_reg_int64: {
-        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        int dst_num = reg_num64();
         assembler().coerce_in(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
-        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        int dst_num = reg_num64();
         assembler().smrt_numify(dst_num, reg_num);
         return dst_num;
       }
       default:
         // TODO
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", interp_.get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", get_local_type(reg_num));
         break;
       }
     }
     int to_i(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      switch (interp_.get_local_type(reg_num)) {
+      switch (get_local_type(reg_num)) {
       case MVM_reg_str: {
-        int dst_num = interp_.push_local_type(MVM_reg_int64);
+        int dst_num = reg_int64();
         assembler().coerce_si(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_num64: {
-        int dst_num = interp_.push_local_type(MVM_reg_num64);
+        int dst_num = reg_num64();
         assembler().coerce_ni(dst_num, reg_num);
         return dst_num;
       }
@@ -1189,41 +1216,41 @@ namespace saru {
         return reg_num;
       }
       case MVM_reg_obj: {
-        int dst_num = interp_.push_local_type(MVM_reg_int64);
+        int dst_num = reg_int64();
         assembler().unbox_i(dst_num, reg_num);
         return dst_num;
       }
       default:
         // TODO
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", interp_.get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", get_local_type(reg_num));
         break;
       }
     }
     int to_s(int reg_num) { return stringify(reg_num); }
     int stringify(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      switch (interp_.get_local_type(reg_num)) {
+      switch (get_local_type(reg_num)) {
       case MVM_reg_str:
         // nop
         return reg_num;
       case MVM_reg_num64: {
-        int dst_num = interp_.push_local_type(MVM_reg_str);
+        int dst_num = reg_str();
         assembler().coerce_ns(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_int64: {
-        int dst_num = interp_.push_local_type(MVM_reg_str);
+        int dst_num = reg_str();
         assembler().coerce_is(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
-        int dst_num = interp_.push_local_type(MVM_reg_str);
+        int dst_num = reg_str();
         assembler().smrt_strify(dst_num, reg_num);
         return dst_num;
       }
       default:
         // TODO
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, stringify %d", interp_.get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, stringify %d", get_local_type(reg_num));
         break;
       }
     }
@@ -1231,25 +1258,25 @@ namespace saru {
         assert(node.children().size() == 2);
 
         int reg_num1 = do_compile(node.children()[0]);
-        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
-        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
+        int reg_num_dst = reg_int64();
+        if (get_local_type(reg_num1) == MVM_reg_int64) {
           int reg_num2 = this->to_i(do_compile(node.children()[1]));
-          assert(interp_.get_local_type(reg_num1) == MVM_reg_int64);
-          assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
+          assert(get_local_type(reg_num1) == MVM_reg_int64);
+          assert(get_local_type(reg_num2) == MVM_reg_int64);
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
-        } else if (interp_.get_local_type(reg_num1) == MVM_reg_num64) {
+        } else if (get_local_type(reg_num1) == MVM_reg_num64) {
           int reg_num2 = this->to_n(do_compile(node.children()[1]));
-          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assert(get_local_type(reg_num2) == MVM_reg_num64);
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
-        } else if (interp_.get_local_type(reg_num1) == MVM_reg_obj) {
+        } else if (get_local_type(reg_num1) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
-          int dst_num = interp_.push_local_type(MVM_reg_num64);
+          int dst_num = reg_num64();
           assembler().op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
 
           int reg_num2 = this->to_n(do_compile(node.children()[1]));
-          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assert(get_local_type(reg_num2) == MVM_reg_num64);
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
           return reg_num_dst;
         } else {
@@ -1262,7 +1289,7 @@ namespace saru {
 
         int reg_num1 = to_s(do_compile(node.children()[0]));
         int reg_num2 = to_s(do_compile(node.children()[1]));
-        int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
+        int reg_num_dst = reg_int64();
         assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
     }
@@ -1270,35 +1297,35 @@ namespace saru {
         assert(node.children().size() == 2);
 
         int reg_num1 = do_compile(node.children()[0]);
-        if (interp_.get_local_type(reg_num1) == MVM_reg_int64) {
-          int reg_num_dst = interp_.push_local_type(MVM_reg_int64);
+        if (get_local_type(reg_num1) == MVM_reg_int64) {
+          int reg_num_dst = reg_int64();
           int reg_num2 = this->to_i(do_compile(node.children()[1]));
-          assert(interp_.get_local_type(reg_num1) == MVM_reg_int64);
-          assert(interp_.get_local_type(reg_num2) == MVM_reg_int64);
+          assert(get_local_type(reg_num1) == MVM_reg_int64);
+          assert(get_local_type(reg_num2) == MVM_reg_int64);
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
-        } else if (interp_.get_local_type(reg_num1) == MVM_reg_num64) {
-          int reg_num_dst = interp_.push_local_type(MVM_reg_num64);
+        } else if (get_local_type(reg_num1) == MVM_reg_num64) {
+          int reg_num_dst = reg_num64();
           int reg_num2 = this->to_n(do_compile(node.children()[1]));
-          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assert(get_local_type(reg_num2) == MVM_reg_num64);
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
-        } else if (interp_.get_local_type(reg_num1) == MVM_reg_obj) {
+        } else if (get_local_type(reg_num1) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
-          int reg_num_dst = interp_.push_local_type(MVM_reg_num64);
+          int reg_num_dst = reg_num64();
 
-          int dst_num = interp_.push_local_type(MVM_reg_num64);
+          int dst_num = reg_num64();
           assembler().op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
 
           int reg_num2 = this->to_n(do_compile(node.children()[1]));
-          assert(interp_.get_local_type(reg_num2) == MVM_reg_num64);
+          assert(get_local_type(reg_num2) == MVM_reg_num64);
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
           return reg_num_dst;
-        } else if (interp_.get_local_type(reg_num1) == MVM_reg_str) {
-          int dst_num = interp_.push_local_type(MVM_reg_num64);
+        } else if (get_local_type(reg_num1) == MVM_reg_str) {
+          int dst_num = reg_num64();
           assembler().coerce_sn(dst_num, reg_num1);
 
-          int reg_num_dst = interp_.push_local_type(MVM_reg_num64);
+          int reg_num_dst = reg_num64();
           int reg_num2 = this->to_n(do_compile(node.children()[1]));
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
 
@@ -1308,7 +1335,7 @@ namespace saru {
         }
     }
     uint16_t unless_op(uint16_t cond_reg) {
-      switch (interp_.get_local_type(cond_reg)) {
+      switch (get_local_type(cond_reg)) {
       case MVM_reg_int64:
         return MVM_OP_unless_i;
       case MVM_reg_num64:
@@ -1322,7 +1349,7 @@ namespace saru {
       }
     }
     uint16_t if_op(uint16_t cond_reg) {
-      switch (interp_.get_local_type(cond_reg)) {
+      switch (get_local_type(cond_reg)) {
       case MVM_reg_int64:
         return MVM_OP_if_i;
       case MVM_reg_num64:
@@ -1374,7 +1401,7 @@ namespace saru {
       */
 
       // final op must be return.
-      int reg = interp_.push_local_type(MVM_reg_obj);
+      int reg = reg_obj();
       assembler().null(reg);
       assembler().return_o(reg);
     }
