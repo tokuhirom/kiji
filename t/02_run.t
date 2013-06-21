@@ -489,3 +489,14 @@ say(@a.shift());
 1
 2
 3
+
+===
+--- code
+my @a:=1,2,3;
+say(@a.elems());
+say(@a.shift());
+say(@a.elems());
+--- expected
+3
+1
+2

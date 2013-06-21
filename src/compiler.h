@@ -29,6 +29,22 @@ namespace saru {
     MVM_gc_root_temp_pop_n(tc, 1);
   }
 
+  static void Array_elems(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
+    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
+    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
+    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
+    MVM_args_proc_cleanup(tc, &arg_ctx);
+
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&self);
+
+    MVMuint64 elems = REPR(self)->elems(tc, STABLE(self), self,
+                                    OBJECT_BODY(self));
+
+    MVM_args_set_result_int(tc, elems, MVM_RETURN_CURRENT_FRAME);
+
+    MVM_gc_root_temp_pop_n(tc, 1);
+  }
+
   class Frame {
   private:
     MVMStaticFrame frame_; // frame itself
@@ -250,17 +266,33 @@ namespace saru {
       {
         MVMObject *array_t = cu_->hll_config->slurpy_array_type;
         MVMObject *cache = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
-        MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, "shift", strlen("shift"));
-        MVMObject * BOOTCCode = tc->instance->boot_types->BOOTCCode;
-        MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc, STABLE(BOOTCCode));
-        ((MVMCFunction *)code_obj)->body.func = Array_shift;
-        REPR(cache)->ass_funcs->bind_key_boxed(
-            tc,
-            STABLE(cache),
-            cache,
-            OBJECT_BODY(cache),
-            (MVMObject*)string,
-            code_obj);
+        {
+          MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, "shift", strlen("shift"));
+          MVMObject * BOOTCCode = tc->instance->boot_types->BOOTCCode;
+          MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc, STABLE(BOOTCCode));
+          ((MVMCFunction *)code_obj)->body.func = Array_shift;
+          REPR(cache)->ass_funcs->bind_key_boxed(
+              tc,
+              STABLE(cache),
+              cache,
+              OBJECT_BODY(cache),
+              (MVMObject*)string,
+              code_obj);
+        }
+
+        {
+          MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, "elems", strlen("elems"));
+          MVMObject * BOOTCCode = tc->instance->boot_types->BOOTCCode;
+          MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc, STABLE(BOOTCCode));
+          ((MVMCFunction *)code_obj)->body.func = Array_elems;
+          REPR(cache)->ass_funcs->bind_key_boxed(
+              tc,
+              STABLE(cache),
+              cache,
+              OBJECT_BODY(cache),
+              (MVMObject*)string,
+              code_obj);
+        }
         STABLE(array_t)->method_cache = cache;
       }
 
