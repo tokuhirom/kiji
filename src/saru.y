@@ -205,6 +205,7 @@ ident = < [a-zA-Z] [a-zA-Z0-9]+ ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
 } -
 
 atkey_expr = ( container:value '{' - k:value - '}' ) { $$.set(saru::NODE_ATKEY, container, k); }
+           | ( container:value '<' - k:ident - '>' ) { k.change_type(saru::NODE_STRING); $$.set(saru::NODE_ATKEY, container, k); }
            | value
 
 value = 

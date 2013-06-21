@@ -173,6 +173,18 @@ TODO
 
  * `say([4,5,6].shift())`
 
+## Step 6.1 2013-06-21
+
+ * hash construction
+
+## Step 6.2 2013-06-21
+
+ * $hash<abc>
+
+## Step 6.3
+
+ * $hash.keys()
+
 ## Step 5.
 
  * postfix for
@@ -200,7 +212,7 @@ TODO
 
  * MOP things
 
-## Step 5.10
+## Step 6
 
 
 ## Step 6.

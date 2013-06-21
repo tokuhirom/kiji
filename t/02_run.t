@@ -521,8 +521,15 @@ hoge
 ===
 --- code
 say({abc => "def", geh => "ijk"}{"abc"})
-say({abc => "def", geh => "ijk"}{"geh"})
+say({"abc" => "def", "geh" => "ijk"}{"geh"})
 --- expected
 def
 ijk
+
+===
+--- code
+my $h:={abc => "def", geh => "ijk"};
+say($h<abc>);
+--- expected
+def
 
