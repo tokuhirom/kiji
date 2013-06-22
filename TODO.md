@@ -194,6 +194,14 @@ TODO
 
  * logical xor, logical and, logical or
 
+## Step 6.6 2013-06-22
+
+ * bit or, bit and, bit xor
+
+## Step 6.6 2013-06-22
+
+ * open('README.md').eof()
+
 ## Step 5.
 
  * $hash.keys()
@@ -209,7 +217,6 @@ TODO
  * `my %hash = { a => 3 }; say(%hash<a>);`
  * Str methods
  * catch
- * bit or, bit and, bit xor
  * `%*ENV`
  * `@_` special variable
  * socket operation

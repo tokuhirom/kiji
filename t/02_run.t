@@ -643,3 +643,9 @@ say(0b0101 +^ 0b1000);
 13
 10
 13
+
+===
+--- code
+say(open("README.md").eof());
+--- expected
+0

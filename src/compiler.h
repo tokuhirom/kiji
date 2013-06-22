@@ -13,6 +13,7 @@ namespace saru {
   void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Hash(MVMCompUnit* cu, MVMThreadContext*tc);
+  void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
 
   class ClassBuilder {
   private:
@@ -268,6 +269,7 @@ namespace saru {
       bootstrap_Array(cu_, tc);
       bootstrap_Str(cu_, tc);
       bootstrap_Hash(cu_, tc);
+      bootstrap_File(cu_, tc);
 
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
@@ -1090,6 +1092,17 @@ namespace saru {
             assembler().print(reg_num);
           }
           return const_true();
+        } else if (ident.pv() == "open") {
+          // TODO support arguments
+          assert(args.children().size() == 1);
+          auto fname_s = do_compile(args.children()[0]);
+          auto dst_reg_o = reg_obj();
+          auto flag_i = reg_int64();
+          assembler().const_i64(flag_i, APR_FOPEN_READ); // TODO support other flags, etc.
+          auto encoding_flag_i = reg_int64();
+          assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
+          assembler().open_fh(dst_reg_o, fname_s, flag_i, encoding_flag_i);
+          return dst_reg_o;
         } else if (ident.pv() == "slurp") {
           assert(args.children().size() <= 2);
           assert(args.children().size() != 2 && "Encoding option is not supported yet");
@@ -1470,3 +1483,4 @@ namespace saru {
 #include "builtin/array.h"
 #include "builtin/str.h"
 #include "builtin/hash.h"
+#include "builtin/io.h"
