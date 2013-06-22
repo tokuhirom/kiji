@@ -612,3 +612,12 @@ say(8 || 0);
 3
 8
 
+===
+--- code
+0 or say(3);
+1 or say(4);
+0 and say(5);
+1 and say(6);
+--- expected
+4
+6

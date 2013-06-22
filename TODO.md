@@ -190,6 +190,10 @@ TODO
  * slurp function
  * print function
 
+## Step 6.5 2013-06-22
+
+ * logical xor, logical and, logical or
+
 ## Step 5.
 
  * $hash.keys()
@@ -206,7 +210,6 @@ TODO
  * Str methods
  * catch
  * bit or, bit and, bit xor
- * logical xor, logical and, logical or
  * `%*ENV`
  * `@_` special variable
  * socket operation

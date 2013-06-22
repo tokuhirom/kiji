@@ -480,6 +480,13 @@ namespace saru {
     int reg_int64() { return cu_.push_local_type(MVM_reg_int64); }
     int reg_num64() { return cu_.push_local_type(MVM_reg_num64); }
 
+    // This reg returns register number contains true value.
+    int const_true() {
+      auto reg = reg_int64();
+      assembler().const_i64(reg, 1);
+      return reg;
+    }
+
     uint16_t get_local_type(int n) {
       return cu_.get_local_type(n);
     }
@@ -1067,13 +1074,13 @@ namespace saru {
             }
             ++i;
           }
-          return UNKNOWN_REG; // TODO: Is there a result?
+          return const_true();
         } else if (ident.pv() == "print") {
           for (auto a:args.children()) {
             uint16_t reg_num = stringify(do_compile(a));
             assembler().print(reg_num);
           }
-          return UNKNOWN_REG; // TODO: Is there a result?
+          return const_true();
         } else if (ident.pv() == "slurp") {
           assert(args.children().size() <= 2);
           assert(args.children().size() != 2 && "Encoding option is not supported yet");

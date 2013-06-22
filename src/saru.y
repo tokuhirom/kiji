@@ -112,9 +112,22 @@ args =
     )
     | '' { $$.set_children(saru::NODE_ARGS); }
 
-expr = bind_expr
+expr = sequencer_expr
 
-bind_expr =
+# TODO
+sequencer_expr = loose_or_expr
+
+loose_or_expr =
+    f1:loose_and_expr (
+        - 'or' - f2:loose_and_expr { $$.set(saru::NODE_LOGICAL_AND, f1, f2); f1=$$; }
+    )* { $$=f1; }
+
+loose_and_expr =
+    f1:list_prefix_expr (
+        - 'and' - f2:list_prefix_expr { $$.set(saru::NODE_LOGICAL_AND, f1, f2); f1=$$; }
+    )* { $$=f1; }
+
+list_prefix_expr =
     (v:variable - ':=' - e:conditional_expr) { $$.set(saru::NODE_BIND, v, e); }
     | conditional_expr
 
