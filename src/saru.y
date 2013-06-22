@@ -163,6 +163,9 @@ methodcall_expr =
     a1:atpos_expr '.' a2:ident '(' - a3:args - ')' {
         $$.set(saru::NODE_METHODCALL, a1, a2, a3);
     }
+    | a1:atpos_expr '.' a2:ident {
+        $$.set(saru::NODE_METHODCALL, a1, a2);
+    }
     | atpos_expr
 
 atpos_expr =

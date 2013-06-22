@@ -883,7 +883,7 @@ namespace saru {
         return dst;
       }
       case NODE_METHODCALL: {
-        assert(node.children().size() == 3);
+        assert(node.children().size() == 3 || node.children().size()==2);
         auto obj = to_o(do_compile(node.children()[0]));
         auto str = push_string(node.children()[1].pv());
         auto meth = reg_obj();
