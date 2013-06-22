@@ -1,3 +1,6 @@
+language: perl
+before_install:
+  - cpanm -nq Text::MicroTemplate
 script:
   - make test
 
