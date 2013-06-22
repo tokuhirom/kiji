@@ -45,7 +45,7 @@ statement =
           | die_stmt
           | funcdef - ';'*
           | block
-          | b:normal_stmt eat_terminator { $$ = b; }
+          | b:normal_stmt - eat_terminator { $$ = b; }
 
 normal_stmt = return_stmt | bind_stmt
 
@@ -105,7 +105,7 @@ args =
             $$.set(saru::NODE_ARGS, s1);
             s1 = $$;
         }
-        ( ',' s2:expr {
+        ( - ',' - s2:expr {
             s1.push_child(s2);
             $$ = s1;
         } )*
@@ -115,25 +115,29 @@ args =
 expr = bind_expr
 
 bind_expr =
-    (v:variable ':=' e:conditional_expr) { $$.set(saru::NODE_BIND, v, e); }
+    (v:variable - ':=' - e:conditional_expr) { $$.set(saru::NODE_BIND, v, e); }
     | conditional_expr
 
-conditional_expr = e1:cmp_expr - '??' - e2:cmp_expr - '!!' - e3:cmp_expr { $$.set(saru::NODE_CONDITIONAL, e1, e2, e3); }
-                | cmp_expr
+conditional_expr = e1:tight_and - '??' - e2:tight_and - '!!' - e3:tight_and { $$.set(saru::NODE_CONDITIONAL, e1, e2, e3); }
+                | tight_and
 
-cmp_expr = f1:methodcall_expr - (
-          '==' - f2:methodcall_expr { $$.set(saru::NODE_EQ, f1, f2); f1=$$; }
-        | '!=' - f2:methodcall_expr { $$.set(saru::NODE_NE, f1, f2); f1=$$; }
-        | '<'  - f2:methodcall_expr { $$.set(saru::NODE_LT, f1, f2); f1=$$; }
-        | '<=' - f2:methodcall_expr { $$.set(saru::NODE_LE, f1, f2); f1=$$; }
-        | '>'  - f2:methodcall_expr { $$.set(saru::NODE_GT, f1, f2); f1=$$; }
-        | '>=' - f2:methodcall_expr { $$.set(saru::NODE_GE, f1, f2); f1=$$; }
-        | 'eq' - f2:methodcall_expr { $$.set(saru::NODE_STREQ, f1, f2); f1=$$; }
-        | 'ne' - f2:methodcall_expr { $$.set(saru::NODE_STRNE, f1, f2); f1=$$; }
-        | 'gt' - f2:methodcall_expr { $$.set(saru::NODE_STRGT, f1, f2); f1=$$; }
-        | 'ge' - f2:methodcall_expr { $$.set(saru::NODE_STRGE, f1, f2); f1=$$; }
-        | 'lt' - f2:methodcall_expr { $$.set(saru::NODE_STRLT, f1, f2); f1=$$; }
-        | 'le' - f2:methodcall_expr { $$.set(saru::NODE_STRLE, f1, f2); f1=$$; }
+tight_and = f1:cmp_expr (
+        - '&&' - f2:cmp_expr { $$.set(saru::NODE_LOGICAL_AND, f1, f2); f1 = $$; }
+    )* { $$ = f1; }
+
+cmp_expr = f1:methodcall_expr (
+          - '==' - f2:methodcall_expr { $$.set(saru::NODE_EQ, f1, f2); f1=$$; }
+        | - '!=' - f2:methodcall_expr { $$.set(saru::NODE_NE, f1, f2); f1=$$; }
+        | - '<'  - f2:methodcall_expr { $$.set(saru::NODE_LT, f1, f2); f1=$$; }
+        | - '<=' - f2:methodcall_expr { $$.set(saru::NODE_LE, f1, f2); f1=$$; }
+        | - '>'  - f2:methodcall_expr { $$.set(saru::NODE_GT, f1, f2); f1=$$; }
+        | - '>=' - f2:methodcall_expr { $$.set(saru::NODE_GE, f1, f2); f1=$$; }
+        | - 'eq' - f2:methodcall_expr { $$.set(saru::NODE_STREQ, f1, f2); f1=$$; }
+        | - 'ne' - f2:methodcall_expr { $$.set(saru::NODE_STRNE, f1, f2); f1=$$; }
+        | - 'gt' - f2:methodcall_expr { $$.set(saru::NODE_STRGT, f1, f2); f1=$$; }
+        | - 'ge' - f2:methodcall_expr { $$.set(saru::NODE_STRGE, f1, f2); f1=$$; }
+        | - 'lt' - f2:methodcall_expr { $$.set(saru::NODE_STRLT, f1, f2); f1=$$; }
+        | - 'le' - f2:methodcall_expr { $$.set(saru::NODE_STRLE, f1, f2); f1=$$; }
     )* {
         $$ = f1;
     }

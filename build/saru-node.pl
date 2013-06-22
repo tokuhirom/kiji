@@ -56,6 +56,7 @@ my @types = qw(
     NODE_HASH
     NODE_PAIR
     NODE_ATKEY
+    NODE_LOGICAL_AND
 );
 
 say qq!/* This file is generated from $0 */!;

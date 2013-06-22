@@ -583,3 +583,15 @@ sub a() { say 5 }
 a();
 --- expected
 5
+
+===
+--- code
+say(0 && 0);
+say(0 && 5);
+say(4 && 5);
+say(3 && 2);
+--- expected
+0
+0
+5
+2
