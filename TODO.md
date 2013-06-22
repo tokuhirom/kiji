@@ -188,6 +188,7 @@ TODO
 ## Step 6.4 2013-06-22
 
  * slurp function
+ * print function
 
 ## Step 5.
 
