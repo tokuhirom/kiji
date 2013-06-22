@@ -189,16 +189,16 @@ not_expr =
     | add_expr
 
 add_expr =
-    l:mul_expr (
-          - '+' - r1:mul_expr {
+    l:multiplicative_expr (
+          - '+' - r1:multiplicative_expr {
             $$.set(saru::NODE_ADD, l, r1);
             l = $$;
           }
-        | - '-' - r2:mul_expr {
+        | - '-' - r2:multiplicative_expr {
             $$.set(saru::NODE_SUB, l, r2);
             l = $$;
           }
-        | - '~' - r2:mul_expr {
+        | - '~' - r2:multiplicative_expr {
             $$.set(saru::NODE_STRING_CONCAT, l, r2);
             l = $$;
           }
@@ -206,21 +206,17 @@ add_expr =
         $$ = l;
     }
 
-mul_expr =
-    l:term (
-        - '*' - r:term {
+multiplicative_expr =
+    l:exponentiation_expr (
+        - '*' - r:exponentiation_expr {
             $$.set(saru::NODE_MUL, l, r);
             l = $$;
         }
-        | - '**' - r:term {
-            $$.set(saru::NODE_POW, l, r);
-            l = $$;
-        }
-        | - '/' - r:term {
+        | - '/' - r:exponentiation_expr {
             $$.set(saru::NODE_DIV, l, r);
             l = $$;
         }
-        | - '%' - r:term {
+        | - '%' - r:exponentiation_expr {
             $$.set(saru::NODE_MOD, l, r);
             l = $$;
         }
@@ -228,17 +224,24 @@ mul_expr =
         $$ = l;
     }
 
-term = atkey_expr
+exponentiation_expr = 
+    f1:autoincrement_expr (
+        - '**' - f2:autoincrement_expr {
+            $$.set(saru::NODE_POW, f1, f2);
+            f1=$$;
+        }
+    )* {
+        $$=f1;
+    }
 
-ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
-    $$.set_ident(yytext, yyleng);
-}
+# ++, -- is not supported yet
+autoincrement_expr = method_postfix_expr
 
-atkey_expr = ( container:value '{' - k:value - '}' ) { $$.set(saru::NODE_ATKEY, container, k); }
-           | ( container:value '<' - k:ident - '>' ) { k.change_type(saru::NODE_STRING); $$.set(saru::NODE_ATKEY, container, k); }
-           | value
+method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$.set(saru::NODE_ATKEY, container, k); }
+           | ( container:term '<' - k:ident - '>' ) { k.change_type(saru::NODE_STRING); $$.set(saru::NODE_ATKEY, container, k); }
+           | term
 
-value = 
+term = 
     ( '-' ( integer | dec_number) ) {
         $$.negate();
     }
@@ -252,6 +255,11 @@ value =
     | qw
     | twargs
     | hash
+
+ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
+    $$.set_ident(yytext, yyleng);
+}
+
 
 hash = '{' -
     p1:pair { $$.set(saru::NODE_HASH, p1); p1=$$; } ( -  ',' - p2:pair { p1.push_child(p2); $$=p1; } )*
@@ -282,8 +290,8 @@ funcdef =
 
 params =
     (
-        v:value { $$.set(saru::NODE_PARAMS, v); v=$$; }
-        ( - ',' - v1:value { v.push_child(v1); $$=v; } )*
+        v:term { $$.set(saru::NODE_PARAMS, v); v=$$; }
+        ( - ',' - v1:term { v.push_child(v1); $$=v; } )*
         { $$=v; }
     )
     | '' { $$.set_children(saru::NODE_PARAMS); }

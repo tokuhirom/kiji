@@ -621,3 +621,9 @@ say(8 || 0);
 --- expected
 4
 6
+
+=== ** is weaken than *
+--- code
+say(2*3**4);
+--- expected
+162
