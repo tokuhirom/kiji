@@ -185,6 +185,10 @@ TODO
 
  * postfix for
 
+## Step 6.4 2013-06-22
+
+ * slurp function
+
 ## Step 5.
 
  * $hash.keys()
@@ -205,6 +209,7 @@ TODO
  * `%*ENV`
  * `@_` special variable
  * socket operation
+ * slurp() function with encoding option
  * implement builtin functions
     * sprintf
     * printf

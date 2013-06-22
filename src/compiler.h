@@ -1022,6 +1022,21 @@ namespace saru {
             ++i;
           }
           return UNKNOWN_REG; // TODO: Is there a result?
+        } else if (ident.pv() == "print") {
+          for (auto a:args.children()) {
+            uint16_t reg_num = stringify(do_compile(a));
+            assembler().print(reg_num);
+          }
+          return UNKNOWN_REG; // TODO: Is there a result?
+        } else if (ident.pv() == "slurp") {
+          assert(args.children().size() <= 2);
+          assert(args.children().size() != 2 && "Encoding option is not supported yet");
+          auto fname_s = do_compile(args.children()[0]);
+          auto dst_reg_s = reg_str();
+          auto encoding_flag_i = reg_int64();
+          assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
+          assembler().slurp(dst_reg_s, fname_s, encoding_flag_i);
+          return dst_reg_s;
         } else {
           auto reg_no = reg_obj();
           int outer = 0;
