@@ -666,7 +666,6 @@ say([1,2,3,4].join);
 1234
 
 ===
---- SKIP
 --- code
 say((1,2,3,4).join);
 --- expected

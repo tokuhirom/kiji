@@ -264,6 +264,7 @@ term =
     | dec_number
     | string
     | '(' e:expr ')' { $$ = e; }
+    | '(' l:list_expr ')' { $$ = l; }
     | variable
     | array
     | funcall

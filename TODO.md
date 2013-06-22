@@ -202,9 +202,12 @@ TODO
 
  * open('README.md').eof()
 
-## Step 5.
+## Step 6.7 2013-06-22
 
  * say((1,2,3,4).join);
+
+## Step 5.
+
  * $hash.keys()
  * +(1,2,3)
  * next, last
