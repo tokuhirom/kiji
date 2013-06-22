@@ -14,7 +14,7 @@ Win32 patch makes hard to maintain. Please do it before first stable release.
 What's this?
 -------------
 
-Tiny interpreter run on MoarVM
+Tiny interpreter run on MoarVM. It's just small toy.
 
 Build time dependencies
 -----------------------
