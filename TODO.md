@@ -204,6 +204,7 @@ TODO
 
 ## Step 5.
 
+ * say((1,2,3,4).join);
  * $hash.keys()
  * +(1,2,3)
  * next, last

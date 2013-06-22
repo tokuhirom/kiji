@@ -15,6 +15,14 @@ namespace saru {
   void bootstrap_Hash(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
 
+  void dump_object(MVMThreadContext*tc, MVMObject* obj) {
+    if (obj==NULL) {
+      printf("(null)\n");
+      return;
+    }
+    MVM_string_say(tc, REPR(obj)->name);
+  }
+
   class ClassBuilder {
   private:
     MVMObject*obj_;
@@ -889,20 +897,37 @@ namespace saru {
         auto meth = reg_obj();
         auto ret = reg_obj();
 
-        // TODO process args
         assembler().findmeth(meth, obj, str);
-
-        MVMCallsite* callsite = new MVMCallsite;
-        memset(callsite, 0, sizeof(MVMCallsite));
-        callsite->arg_count = 1;
-        callsite->num_pos = 1;
-        callsite->arg_flags = new MVMCallsiteEntry[1];
-        callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;;
-
-        auto callsite_no = push_callsite(callsite);
-        assembler().prepargs(callsite_no);
-
         assembler().arg_o(0, obj);
+
+        if (node.children().size() == 3) {
+          auto args = node.children()[2];
+
+          MVMCallsite* callsite = new MVMCallsite;
+          memset(callsite, 0, sizeof(MVMCallsite));
+          callsite->arg_count = 1+args.children().size();
+          callsite->num_pos = 1+args.children().size();
+          callsite->arg_flags = new MVMCallsiteEntry[1+args.children().size()];
+          callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
+          int i=1;
+          for (auto a: args.children()) {
+            callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
+            assembler().arg_o(i, to_o(do_compile(a)));
+            ++i;
+          }
+          auto callsite_no = push_callsite(callsite);
+          assembler().prepargs(callsite_no);
+        } else {
+          MVMCallsite* callsite = new MVMCallsite;
+          memset(callsite, 0, sizeof(MVMCallsite));
+          callsite->arg_count = 1;
+          callsite->num_pos = 1;
+          callsite->arg_flags = new MVMCallsiteEntry[1];
+          callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
+          auto callsite_no = push_callsite(callsite);
+          assembler().prepargs(callsite_no);
+        }
+
         assembler().invoke_o(ret, meth);
         return ret;
       }

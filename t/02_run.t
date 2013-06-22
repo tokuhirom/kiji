@@ -13,7 +13,7 @@ for my $block (blocks) {
 
         my $ret = `./saru < $tmp`;
         ok(POSIX::WIFEXITED($?));
-        is(POSIX::WEXITSTATUS($?), 0);
+        is(POSIX::WEXITSTATUS($?), 0, 'exit status should be 0');
 
         $ret =~ s/\n+\z//;
         (my $expected = $block->expected) =~ s/\n+\z//;
@@ -651,3 +651,23 @@ say(open("README.md").eof);
 --- expected
 0
 0
+
+===
+--- code
+my @a:=5,9,6,3;
+say(@a.join("-"));
+say([1,2,3,4].join("*"));
+say([1,2,3,4].join(5));
+say([1,2,3,4].join);
+--- expected
+5-9-6-3
+1*2*3*4
+1525354
+1234
+
+===
+--- SKIP
+--- code
+say((1,2,3,4).join);
+--- expected
+1234
