@@ -118,8 +118,12 @@ bind_expr =
     (v:variable - ':=' - e:conditional_expr) { $$.set(saru::NODE_BIND, v, e); }
     | conditional_expr
 
-conditional_expr = e1:tight_and - '??' - e2:tight_and - '!!' - e3:tight_and { $$.set(saru::NODE_CONDITIONAL, e1, e2, e3); }
-                | tight_and
+conditional_expr = e1:tight_or - '??' - e2:tight_or - '!!' - e3:tight_or { $$.set(saru::NODE_CONDITIONAL, e1, e2, e3); }
+                | tight_or
+
+tight_or = f1:tight_and (
+        - '||' - f2:tight_and { $$.set(saru::NODE_LOGICAL_OR, f1, f2); f1 = $$; }
+    )* { $$ = f1; }
 
 tight_and = f1:cmp_expr (
         - '&&' - f2:cmp_expr { $$.set(saru::NODE_LOGICAL_AND, f1, f2); f1 = $$; }

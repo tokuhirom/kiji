@@ -1005,7 +1005,30 @@ namespace saru {
         }
         return hash;
       }
-      case NODE_LOGICAL_AND: {
+      case NODE_LOGICAL_OR: { // '||'
+        //   calc_arg1
+        //   if_o arg1, label_a1
+        //   calc_arg2
+        //   set dst_reg, arg2
+        //   goto label_end
+        // label_a1:
+        //   set dst_reg, arg1
+        //   goto label_end // omit-able
+        // label_end:
+        auto label_end = label_unsolved();
+        auto label_a1  = label_unsolved();
+        auto dst_reg = reg_obj();
+          auto arg1 = to_o(do_compile(node.children()[0]));
+          if_any(arg1, label_a1);
+          auto arg2 = to_o(do_compile(node.children()[1]));
+          assembler().set(dst_reg, arg2);
+          goto_(label_end);
+        label_a1.put();
+          assembler().set(dst_reg, arg1);
+        label_end.put();
+        return dst_reg;
+      }
+      case NODE_LOGICAL_AND: { // '&&'
         //   calc_arg1
         //   unless_o arg1, label_a1
         //   calc_arg2
