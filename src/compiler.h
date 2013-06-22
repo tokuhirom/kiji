@@ -941,6 +941,15 @@ namespace saru {
         assembler().not_i(dst_reg, src_reg);
         return dst_reg;
       }
+      case NODE_BIN_AND: {
+        return this->binary_binop(node, MVM_OP_band_i);
+      }
+      case NODE_BIN_OR: {
+        return this->binary_binop(node, MVM_OP_bor_i);
+      }
+      case NODE_BIN_XOR: {
+        return this->binary_binop(node, MVM_OP_bxor_i);
+      }
       case NODE_EQ: {
         return this->numeric_cmp_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
       }
@@ -1331,6 +1340,15 @@ namespace saru {
         int reg_num_dst = reg_int64();
         assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
+    }
+    int binary_binop(const saru::Node& node, uint16_t op_i) {
+        assert(node.children().size() == 2);
+
+        int reg_num1 = to_i(do_compile(node.children()[0]));
+        int reg_num2 = to_i(do_compile(node.children()[1]));
+        auto dst_reg = reg_int64();
+        assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
+        return dst_reg;
     }
     int numeric_binop(const saru::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);

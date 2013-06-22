@@ -202,6 +202,14 @@ add_expr =
             $$.set(saru::NODE_STRING_CONCAT, l, r2);
             l = $$;
           }
+        | - '+|' - r:exponentiation_expr {
+            $$.set(saru::NODE_BIN_OR, l, r);
+            l = $$;
+        }
+        | - '+^' - r:exponentiation_expr {
+            $$.set(saru::NODE_BIN_XOR, l, r);
+            l = $$;
+        }
     )* {
         $$ = l;
     }
@@ -218,6 +226,10 @@ multiplicative_expr =
         }
         | - '%' - r:exponentiation_expr {
             $$.set(saru::NODE_MOD, l, r);
+            l = $$;
+        }
+        | - '+&' - r:exponentiation_expr {
+            $$.set(saru::NODE_BIN_AND, l, r);
             l = $$;
         }
     )* {
