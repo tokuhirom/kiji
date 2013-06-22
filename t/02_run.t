@@ -670,3 +670,12 @@ say([1,2,3,4].join);
 say((1,2,3,4).join);
 --- expected
 1234
+
+===
+--- code
+my $a:=[5,9,6];
+$a.push(3);
+say($a.join("-"));
+--- expected
+5-9-6-3
+

@@ -26,7 +26,6 @@ namespace saru {
   // sort
   // reduce
   // splice
-  // push
   // unshift
 
   static void Array_elems(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
@@ -80,6 +79,26 @@ namespace saru {
     MVM_args_set_result_obj(tc, result.o, MVM_RETURN_CURRENT_FRAME);
 
     MVM_gc_root_temp_pop_n(tc, 1);
+  }
+
+  static void Array_push(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
+    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
+    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
+    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
+    MVMObject* stuff    = MVM_args_get_pos_obj(tc, &arg_ctx, 1, MVM_ARG_REQUIRED).arg.o;
+    MVM_args_proc_cleanup(tc, &arg_ctx);
+
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&self);
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&stuff);
+
+    MVMRegister reg;
+    reg.o = stuff;
+    REPR(self)->pos_funcs->push(tc, STABLE(self), self,
+                                    OBJECT_BODY(self), reg, MVM_reg_obj);
+
+    MVM_args_set_result_obj(tc, self, MVM_RETURN_CURRENT_FRAME);
+
+    MVM_gc_root_temp_pop_n(tc, 2);
   }
 
   // based on MVM_string_join in 3rd/MoarVM/src/strings/ops.c
@@ -221,6 +240,7 @@ namespace saru {
     ClassBuilder b(cu->hll_config->slurpy_array_type, tc);
     b.add_method("shift", strlen("shift"), Array_shift);
     b.add_method("pop", strlen("pop"), Array_pop);
+    b.add_method("push", strlen("push"), Array_push);
     b.add_method("elems", strlen("elems"), Array_elems);
     b.add_method("join", strlen("join"), Array_join);
   }
