@@ -3,23 +3,9 @@ use warnings;
 use utf8;
 use Test::More 0.98;
 use Test::Base::Less;
-use File::Temp;
-use POSIX;
+use t::Util;
 
-for my $block (blocks) {
-    subtest $block->code => sub {
-        my $tmp = File::Temp->new();
-        print {$tmp} $block->code;
-
-        my $ret = `./saru < $tmp`;
-        ok(POSIX::WIFEXITED($?));
-        is(POSIX::WEXITSTATUS($?), 0, 'exit status should be 0');
-
-        $ret =~ s/\n+\z//;
-        (my $expected = $block->expected) =~ s/\n+\z//;
-        is($ret, $expected);
-    };
-}
+run_test_cases(blocks);
 
 done_testing;
 
@@ -395,7 +381,9 @@ for 1,2,3 { say($_); }
 --- code
 if !1 { say("FAIL"); }
 if !0 { say("OK"); }
+if ! 0 { say("OK"); }
 --- expected
+OK
 OK
 
 ===
