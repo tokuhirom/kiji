@@ -18,6 +18,7 @@ if ($debug) {
     push @CXXFLAGS, qw(-O3)
 }
 push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin';
+my $CXXFLAGS=join(' ', @CXXFLAGS);
 
 my @LLIBS = qw(-lapr-1 -lpthread -lm);
 push @LLIBS, qw(-luuid) if $^O eq 'linux';
@@ -211,7 +212,7 @@ clean:
 	rm -rf saru src/gen.* 3rd/greg/greg 3rd/greg/*.o vgcore.* core
 
 src/gen.stdafx.pch: src/stdafx.h
-	clang++ -cc1 -emit-pch -x c++-header ./src/stdafx.h -o src/gen.stdafx.pch
+	clang++ $(CXXFLAGS) -cc1 -emit-pch -x c++-header ./src/stdafx.h -o src/gen.stdafx.pch
 
 src/gen.assembler.h: build/asm.pl
 	perl build/asm.pl
@@ -226,6 +227,7 @@ src/gen.node.h: build/saru-node.pl
 .PHONY: all clean test
 ...
 $tmpl =~ s!<<([a-zA-Z_-]+)>>!"\$$1"!gee;
+
 open my $fh, '>', 'Makefile';
 print {$fh} $tmpl;
 close $fh;
