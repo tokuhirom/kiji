@@ -4,3 +4,4 @@ vgcore.*
 /_build/
 /saru
 /foo.p6
+/Makefile

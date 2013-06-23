@@ -1,7 +1,8 @@
-language: cpp
+language: perl
 before_install:
   - cpanm -nq Text::MicroTemplate
 script:
+  - perl Configure.pl
   - make test
 compiler: clang
 install:

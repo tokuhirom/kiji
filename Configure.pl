@@ -1,8 +1,24 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use utf8;
+use 5.008_001;
+use Getopt::Long;
+
+my $p = Getopt::Long::Parser->new(
+    config => [qw(posix_default no_ignore_case auto_help)]
+);
+$p->getoptions(
+    'debug!' => \my $debug,
+);
+my $CXXFLAGS = $debug ? '-g -D_GLIBCXX_DEBUG -ferror-limit=3 -std=c++11' : '-O3 -std=c++11';
+
+my $tmpl = <<'...';
 # File extensions
 EXE = 
 O   = .o
 
-CXXFLAGS=-g -D_GLIBCXX_DEBUG
+CXXFLAGS=<<CXXFLAGS>>
 
 CXX=clang++
 CINCLUDE = -I3rd/MoarVM/3rdparty/apr/include -I3rd/MoarVM/3rdparty/libatomic_ops/src -I3rd/MoarVM/3rdparty/libtommath/ -I3rd/MoarVM/3rdparty/sha1/ -I3rd/MoarVM/src -I3rd/MoarVM/3rdparty
@@ -167,7 +183,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
 all: saru
 
 saru: 3rd/MoarVM/moarvm src/saru.cc src/gen.node.h src/gen.saru.y.cc src/compiler.h src/node.h src/*.h src/gen.assembler.h src/gen.stdafx.pch src/builtin/array.h src/builtin/str.h src/builtin/hash.h
-	$(CXX) $(CXXFLAGS) -include src/stdafx.h -ferror-limit=3 -g -std=c++11 -Wall $(CINCLUDE) -o saru src/saru.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS)
+	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o saru src/saru.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS)
 
 test: saru
 	prove -r t
@@ -198,3 +214,10 @@ src/gen.node.h: build/saru-node.pl
 	perl build/saru-node.pl > src/gen.node.h
 
 .PHONY: all clean test
+...
+$tmpl =~ s!<<([a-zA-Z_-]+)>>!"\$$1"!gee;
+open my $fh, '>', 'Makefile';
+print {$fh} $tmpl;
+close $fh;
+
+print "Generated Makefile\n";
