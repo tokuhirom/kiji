@@ -99,6 +99,9 @@ list_expr =
         (- ','  - b:methodcall_expr { a.push_child(b); $$ = a; } )+
     ) { $$=a }
 
+paren_args = '(' - a:args - ')' { $$=a; }
+           | '(' - ')' { $$.set_children(saru::NODE_ARGS); }
+
 args =
     (
         s1:expr {
@@ -161,13 +164,12 @@ cmp_expr = f1:methodcall_expr (
     }
 
 methodcall_expr =
-    a1:atpos_expr '.' a2:ident '(' - a3:args - ')' {
-        $$.set(saru::NODE_METHODCALL, a1, a2, a3);
-    }
-    | a1:atpos_expr '.' a2:ident {
-        $$.set(saru::NODE_METHODCALL, a1, a2);
-    }
-    | atpos_expr
+    a1:atpos_expr (
+        '.' a2:ident { $$.set(saru::NODE_METHODCALL, a1, a2); a1=$$; }
+        (
+            a3:paren_args { a1.push_child(a3) }
+        )?
+    )? { $$=a1; }
 
 atpos_expr =
     f1:not_expr - '[' - f2:not_expr - ']' {
