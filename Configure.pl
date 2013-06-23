@@ -11,7 +11,14 @@ my $p = Getopt::Long::Parser->new(
 $p->getoptions(
     'debug!' => \my $debug,
 );
-my $CXXFLAGS = $debug ? '-g -D_GLIBCXX_DEBUG -ferror-limit=3 -std=c++11' : '-g -O3 -std=c++11';
+my @CXXFLAGS = qw(-g -std=c++11);
+if ($debug) {
+    push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3)
+} else {
+    push @CXXFLAGS, qw(-O3)
+}
+push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin';
+
 my @LLIBS = qw(-lapr-1 -lpthread -lm);
 push @LLIBS, qw(-luuid) if $^O eq 'linux';
 my $LLIBS = join(' ', @LLIBS);
