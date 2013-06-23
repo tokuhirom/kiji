@@ -181,11 +181,7 @@ funcall =
     }
     | (i:ident ws+ a:args) {
         // funcall without parens.
-        if (i.pv()=="return") {
-            $$.set(saru::NODE_RETURN, a);
-        } else {
-            $$.set(saru::NODE_FUNCALL, i, a);
-        }
+        $$.set(saru::NODE_FUNCALL, i, a);
     }
 
 not_expr =
