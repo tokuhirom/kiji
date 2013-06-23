@@ -1,6 +1,6 @@
 language: perl
 before_install:
-  - cpanm -nq Text::MicroTemplate
+  - cpanm -nq --installdeps .
 script:
   - perl Configure.pl
   - make test
