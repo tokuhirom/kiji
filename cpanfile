@@ -3,4 +3,5 @@ on 'test' => sub {
     requires 'Test::Base::Less', 0.11;
     requires 'File::Temp';
     requires 'Data::SExpression', 0.41;
+    requires 'JSON::PP';
 };
