@@ -111,6 +111,7 @@ args =
         } )*
     )
     | '' { $$.set_children(saru::NODE_ARGS); }
+    # ↑ it makes slower?
 
 expr = sequencer_expr
 
@@ -188,7 +189,7 @@ funcall =
     }
 
 not_expr =
-    ( '!' a:add_expr ) { $$.set(saru::NODE_NOT, a); }
+    ( '!' - a:add_expr ) { $$.set(saru::NODE_NOT, a); }
     | add_expr
 
 add_expr =
@@ -263,8 +264,8 @@ term =
     | integer
     | dec_number
     | string
-    | '(' e:expr ')' { $$ = e; }
-    | '(' l:list_expr ')' { $$ = l; }
+    | '(' - e:expr  - ')' { $$ = e; }
+    | '(' - l:list_expr  - ')' { $$ = l; }
     | variable
     | array
     | funcall
@@ -311,6 +312,7 @@ params =
         { $$=v; }
     )
     | '' { $$.set_children(saru::NODE_PARAMS); }
+    # is it slow?
 
 block = 
     ('{' - s:statementlist - '}') { $$=s; }
