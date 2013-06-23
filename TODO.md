@@ -206,6 +206,10 @@ TODO
 
  * say((1,2,3,4).join);
 
+## Step 6.8 2013-06-23
+
+ * single quoted string
+
 ## Step 5.
 
  * $hash.keys()

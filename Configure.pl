@@ -17,7 +17,7 @@ if ($debug) {
 } else {
     push @CXXFLAGS, qw(-O3)
 }
-push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin';
+push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin' || $ENV{TRAVIS};
 my $CXXFLAGS=join(' ', @CXXFLAGS);
 
 my @LLIBS = qw(-lapr-1 -lpthread -lm);
