@@ -795,6 +795,7 @@ namespace saru {
 
         auto if_cond_reg = do_compile(node.children()[0]);
         auto if_body = node.children()[1];
+        auto dst_reg = reg_obj();
 
         auto label_if = label_unsolved();
         if_any(if_cond_reg, label_if);
@@ -812,10 +813,7 @@ namespace saru {
 
         // compile else clause
         if (node.children().back().type() == NODE_ELSE) {
-            for (auto n: node.children().back().children()) {
-              // TODO return data
-              do_compile(n);
-            }
+          compile_statements(node.children().back(), dst_reg);
         }
 
         auto label_end = label_unsolved();
@@ -823,10 +821,10 @@ namespace saru {
 
         // update if_label and compile if body
         label_if.put();
-          (void)do_compile(if_body);
+          compile_statements(if_body, dst_reg);
           goto_(label_end);
 
-        // compile else body
+        // compile elsif body
         for (auto iter=node.children().begin()+2; iter!=node.children().end(); ++iter) {
           if (iter->type() == NODE_ELSE) {
             break;
@@ -834,17 +832,14 @@ namespace saru {
 
           elsif_poses.front().put();
           elsif_poses.pop_back();
-          for (auto n: iter->children()[1].children()) {
-            // TODO return data
-            do_compile(n);
-          }
+          compile_statements(iter->children()[1], dst_reg);
           goto_(label_end);
         }
         assert(elsif_poses.size() == 0);
 
         label_end.put();
 
-        return -1;
+        return dst_reg;
       }
       case NODE_ELSIF:
       case NODE_ELSE: {
@@ -1458,6 +1453,21 @@ namespace saru {
         return MVM_OP_if_o;
       default:
         abort();
+      }
+    }
+    void compile_statements(const saru::Node &node, int dst_reg) {
+      int reg = UNKNOWN_REG;
+      if (node.type() == NODE_STATEMENTS || node.type() == NODE_ELSE) {
+        for (int i=0, l=node.children().size(); i<l; i++) {
+          reg = do_compile(node.children()[i]);
+        }
+      } else {
+        reg = do_compile(node);
+      }
+      if (reg == UNKNOWN_REG) {
+        assembler().null(dst_reg);
+      } else {
+        assembler().set(dst_reg, to_o(reg));
       }
     }
   public:

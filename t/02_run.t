@@ -592,3 +592,14 @@ say(0b0101 +^ 0b1000);
 13
 10
 13
+
+===
+--- code
+sub foo($n) { if $n==0 { 5 } elsif $n==1 { 3 } else { 8 } }
+say(foo(0));
+say(foo(1));
+say(foo(2));
+--- expected
+5
+3
+8

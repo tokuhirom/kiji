@@ -214,6 +214,10 @@ TODO
 
  * Added String.length method.
 
+## Step 7.0 2013-06-23
+
+ * if statement should return value.
+
 ## Step 5.
 
  * $hash.keys()
@@ -280,7 +284,6 @@ TODO
  * read code from file
  * Support XSUB?
    * use MVMCFunction → it works well
- * if statement should return value.
 
 ## Step 40.
 
