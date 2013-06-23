@@ -12,6 +12,9 @@ $p->getoptions(
     'debug!' => \my $debug,
 );
 my $CXXFLAGS = $debug ? '-g -D_GLIBCXX_DEBUG -ferror-limit=3 -std=c++11' : '-g -O3 -std=c++11';
+my @LLIBS = qw(-lapr-1 -lpthread -lm);
+push @LLIBS, qw(-luuid) if $^O eq 'linux';
+my $LLIBS = join(' ', @LLIBS);
 
 my $tmpl = <<'...';
 # File extensions
@@ -22,7 +25,7 @@ CXXFLAGS=<<CXXFLAGS>>
 
 CXX=clang++
 CINCLUDE = -I3rd/MoarVM/3rdparty/apr/include -I3rd/MoarVM/3rdparty/libatomic_ops/src -I3rd/MoarVM/3rdparty/libtommath/ -I3rd/MoarVM/3rdparty/sha1/ -I3rd/MoarVM/src -I3rd/MoarVM/3rdparty
-LLIBS=-lapr-1 -lpthread -lm -luuid
+LLIBS=<<LLIBS>>
 MOARVM_OBJS = \
 			  3rd/MoarVM/src/6model/6model.o                      3rd/MoarVM/src/core/bytecode.o \
 3rd/MoarVM/src/6model/bootstrap.o                   3rd/MoarVM/src/core/coerce.o \
