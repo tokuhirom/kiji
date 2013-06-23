@@ -468,45 +468,6 @@ say($_) for 1,2,3;
 
 ===
 --- code
-my @a:=1,2,3;
-say(@a.shift());
-say(@a.shift());
-say(@a.shift());
---- expected
-1
-2
-3
-
-===
---- code
-my @a:=1,2,3;
-say(@a.elems());
-say(@a.shift());
-say(@a.elems());
---- expected
-3
-1
-2
-
-===
---- code
-my @a:=423,553,664;
-say(@a.elems());
-say(@a.pop());
-say(@a.elems());
---- expected
-3
-664
-2
-
-===
---- code
-say("hOgE".lc());
---- expected
-hoge
-
-===
---- code
 say({abc => "def", geh => "ijk"}{"abc"})
 say({"abc" => "def", "geh" => "ijk"}{"geh"})
 --- expected
@@ -631,39 +592,3 @@ say(0b0101 +^ 0b1000);
 13
 10
 13
-
-===
---- code
-say(open("README.md").eof());
-say(open("README.md").eof);
---- expected
-0
-0
-
-===
---- code
-my @a:=5,9,6,3;
-say(@a.join("-"));
-say([1,2,3,4].join("*"));
-say([1,2,3,4].join(5));
-say([1,2,3,4].join);
---- expected
-5-9-6-3
-1*2*3*4
-1525354
-1234
-
-===
---- code
-say((1,2,3,4).join);
---- expected
-1234
-
-===
---- code
-my $a:=[5,9,6];
-$a.push(3);
-say($a.join("-"));
---- expected
-5-9-6-3
-
