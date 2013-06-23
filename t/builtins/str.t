@@ -11,9 +11,14 @@ done_testing;
 
 __END__
 
-===
+=== lc
 --- code
 say("hOgE".lc());
 --- expected
 hoge
 
+=== uc
+--- code
+say("HOGE".uc());
+--- expected
+HOGE
