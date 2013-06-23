@@ -7,6 +7,7 @@
 #include <list>
 #include <stdint.h>
 #include <sstream>
+#include <memory>
 #include "gen.assembler.h"
 
 namespace saru {
