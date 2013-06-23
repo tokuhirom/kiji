@@ -76,6 +76,5 @@ namespace saru {
     ClassBuilder b(cu->hll_config->str_box_type, tc);
     b.add_method("lc", strlen("lc"), Str_lc);
     b.add_method("uc", strlen("uc"), Str_uc);
-    b.add_method("substr", strlen("substr"), Str_substr);
   }
 };
