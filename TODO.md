@@ -210,6 +210,10 @@ TODO
 
  * single quoted string
 
+## Step 6.9 2013-06-23
+
+ * Added String.length method.
+
 ## Step 5.
 
  * $hash.keys()
