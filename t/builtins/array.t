@@ -74,3 +74,11 @@ say($a.join("-"));
 --- expected
 5-9-6-3
 
+=== unshift
+--- code
+my $a:=[5,9,6];
+$a.unshift(3);
+say($a.join("-"));
+--- expected
+3-5-9-6
+
