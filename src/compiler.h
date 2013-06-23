@@ -283,6 +283,8 @@ namespace saru {
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
       cu_->scs[0] = sc;
+      cu_->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*1);
+      cu_->scs_to_resolve[0] = NULL;
     }
 
     void initialize() {
