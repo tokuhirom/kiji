@@ -191,7 +191,7 @@ test: saru
 3rd/greg/greg:
 	cd 3rd/greg/ && $(CC) -g -o greg greg.c compile.c tree.c
 
-3rd/MoarVM/Makefile: 3rd/MoarVM/build/Makefile.in 3rd/MoarVM/Configure.pl
+3rd/MoarVM/Makefile: 3rd/MoarVM/build/Makefile.in 3rd/MoarVM/Configure.pl 3rd/MoarVM/build/Config/BuildEnvironment.pm
 	cd 3rd/MoarVM/ && perl Configure.pl --clang
 
 3rd/MoarVM/moarvm: 3rd/MoarVM/Makefile 3rd/MoarVM/src/core/*.c 3rd/MoarVM/src/core/validation.c 3rd/MoarVM/src/6model/reprs/*.c
