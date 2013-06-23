@@ -11,7 +11,7 @@ my $p = Getopt::Long::Parser->new(
 $p->getoptions(
     'debug!' => \my $debug,
 );
-my $CXXFLAGS = $debug ? '-g -D_GLIBCXX_DEBUG -ferror-limit=3 -std=c++11' : '-O3 -std=c++11';
+my $CXXFLAGS = $debug ? '-g -D_GLIBCXX_DEBUG -ferror-limit=3 -std=c++11' : '-g -O3 -std=c++11';
 
 my $tmpl = <<'...';
 # File extensions
