@@ -4,6 +4,8 @@ use warnings;
 use utf8;
 use 5.010000;
 use autodie;
+use FindBin;
+use lib "$FindBin::Bin/local/lib/perl5/";
 use Text::MicroTemplate qw(render_mt);
 
 &main; exit;

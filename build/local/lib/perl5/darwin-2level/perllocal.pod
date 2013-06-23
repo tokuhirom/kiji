@@ -1,0 +1,22 @@
+=head2 Sun Jun 23 09:20:25 2013: C<Module> L<Text::MicroTemplate|Text::MicroTemplate>
+
+=over 4
+
+=item *
+
+C<installed into: /Users/tokuhirom/dev/saru/build/local/lib/perl5>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.20>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+
