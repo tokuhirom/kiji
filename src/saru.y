@@ -357,16 +357,28 @@ integer =
     $$.set_integer(yytext, 8);
 }
 
+string = dq_string | sq_string
+
 # Missing foo
-string = '"' { $$.init_string(); } (
-        < [^"]* > { $$.append_string(yytext, yyleng); }
-        | '\a' { $$.append_string("\a", 1); }
-        | '\b' { $$.append_string("\b", 1); }
-        | '\t' { $$.append_string("\t", 1); }
-        | '\r' { $$.append_string("\r", 1); }
-        | '\n' { $$.append_string("\n", 1); }
-        | '\"' { $$.append_string("\"", 1); }
-    ) '"'
+dq_string = '"' { $$.init_string(); } (
+        < [^"\\]+ > { $$.append_string(yytext, yyleng); }
+        | esc 'a' { $$.append_string("\a", 1); }
+        | esc 'b' { $$.append_string("\b", 1); }
+        | esc 't' { $$.append_string("\t", 1); }
+        | esc 'r' { $$.append_string("\r", 1); }
+        | esc 'n' { $$.append_string("\n", 1); }
+        | esc '"' { $$.append_string("\"", 1); }
+        | esc esc { $$.append_string("\\", 1); }
+    )* '"'
+
+esc = '\\'
+
+sq_string = "'" { $$.init_string(); } (
+        < [^'\\]+ > { $$.append_string(yytext, yyleng); }
+        | esc "'" { $$.append_string("'", 1); }
+        | esc esc { $$.append_string("\\", 1); }
+        | < esc . > { $$.append_string(yytext, yyleng); }
+    )* "'"
 
 # TODO
 

@@ -20,13 +20,78 @@ test(
 );
 
 test(
-    '"ho\nge"',
+    q!"ho\nge\afuga\""!,
     {
         'type'  => 'NODE_STATEMENTS',
         'value' => [
             {
                 'type'  => 'NODE_STRING',
-                'value' => [ "ho\nge" ]
+                'value' => [ "ho\nge\afuga\"" ]
+            }
+        ]
+    }
+);
+
+test(
+    q!""!,
+    {
+        'type'  => 'NODE_STATEMENTS',
+        'value' => [
+            {
+                'type'  => 'NODE_STRING',
+                'value' => [ "" ]
+            }
+        ]
+    }
+);
+
+test(
+    q{''},
+    {
+        'type'  => 'NODE_STATEMENTS',
+        'value' => [
+            {
+                'type'  => 'NODE_STRING',
+                'value' => [ '' ]
+            }
+        ]
+    }
+);
+
+test(
+    q{'hoge'},
+    {
+        'type'  => 'NODE_STATEMENTS',
+        'value' => [
+            {
+                'type'  => 'NODE_STRING',
+                'value' => [ 'hoge' ]
+            }
+        ]
+    }
+);
+
+test(
+    q{'ho\nge'},
+    {
+        'type'  => 'NODE_STATEMENTS',
+        'value' => [
+            {
+                'type'  => 'NODE_STRING',
+                'value' => [ 'ho\nge' ]
+            }
+        ]
+    }
+);
+
+test(
+    q{'ho\\n\'ge'},
+    {
+        'type'  => 'NODE_STATEMENTS',
+        'value' => [
+            {
+                'type'  => 'NODE_STRING',
+                'value' => [ q!ho\n'ge! ]
             }
         ]
     }
@@ -36,6 +101,8 @@ done_testing;
 
 sub test {
     my ($src, $expected) = @_;
+
+    note "-----------------------------------------------------------------------";
 
     my $tmp = File::Temp->new();
     print {$tmp} $src;

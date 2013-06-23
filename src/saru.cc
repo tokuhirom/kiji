@@ -1,4 +1,5 @@
 // vim:ts=2:sw=2:tw=0:
+#define YY_DEBUG
 #include <stdio.h>
 #include <assert.h>
 #include <fstream>
@@ -16,6 +17,11 @@ bool parse() {
   bool retval = true;
   GREG g;
   yyinit(&g);
+  /*
+#ifdef YY_DEBUG
+    g.debug = 1;
+#endif
+  */
   if (!yyparse(&g)) {
     fprintf(stderr, "** Syntax error at line %d\n", line_number);
     if (g.text[0]) {
@@ -35,7 +41,7 @@ bool parse() {
       }
       fputc('\"', stderr);
     }
-    fprintf(stderr, "\n");
+    fprintf(stderr, "\n\n");
     retval = false;
   }
   yydeinit(&g);

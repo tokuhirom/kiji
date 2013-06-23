@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <string>
+#include <sstream>
 #include "gen.node.h"
 
 namespace saru {
@@ -17,6 +18,27 @@ namespace saru {
     NODE_TYPE_STR,
     NODE_TYPE_CHILDREN
   };
+
+  // TODO: support multibyte
+  static std::string escapeJsonString(const std::string& input) {
+    std::ostringstream ss;
+    for (auto iter = input.cbegin(); iter != input.cend(); iter++) {
+      switch (*iter) {
+        case '\\': ss << "\\\\";    break;
+        case '"':  ss << "\\\"";    break;
+        case '/':  ss << "\\/";     break;
+        case '\b': ss << "\\b";     break;
+        case '\f': ss << "\\f";     break;
+        case '\n': ss << "\\n";     break;
+        case '\r': ss << "\\r";     break;
+        case '\t': ss << "\\t";     break;
+        case '\a': ss << "\\u0007"; break;
+        default:   ss << *iter;     break;
+      }
+    }
+    return ss.str();
+  }
+
   class Node {
   private:
     NODE_TYPE type_;
@@ -185,7 +207,7 @@ namespace saru {
         break;
       case NODE_TYPE_STR:
         indent(depth+1);
-        printf("\"value\":[\"%s\"]\n", this->pv().c_str()); // TODO need escape
+        printf("\"value\":[\"%s\"]\n", escapeJsonString(this->pv()).c_str());
         break;
       case NODE_TYPE_CHILDREN: {
         indent(depth+1);
