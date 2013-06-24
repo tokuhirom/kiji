@@ -633,3 +633,11 @@ say("YO");
 --- expected
 Hello, world!
 YO
+
+--- code
+use v6;
+use Hello;
+say("YO");
+--- expected
+Hello, world!
+YO

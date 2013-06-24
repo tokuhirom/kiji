@@ -65,8 +65,7 @@ module_stmt = 'module' ws pkg:pkg_name eat_terminator { $$.set(saru::NODE_MODULE
 
 use_stmt = 'use ' pkg:pkg_name eat_terminator { $$.set(saru::NODE_USE, pkg); }
 
-# pkg_name = < [a-zA-Z] [a-zA-Z0-9]* ( '::' [a-zA-Z0-9]+ )* > {
-pkg_name = < [a-zA-Z]+ > {
+pkg_name = < [a-zA-Z] [a-zA-Z0-9]* ( '::' [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);
 }
 
