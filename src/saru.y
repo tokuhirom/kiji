@@ -369,6 +369,15 @@ dq_string = '"' { $$.init_string(); } (
         | esc 'r' { $$.append_string("\r", 1); }
         | esc 'n' { $$.append_string("\n", 1); }
         | esc '"' { $$.append_string("\"", 1); }
+        | esc 'x' < [a-fA-F0-9] [a-fA-F0-9] > {
+            // \x53
+            char buf[3];
+            buf[0] = yytext[0];
+            buf[1] = yytext[1];
+            buf[2] = '\0';
+            char c = strtol(buf, NULL, 16);
+            $$.append_string(&c, 1);
+        }
         | esc esc { $$.append_string("\\", 1); }
     )* '"'
 

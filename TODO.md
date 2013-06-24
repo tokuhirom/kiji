@@ -222,13 +222,16 @@ TODO
 
  * `for <a b c> { say($_) }`
 
+## Step 7.2 2013-06-24
+
+ * "\x6f\x6b 8"
+
 ## Step 5.
 
  * $hash.keys()
  * +(1,2,3)
  * next, last
  * `q<ok 7>`
- * "\x6f\x6b 8"
  * `loop { }`
  * abs(-3), abs(3)
  * Array operations

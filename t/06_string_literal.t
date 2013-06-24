@@ -97,6 +97,19 @@ test(
     }
 );
 
+test(
+    q{"\x6f\x6b 8"},
+    {
+        'type'  => 'NODE_STATEMENTS',
+        'value' => [
+            {
+                'type'  => 'NODE_STRING',
+                'value' => [ q!ok 8! ]
+            }
+        ]
+    }
+);
+
 done_testing;
 
 sub test {
