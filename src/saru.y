@@ -10,6 +10,7 @@
 namespace saru {
   struct ParserContext {
     int line_number;
+    saru::Node *root;
   };
 };
 
@@ -25,7 +26,7 @@ std::istream *global_input_stream;
 %}
 
 comp_init = e:statementlist end-of-file {
-    $$ = (node_global = e);
+    $$ = (*(G->data.root) = e);
 }
 
 statementlist =

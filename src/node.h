@@ -250,6 +250,4 @@ namespace saru {
 
 };
 
-static saru::Node node_global;
-
 #define YYSTYPE saru::Node

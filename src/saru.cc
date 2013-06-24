@@ -13,7 +13,7 @@ extern "C" {
 }
 #include "compiler.h"
 
-bool parse() {
+bool parse(saru::Node &root) {
   bool retval = true;
   GREG g;
   yyinit(&g);
@@ -23,6 +23,7 @@ bool parse() {
 #endif
   */
   g.data.line_number = 1;
+  g.data.root = &root;
 
   if (!yyparse(&g)) {
     fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
@@ -60,14 +61,16 @@ void run_repl() {
       std::unique_ptr<std::istringstream> iss(new std::istringstream(src));
       global_input_stream = &(*iss);
 
-      if (!parse()) {
+      saru::Node root;
+
+      if (!parse(root)) {
         continue;
       }
 
       saru::Interpreter interp;
       saru::CompUnit cu(interp.main_thread());
       saru::Compiler compiler(cu);
-      compiler.compile(node_global);
+      compiler.compile(root);
       interp.run(cu);
     }
     std::cout << std::endl;
@@ -147,7 +150,8 @@ int main(int argc, char** argv) {
   instance->raw_clargs = (char **)(opt->argv + processed_args);
   */
 
-  if (!parse()) {
+  saru::Node root_node;
+  if (!parse(root_node)) {
     exit(1);
   }
 
@@ -164,13 +168,13 @@ int main(int argc, char** argv) {
   }
 
   if (dump_ast) {
-    node_global.dump_json();
+    root_node.dump_json();
     return 0;
   }
 
   saru::CompUnit cu(interp.main_thread());
   saru::Compiler compiler(cu);
-  compiler.compile(node_global);
+  compiler.compile(root_node);
   if (dump_bytecode) {
     cu.dump(interp.vm());
   } else {
