@@ -1263,6 +1263,9 @@ namespace kiji {
         label_end.put();
         return dst_reg;
       }
+      case NODE_UNARY_PLUS: {
+        return to_n(do_compile(node.children()[0]));
+      }
       case NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const kiji::Node &ident = node.children()[0];

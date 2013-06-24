@@ -62,7 +62,7 @@ statement =
           | c:comment { $$.set_nop(); }
 
 funcall_stmt =
-    i:ident ws+ a:args {
+    i:ident ' '+ a:args {
         // funcall without parens.
         $$.set(kiji::NODE_FUNCALL, i, a);
     }
@@ -251,26 +251,30 @@ add_expr =
     }
 
 multiplicative_expr =
-    l:exponentiation_expr (
-        - '*' - r:exponentiation_expr {
+    l:symbolic_unary (
+        - '*' - r:symbolic_unary {
             $$.set(kiji::NODE_MUL, l, r);
             l = $$;
         }
-        | - '/' - r:exponentiation_expr {
+        | - '/' - r:symbolic_unary {
             $$.set(kiji::NODE_DIV, l, r);
             l = $$;
         }
-        | - '%' - r:exponentiation_expr {
+        | - '%' - r:symbolic_unary {
             $$.set(kiji::NODE_MOD, l, r);
             l = $$;
         }
-        | - '+&' - r:exponentiation_expr {
+        | - '+&' - r:symbolic_unary {
             $$.set(kiji::NODE_BIN_AND, l, r);
             l = $$;
         }
     )* {
         $$ = l;
     }
+
+symbolic_unary =
+    '+' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_PLUS, f1); }
+    | exponentiation_expr
 
 exponentiation_expr = 
     f1:autoincrement_expr (
@@ -385,19 +389,22 @@ dec_number =
     | <([0-9]+ '.' [0-9]+)> {
     $$.set_number(yytext);
 }
-    | <([0-9]+)> {
-    $$.set_integer(yytext, 10);
+    | <([0-9_]+)> {
+    $$.set_integer(yytext, yyleng, 10);
 }
 
 integer =
-    '0b' <[01]+> {
-    $$.set_integer(yytext, 2);
+    '0b' <[01_]+> {
+    $$.set_integer(yytext, yyleng, 2);
 }
-    | '0x' <[0-9a-f]+> {
-    $$.set_integer(yytext, 16);
+    | '0d' <[0-9]+> {
+    $$.set_integer(yytext, yyleng, 10);
+}
+    | '0x' <[0-9a-f_]+> {
+    $$.set_integer(yytext, yyleng, 16);
 }
     | '0o' <[0-7]+> {
-    $$.set_integer(yytext, 8);
+    $$.set_integer(yytext, yyleng, 8);
 }
 
 string = dq_string | sq_string

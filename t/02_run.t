@@ -657,3 +657,9 @@ OK
 say("YO");
 --- expected
 YO
+
+===
+--- code
+say 'ok ', 0_0_1_4;
+--- expected
+ok 14

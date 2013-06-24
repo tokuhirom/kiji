@@ -134,13 +134,19 @@ namespace kiji {
       this->type_ = NODE_NUMBER;
       this->body_.nv = atof(txt);
     }
-    void set_integer(int n) {
+    void set_integer(int64_t n) {
       this->type_ = NODE_INT;
       this->body_.iv = n;
     }
-    void set_integer(const char*txt, int base) {
-      this->type_ = NODE_INT;
-      this->body_.iv = strtoll(txt, NULL, base);
+    void set_integer(const char*txt, size_t length, int base) {
+      std::string buf;
+      for (int i=0; i<length; i++) {
+        if (txt[i] != '_') {
+          buf += txt[i];
+        }
+      }
+      int64_t n = strtoll(buf.c_str(), NULL, base);
+      set_integer(n);
     }
     void set_ident(const char *txt, int length) {
       this->type_ = NODE_IDENT;

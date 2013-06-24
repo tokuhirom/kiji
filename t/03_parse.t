@@ -336,3 +336,18 @@ for @a { 1; }
     (list (string "a") (string "b") (string "c"))
 )
 
+===
+--- code
++"0x0a"
+--- expected
+(statements
+    (unary_plus (string "0x0a"))
+)
+
+===
+--- code
+0d9
+--- expected
+(statements
+    (int 9)
+)
