@@ -289,10 +289,13 @@ hash_key =
 twargs='@*ARGS' { $$.set_clargs(); }
 
 qw =
-    '<<' -
+    '<<' - qw_list - '>>'
+    | '<' - qw_list - '>'
+
+qw_list =
         a:qw_item { $$.set(saru::NODE_LIST, a); a = $$; }
         ( ws+ b:qw_item { a.push_child(b); $$ = a; } )*
-    - '>>' { $$=a }
+        { $$=a; }
 
 # I want to use [^ ] but greg does not support it...
 # https://github.com/nddrylliog/greg/issues/12

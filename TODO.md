@@ -218,6 +218,10 @@ TODO
 
  * if statement should return value.
 
+## Step 7.1 2013-06-24
+
+ * `for <a b c> { say($_) }`
+
 ## Step 5.
 
  * $hash.keys()
@@ -262,15 +266,9 @@ TODO
  * use
  * `"foo { 3+2 }"`
  * ++$i , $i++ , --$i , $i--
- * fix the variable scopes
-   {
-    my $i:=0;
-    {
-      my $i:=3;
-      say($i); # 3
-    }
-    say($i); # 0
-   }
+ * variable scope in 'for' stmt
+ * variable scope in 'if' stmt
+ * variable scope in 'while' stmt
  * heredocs?
   * needs 'assignment'
 

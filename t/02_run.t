@@ -604,3 +604,10 @@ say(foo(2));
 3
 8
 
+===
+--- code
+for <a b c> { say($_) }
+--- expected
+a
+b
+c
