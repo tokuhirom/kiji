@@ -63,6 +63,8 @@ my @types = qw(
     NODE_BIN_XOR
     NODE_BLOCK
     NODE_LAMBDA
+    NODE_USE
+    NODE_MODULE
 );
 
 say qq!/* This file is generated from $0 */!;

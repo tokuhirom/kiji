@@ -35,7 +35,7 @@ namespace saru {
       if (g.text[0]) {
         fprintf(stderr, "** near %s\n", g.text);
       }
-      if (g.pos < g.limit || !feof(stdin)) {
+      if (g.pos < g.limit || !is->eof()) {
         g.buf[g.limit]= '\0';
         fprintf(stderr, " before text \"");
         while (g.pos < g.limit) {
@@ -44,7 +44,7 @@ namespace saru {
         }
         if (g.pos == g.limit) {
           int c;
-          while (EOF != (c= fgetc(stdin)) && '\n' != c && '\r' != c)
+          while (EOF != (c= is->get()) && '\n' != c && '\r' != c)
           fputc(c, stderr);
         }
         fputc('\"', stderr);
@@ -622,6 +622,45 @@ namespace saru {
         default:
           MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", get_local_type(reg));
         }
+        return UNKNOWN_REG;
+      }
+      case NODE_MODULE: {
+        // nop, for now.
+        return UNKNOWN_REG;
+      }
+      case NODE_USE: {
+        assert(node.children().size()==1);
+        auto name = node.children()[0].pv();
+        if (name == "v6") {
+          return UNKNOWN_REG; // nop.
+        }
+        std::string path = std::string("lib/") + name + ".p6";
+        std::ifstream ifs(path);
+        saru::Node root_node;
+        if (!ifs) {
+          MVM_panic(MVM_exitcode_compunit, "Cannot open file: %s", path.c_str());
+        }
+        if (!saru::parse(&ifs, root_node)) {
+          MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", path.c_str());
+        }
+
+        auto frame_no = push_frame(path);
+        assembler().checkarity(0,0);
+        this->do_compile(root_node);
+        assembler().return_();
+        pop_frame();
+
+        auto code_reg = reg_obj();
+        assembler().getcode(code_reg, frame_no);
+        MVMCallsite* callsite = new MVMCallsite;
+        memset(callsite, 0, sizeof(MVMCallsite));
+        callsite->arg_count = 0;
+        callsite->num_pos = 0;
+        callsite->arg_flags = NULL;
+        auto callsite_no = push_callsite(callsite);
+        assembler().prepargs(callsite_no);
+        assembler().invoke_v(code_reg);
+
         return UNKNOWN_REG;
       }
       case NODE_DIE: {

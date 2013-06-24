@@ -43,13 +43,15 @@ statementlist =
     )
 
 statement =
-            e:postfix_if_stmt eat_terminator { $$ = e; }
+            use_stmt
+          | e:postfix_if_stmt eat_terminator { $$ = e; }
           | e:postfix_unless_stmt eat_terminator { $$ = e; }
           | e:postfix_for_stmt eat_terminator { $$ = e; }
           | if_stmt
           | for_stmt
           | while_stmt
           | unless_stmt
+          | module_stmt
           | die_stmt
           | funcdef - ';'*
           | bl:block { $$.set(saru::NODE_BLOCK, bl); }
@@ -59,6 +61,14 @@ normal_stmt = return_stmt | bind_stmt
 
 return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
 
+module_stmt = 'module' ws pkg:pkg_name eat_terminator { $$.set(saru::NODE_MODULE, pkg); }
+
+use_stmt = 'use ' pkg:pkg_name eat_terminator { $$.set(saru::NODE_USE, pkg); }
+
+# pkg_name = < [a-zA-Z] [a-zA-Z0-9]* ( '::' [a-zA-Z0-9]+ )* > {
+pkg_name = < [a-zA-Z]+ > {
+    $$.set_ident(yytext, yyleng);
+}
 
 die_stmt = 'die' ws e:expr eat_terminator { $$.set(saru::NODE_DIE, e); }
 
