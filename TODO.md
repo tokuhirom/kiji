@@ -244,6 +244,10 @@ TODO
  * `@_` special variable
  * socket operation
  * slurp() function with encoding option
+ * Array#map
+ * Array#grep
+ * `for <a b c> -> $n { say($n); }`
+ * `(-> $n { say($n) })(5)`
  * implement builtin functions
     * sprintf
     * printf

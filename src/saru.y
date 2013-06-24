@@ -253,6 +253,7 @@ autoincrement_expr = method_postfix_expr
 
 method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$.set(saru::NODE_ATKEY, container, k); }
            | ( container:term '<' - k:ident - '>' ) { k.change_type(saru::NODE_STRING); $$.set(saru::NODE_ATKEY, container, k); }
+           | ( container:term '(' - k:args - ')' ) { $$.set(saru::NODE_FUNCALL, container, k); }
            | term
 
 term = 
@@ -270,6 +271,7 @@ term =
     | qw
     | twargs
     | hash
+    | lambda
 
 ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);
@@ -304,6 +306,11 @@ qw_item = < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
 funcdef =
     'sub' - i:ident - '(' - p:params - ')' - b:block {
         $$.set(saru::NODE_FUNC, i, p, b);
+    }
+
+lambda =
+    '->' - p:params - b:block {
+        $$.set(saru::NODE_LAMBDA, p, b);
     }
 
 params =

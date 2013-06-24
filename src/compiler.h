@@ -471,6 +471,23 @@ namespace saru {
       }
       assembler().goto_(label.address());
     }
+    void return_any(uint16_t reg) {
+      switch (get_local_type(reg)) {
+      case MVM_reg_int64:
+        assembler().return_i(reg);
+        break;
+      case MVM_reg_str:
+        assembler().return_s(reg);
+        break;
+      case MVM_reg_obj:
+        assembler().return_o(reg);
+        break;
+      case MVM_reg_num64:
+        assembler().return_n(reg);
+        break;
+      default: abort();
+      }
+    }
     void if_any(uint16_t reg, Label &label) {
       if (!label.is_solved()) {
         label.reserve(assembler().bytecode_size() + 2 + 2);
@@ -579,6 +596,34 @@ namespace saru {
           goto_(label_while);
         label_end.put();
         return UNKNOWN_REG;
+      }
+      case NODE_LAMBDA: {
+        auto frame_no = push_frame("lambda");
+        assembler().checkarity(
+          node.children()[0].children().size(),
+          node.children()[0].children().size()
+        );
+        int i=0;
+        for (auto n: node.children()[0].children()) {
+          int reg = reg_obj();
+          int lex = push_lexical(n.pv(), MVM_reg_obj);
+          assembler().param_rp_o(reg, i);
+          assembler().bindlex(lex, 0, reg);
+          ++i;
+        }
+        auto retval = do_compile(node.children()[1]);
+        if (retval == UNKNOWN_REG) {
+          retval = reg_obj();
+          assembler().null(retval);
+        }
+        return_any(retval);
+        pop_frame();
+
+        // warn if void context.
+        auto dst_reg = reg_obj();
+        assembler().getcode(dst_reg, frame_no);
+
+        return dst_reg;
       }
       case NODE_BLOCK: {
         auto frame_no = push_frame("block");
@@ -1121,53 +1166,63 @@ namespace saru {
         const saru::Node &ident = node.children()[0];
         const saru::Node &args  = node.children()[1];
         assert(args.type() == NODE_ARGS);
-        if (ident.pv() == "say") {
-          int i=0;
-          for (auto a:args.children()) {
-            uint16_t reg_num = stringify(do_compile(a));
-            if (i==args.children().size()-1) {
-              assembler().say(reg_num);
-            } else {
+        
+        if (node.children()[0].type() == NODE_IDENT) {
+          if (ident.pv() == "say") {
+            int i=0;
+            for (auto a:args.children()) {
+              uint16_t reg_num = stringify(do_compile(a));
+              if (i==args.children().size()-1) {
+                assembler().say(reg_num);
+              } else {
+                assembler().print(reg_num);
+              }
+              ++i;
+            }
+            return const_true();
+          } else if (ident.pv() == "print") {
+            for (auto a:args.children()) {
+              uint16_t reg_num = stringify(do_compile(a));
               assembler().print(reg_num);
             }
-            ++i;
+            return const_true();
+          } else if (ident.pv() == "open") {
+            // TODO support arguments
+            assert(args.children().size() == 1);
+            auto fname_s = do_compile(args.children()[0]);
+            auto dst_reg_o = reg_obj();
+            auto flag_i = reg_int64();
+            assembler().const_i64(flag_i, APR_FOPEN_READ); // TODO support other flags, etc.
+            auto encoding_flag_i = reg_int64();
+            assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
+            assembler().open_fh(dst_reg_o, fname_s, flag_i, encoding_flag_i);
+            return dst_reg_o;
+          } else if (ident.pv() == "slurp") {
+            assert(args.children().size() <= 2);
+            assert(args.children().size() != 2 && "Encoding option is not supported yet");
+            auto fname_s = do_compile(args.children()[0]);
+            auto dst_reg_s = reg_str();
+            auto encoding_flag_i = reg_int64();
+            assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
+            assembler().slurp(dst_reg_s, fname_s, encoding_flag_i);
+            return dst_reg_s;
           }
-          return const_true();
-        } else if (ident.pv() == "print") {
-          for (auto a:args.children()) {
-            uint16_t reg_num = stringify(do_compile(a));
-            assembler().print(reg_num);
+        }
+
+        {
+          uint16_t func_reg_no;
+          if (node.children()[0].type() == NODE_IDENT) {
+            func_reg_no = reg_obj();
+            int outer = 0;
+            auto lex_no = find_lexical_by_name(std::string("&") + ident.pv(), outer);
+            assembler().getlex(
+              func_reg_no,
+              lex_no,
+              outer // outer frame
+            );
+          } else {
+            func_reg_no = to_o(do_compile(node.children()[0]));
           }
-          return const_true();
-        } else if (ident.pv() == "open") {
-          // TODO support arguments
-          assert(args.children().size() == 1);
-          auto fname_s = do_compile(args.children()[0]);
-          auto dst_reg_o = reg_obj();
-          auto flag_i = reg_int64();
-          assembler().const_i64(flag_i, APR_FOPEN_READ); // TODO support other flags, etc.
-          auto encoding_flag_i = reg_int64();
-          assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
-          assembler().open_fh(dst_reg_o, fname_s, flag_i, encoding_flag_i);
-          return dst_reg_o;
-        } else if (ident.pv() == "slurp") {
-          assert(args.children().size() <= 2);
-          assert(args.children().size() != 2 && "Encoding option is not supported yet");
-          auto fname_s = do_compile(args.children()[0]);
-          auto dst_reg_s = reg_str();
-          auto encoding_flag_i = reg_int64();
-          assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
-          assembler().slurp(dst_reg_s, fname_s, encoding_flag_i);
-          return dst_reg_s;
-        } else {
-          auto reg_no = reg_obj();
-          int outer = 0;
-          auto lex_no = find_lexical_by_name(std::string("&") + ident.pv(), outer);
-          assembler().getlex(
-            reg_no,
-            lex_no,
-            outer // outer frame
-          );
 
           {
             MVMCallsite* callsite = new MVMCallsite;
@@ -1234,10 +1289,10 @@ namespace saru {
               ++i;
             }
           }
-          auto dest_reg = reg_obj();
+          auto dest_reg = reg_obj(); // ctx
           assembler().invoke_o(
               dest_reg,
-              reg_no
+              func_reg_no
           );
           return dest_reg;
         }

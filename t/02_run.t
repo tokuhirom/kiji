@@ -611,3 +611,9 @@ for <a b c> { say($_) }
 a
 b
 c
+
+===
+--- code
+(-> $n { say($n) })(5)
+--- expected
+5
