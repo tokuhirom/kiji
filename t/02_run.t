@@ -650,3 +650,10 @@ say((not 1) ?? 'FAIL' !! 'OK');
 --- expected
 OK
 OK
+
+===
+--- code
+# comment
+say("YO");
+--- expected
+YO

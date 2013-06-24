@@ -295,6 +295,8 @@ TODO
  * variable scope in 'if' stmt
  * variable scope in 'while' stmt
  * eval
+ * try S32-str/lines.t in roast
+ * `+"0x0a";`
  * heredocs?
   * needs 'assignment'
 
@@ -328,6 +330,10 @@ TODO
 
     sub foo() { bar() }
     sub bar() { 3 }
+
+## Step 100.
+
+ * pass roast
 
 ## Step ∞. Will done in 2999-12-31
 

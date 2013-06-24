@@ -59,6 +59,7 @@ statement =
           | bl:block { $$.set(saru::NODE_BLOCK, bl); }
           | b:normal_stmt - eat_terminator { $$ = b; }
           | e:funcall_stmt eat_terminator { $$=e; }
+          | c:comment { $$.set_nop(); }
 
 funcall_stmt =
     i:ident ws+ a:args {
@@ -434,9 +435,11 @@ sq_string = "'" { $$.init_string(); } (
 
 # TODO
 
+comment= '#' [^\n]*
+
 # white space
 ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
-    | '#' [^\n]*
+    | comment
 - = ws*
 end-of-line = ( '\r\n' | '\n' | '\r' ) {
     G->data.line_number++;
