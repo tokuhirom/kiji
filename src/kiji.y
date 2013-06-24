@@ -3,14 +3,14 @@
 #include "node.h"
 #include <iostream>
 
-#define YYSTYPE saru::Node
+#define YYSTYPE kiji::Node
 
-#define YY_XTYPE saru::ParserContext
+#define YY_XTYPE kiji::ParserContext
 
-namespace saru {
+namespace kiji {
   struct ParserContext {
     int line_number;
-    saru::Node *root;
+    kiji::Node *root;
     std::istream *input_stream;
   };
 };
@@ -31,7 +31,7 @@ comp_init = e:statementlist end-of-file {
 statementlist =
     (
         s1:statement {
-            $$.set(saru::NODE_STATEMENTS, s1);
+            $$.set(kiji::NODE_STATEMENTS, s1);
             s1 = $$;
         }
         (
@@ -56,7 +56,7 @@ statement =
           | method_stmt
           | die_stmt
           | funcdef - ';'*
-          | bl:block { $$.set(saru::NODE_BLOCK, bl); }
+          | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
           | b:normal_stmt - eat_terminator { $$ = b; }
           | e:funcall_stmt eat_terminator { $$=e; }
           | c:comment { $$.set_nop(); }
@@ -64,82 +64,82 @@ statement =
 funcall_stmt =
     i:ident ws+ a:args {
         // funcall without parens.
-        $$.set(saru::NODE_FUNCALL, i, a);
+        $$.set(kiji::NODE_FUNCALL, i, a);
     }
 
-class_stmt = 'class' ws i:ident - b:block { $$.set(saru::NODE_CLASS, i, b); }
+class_stmt = 'class' ws i:ident - b:block { $$.set(kiji::NODE_CLASS, i, b); }
 
-method_stmt = 'method' ws i:ident p:paren_args - b:block { $$.set(saru::NODE_METHOD, i, p, b); }
+method_stmt = 'method' ws i:ident p:paren_args - b:block { $$.set(kiji::NODE_METHOD, i, p, b); }
 
 normal_stmt = return_stmt | bind_stmt
 
-return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
+return_stmt = 'return' ws e:expr { $$.set(kiji::NODE_RETURN, e); }
 
-module_stmt = 'module' ws pkg:pkg_name eat_terminator { $$.set(saru::NODE_MODULE, pkg); }
+module_stmt = 'module' ws pkg:pkg_name eat_terminator { $$.set(kiji::NODE_MODULE, pkg); }
 
-use_stmt = 'use ' pkg:pkg_name eat_terminator { $$.set(saru::NODE_USE, pkg); }
+use_stmt = 'use ' pkg:pkg_name eat_terminator { $$.set(kiji::NODE_USE, pkg); }
 
 pkg_name = < [a-zA-Z] [a-zA-Z0-9]* ( '::' [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);
 }
 
-die_stmt = 'die' ws e:expr eat_terminator { $$.set(saru::NODE_DIE, e); }
+die_stmt = 'die' ws e:expr eat_terminator { $$.set(kiji::NODE_DIE, e); }
 
 while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
-            $$.set(saru::NODE_WHILE, cond, body);
+            $$.set(kiji::NODE_WHILE, cond, body);
         }
 
 for_stmt =
-    'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
-    | 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - body:lambda { $$.set(saru::NODE_FOR, src, body); }
+    'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - '{' - body:statementlist - '}' { $$.set(kiji::NODE_FOR, src, body); }
+    | 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - body:lambda { $$.set(kiji::NODE_FOR, src, body); }
 
 unless_stmt = 'unless' - cond:expr - '{' - body:statementlist - '}' {
-            $$.set(saru::NODE_UNLESS, cond, body);
+            $$.set(kiji::NODE_UNLESS, cond, body);
         }
 
 if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
-            $$.set(saru::NODE_IF, if_cond, if_body);
+            $$.set(kiji::NODE_IF, if_cond, if_body);
             if_cond=$$;
         }
         (
             ws+ 'elsif' - elsif_cond:expr - '{' - elsif_body:statementlist - '}' {
-                // elsif_body.change_type(saru::NODE_ELSIF);
-                $$.set(saru::NODE_ELSIF, elsif_cond, elsif_body);
+                // elsif_body.change_type(kiji::NODE_ELSIF);
+                $$.set(kiji::NODE_ELSIF, elsif_cond, elsif_body);
                 // if_cond.push_child(elsif_cond);
                 if_cond.push_child($$);
             }
         )*
         (
             ws+ 'else' ws+ - '{' - else_body:statementlist - '}' {
-                else_body.change_type(saru::NODE_ELSE);
+                else_body.change_type(kiji::NODE_ELSE);
                 if_cond.push_child(else_body);
             }
         )? { $$=if_cond; }
 
-postfix_if_stmt = body:normal_stmt - 'if' - cond:expr { $$.set(saru::NODE_IF, cond, body); }
+postfix_if_stmt = body:normal_stmt - 'if' - cond:expr { $$.set(kiji::NODE_IF, cond, body); }
 
-postfix_unless_stmt = body:normal_stmt - 'unless' - cond:expr { $$.set(saru::NODE_UNLESS, cond, body); }
+postfix_unless_stmt = body:normal_stmt - 'unless' - cond:expr { $$.set(kiji::NODE_UNLESS, cond, body); }
 
-postfix_for_stmt = body:normal_stmt - 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) { $$.set(saru::NODE_FOR, src, body); }
+postfix_for_stmt = body:normal_stmt - 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) { $$.set(kiji::NODE_FOR, src, body); }
 
 # FIXME: simplify the code
 bind_stmt =
-          e1:my - ':=' - e2:list_expr { $$.set(saru::NODE_BIND, e1, e2); }
-        | e3:my - ':=' - e4:expr { $$.set(saru::NODE_BIND, e3, e4); }
+          e1:my - ':=' - e2:list_expr { $$.set(kiji::NODE_BIND, e1, e2); }
+        | e3:my - ':=' - e4:expr { $$.set(kiji::NODE_BIND, e3, e4); }
         | e5:expr { $$ = e5; }
 
 list_expr =
-    (a:methodcall_expr { $$.set(saru::NODE_LIST, a); a = $$; }
+    (a:methodcall_expr { $$.set(kiji::NODE_LIST, a); a = $$; }
         (- ','  - b:methodcall_expr { a.push_child(b); $$ = a; } )+
     ) { $$=a }
 
 paren_args = '(' - a:args - ')' { $$=a; }
-           | '(' - ')' { $$.set_children(saru::NODE_ARGS); }
+           | '(' - ')' { $$.set_children(kiji::NODE_ARGS); }
 
 args =
     (
         s1:expr {
-            $$.set(saru::NODE_ARGS, s1);
+            $$.set(kiji::NODE_ARGS, s1);
             s1 = $$;
         }
         ( - ',' - s2:expr {
@@ -147,7 +147,7 @@ args =
             $$ = s1;
         } )*
     )
-    | '' { $$.set_children(saru::NODE_ARGS); }
+    | '' { $$.set_children(kiji::NODE_ARGS); }
     # ↑ it makes slower?
 
 expr = sequencer_expr
@@ -157,53 +157,53 @@ sequencer_expr = loose_or_expr
 
 loose_or_expr =
     f1:loose_and_expr (
-        - 'or' - f2:loose_and_expr { $$.set(saru::NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        - 'or' - f2:loose_and_expr { $$.set(kiji::NODE_LOGICAL_AND, f1, f2); f1=$$; }
     )* { $$=f1; }
 
 loose_and_expr =
     f1:list_prefix_expr (
-        - 'and' - f2:list_prefix_expr { $$.set(saru::NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        - 'and' - f2:list_prefix_expr { $$.set(kiji::NODE_LOGICAL_AND, f1, f2); f1=$$; }
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:variable - ':=' - e:loose_not_expr) { $$.set(saru::NODE_BIND, v, e); }
+    (v:variable - ':=' - e:loose_not_expr) { $$.set(kiji::NODE_BIND, v, e); }
     | loose_not_expr
 
 loose_not_expr =
-    'not' - f1:conditional_expr { $$.set(saru::NODE_NOT, f1); }
+    'not' - f1:conditional_expr { $$.set(kiji::NODE_NOT, f1); }
     | f1:conditional_expr { $$=f1 }
 
-conditional_expr = e1:tight_or - '??' - e2:tight_or - '!!' - e3:tight_or { $$.set(saru::NODE_CONDITIONAL, e1, e2, e3); }
+conditional_expr = e1:tight_or - '??' - e2:tight_or - '!!' - e3:tight_or { $$.set(kiji::NODE_CONDITIONAL, e1, e2, e3); }
                 | tight_or
 
 tight_or = f1:tight_and (
-        - '||' - f2:tight_and { $$.set(saru::NODE_LOGICAL_OR, f1, f2); f1 = $$; }
+        - '||' - f2:tight_and { $$.set(kiji::NODE_LOGICAL_OR, f1, f2); f1 = $$; }
     )* { $$ = f1; }
 
 tight_and = f1:cmp_expr (
-        - '&&' - f2:cmp_expr { $$.set(saru::NODE_LOGICAL_AND, f1, f2); f1 = $$; }
+        - '&&' - f2:cmp_expr { $$.set(kiji::NODE_LOGICAL_AND, f1, f2); f1 = $$; }
     )* { $$ = f1; }
 
 cmp_expr = f1:methodcall_expr (
-          - '==' - f2:methodcall_expr { $$.set(saru::NODE_EQ, f1, f2); f1=$$; }
-        | - '!=' - f2:methodcall_expr { $$.set(saru::NODE_NE, f1, f2); f1=$$; }
-        | - '<'  - f2:methodcall_expr { $$.set(saru::NODE_LT, f1, f2); f1=$$; }
-        | - '<=' - f2:methodcall_expr { $$.set(saru::NODE_LE, f1, f2); f1=$$; }
-        | - '>'  - f2:methodcall_expr { $$.set(saru::NODE_GT, f1, f2); f1=$$; }
-        | - '>=' - f2:methodcall_expr { $$.set(saru::NODE_GE, f1, f2); f1=$$; }
-        | - 'eq' - f2:methodcall_expr { $$.set(saru::NODE_STREQ, f1, f2); f1=$$; }
-        | - 'ne' - f2:methodcall_expr { $$.set(saru::NODE_STRNE, f1, f2); f1=$$; }
-        | - 'gt' - f2:methodcall_expr { $$.set(saru::NODE_STRGT, f1, f2); f1=$$; }
-        | - 'ge' - f2:methodcall_expr { $$.set(saru::NODE_STRGE, f1, f2); f1=$$; }
-        | - 'lt' - f2:methodcall_expr { $$.set(saru::NODE_STRLT, f1, f2); f1=$$; }
-        | - 'le' - f2:methodcall_expr { $$.set(saru::NODE_STRLE, f1, f2); f1=$$; }
+          - '==' - f2:methodcall_expr { $$.set(kiji::NODE_EQ, f1, f2); f1=$$; }
+        | - '!=' - f2:methodcall_expr { $$.set(kiji::NODE_NE, f1, f2); f1=$$; }
+        | - '<'  - f2:methodcall_expr { $$.set(kiji::NODE_LT, f1, f2); f1=$$; }
+        | - '<=' - f2:methodcall_expr { $$.set(kiji::NODE_LE, f1, f2); f1=$$; }
+        | - '>'  - f2:methodcall_expr { $$.set(kiji::NODE_GT, f1, f2); f1=$$; }
+        | - '>=' - f2:methodcall_expr { $$.set(kiji::NODE_GE, f1, f2); f1=$$; }
+        | - 'eq' - f2:methodcall_expr { $$.set(kiji::NODE_STREQ, f1, f2); f1=$$; }
+        | - 'ne' - f2:methodcall_expr { $$.set(kiji::NODE_STRNE, f1, f2); f1=$$; }
+        | - 'gt' - f2:methodcall_expr { $$.set(kiji::NODE_STRGT, f1, f2); f1=$$; }
+        | - 'ge' - f2:methodcall_expr { $$.set(kiji::NODE_STRGE, f1, f2); f1=$$; }
+        | - 'lt' - f2:methodcall_expr { $$.set(kiji::NODE_STRLT, f1, f2); f1=$$; }
+        | - 'le' - f2:methodcall_expr { $$.set(kiji::NODE_STRLE, f1, f2); f1=$$; }
     )* {
         $$ = f1;
     }
 
 methodcall_expr =
     a1:atpos_expr (
-        '.' a2:ident { $$.set(saru::NODE_METHODCALL, a1, a2); a1=$$; }
+        '.' a2:ident { $$.set(kiji::NODE_METHODCALL, a1, a2); a1=$$; }
         (
             a3:paren_args { a1.push_child(a3) }
         )?
@@ -211,39 +211,39 @@ methodcall_expr =
 
 atpos_expr =
     f1:not_expr - '[' - f2:not_expr - ']' {
-        $$.set(saru::NODE_ATPOS, f1, f2);
+        $$.set(kiji::NODE_ATPOS, f1, f2);
     }
     | not_expr
 
 funcall =
     (i:ident - '(' - a:args - ')') {
-        $$.set(saru::NODE_FUNCALL, i, a);
+        $$.set(kiji::NODE_FUNCALL, i, a);
     }
 
 not_expr =
-    ( '!' - a:add_expr ) { $$.set(saru::NODE_NOT, a); }
+    ( '!' - a:add_expr ) { $$.set(kiji::NODE_NOT, a); }
     | add_expr
 
 add_expr =
     l:multiplicative_expr (
           - '+' - r1:multiplicative_expr {
-            $$.set(saru::NODE_ADD, l, r1);
+            $$.set(kiji::NODE_ADD, l, r1);
             l = $$;
           }
         | - '-' - r2:multiplicative_expr {
-            $$.set(saru::NODE_SUB, l, r2);
+            $$.set(kiji::NODE_SUB, l, r2);
             l = $$;
           }
         | - '~' - r2:multiplicative_expr {
-            $$.set(saru::NODE_STRING_CONCAT, l, r2);
+            $$.set(kiji::NODE_STRING_CONCAT, l, r2);
             l = $$;
           }
         | - '+|' - r:exponentiation_expr {
-            $$.set(saru::NODE_BIN_OR, l, r);
+            $$.set(kiji::NODE_BIN_OR, l, r);
             l = $$;
         }
         | - '+^' - r:exponentiation_expr {
-            $$.set(saru::NODE_BIN_XOR, l, r);
+            $$.set(kiji::NODE_BIN_XOR, l, r);
             l = $$;
         }
     )* {
@@ -253,19 +253,19 @@ add_expr =
 multiplicative_expr =
     l:exponentiation_expr (
         - '*' - r:exponentiation_expr {
-            $$.set(saru::NODE_MUL, l, r);
+            $$.set(kiji::NODE_MUL, l, r);
             l = $$;
         }
         | - '/' - r:exponentiation_expr {
-            $$.set(saru::NODE_DIV, l, r);
+            $$.set(kiji::NODE_DIV, l, r);
             l = $$;
         }
         | - '%' - r:exponentiation_expr {
-            $$.set(saru::NODE_MOD, l, r);
+            $$.set(kiji::NODE_MOD, l, r);
             l = $$;
         }
         | - '+&' - r:exponentiation_expr {
-            $$.set(saru::NODE_BIN_AND, l, r);
+            $$.set(kiji::NODE_BIN_AND, l, r);
             l = $$;
         }
     )* {
@@ -275,7 +275,7 @@ multiplicative_expr =
 exponentiation_expr = 
     f1:autoincrement_expr (
         - '**' - f2:autoincrement_expr {
-            $$.set(saru::NODE_POW, f1, f2);
+            $$.set(kiji::NODE_POW, f1, f2);
             f1=$$;
         }
     )* {
@@ -285,9 +285,9 @@ exponentiation_expr =
 # ++, -- is not supported yet
 autoincrement_expr = method_postfix_expr
 
-method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$.set(saru::NODE_ATKEY, container, k); }
-           | ( container:term '<' - k:ident - '>' ) { k.change_type(saru::NODE_STRING); $$.set(saru::NODE_ATKEY, container, k); }
-           | ( container:term '(' - k:args - ')' ) { $$.set(saru::NODE_FUNCALL, container, k); }
+method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$.set(kiji::NODE_ATKEY, container, k); }
+           | ( container:term '<' - k:ident - '>' ) { k.change_type(kiji::NODE_STRING); $$.set(kiji::NODE_ATKEY, container, k); }
+           | ( container:term '(' - k:args - ')' ) { $$.set(kiji::NODE_FUNCALL, container, k); }
            | term
 
 term = 
@@ -314,10 +314,10 @@ ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
 
 
 hash = '{' -
-    p1:pair { $$.set(saru::NODE_HASH, p1); p1=$$; } ( -  ',' - p2:pair { p1.push_child(p2); $$=p1; } )*
+    p1:pair { $$.set(kiji::NODE_HASH, p1); p1=$$; } ( -  ',' - p2:pair { p1.push_child(p2); $$=p1; } )*
     - '}' { $$=p1; }
 
-pair = k:hash_key - '=>' - v:expr { $$.set(saru::NODE_PAIR, k, v); }
+pair = k:hash_key - '=>' - v:expr { $$.set(kiji::NODE_PAIR, k, v); }
 
 hash_key =
     < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
@@ -330,7 +330,7 @@ qw =
     | '<' - qw_list - '>'
 
 qw_list =
-        a:qw_item { $$.set(saru::NODE_LIST, a); a = $$; }
+        a:qw_item { $$.set(kiji::NODE_LIST, a); a = $$; }
         ( ws+ b:qw_item { a.push_child(b); $$ = a; } )*
         { $$=a; }
 
@@ -340,32 +340,32 @@ qw_item = < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
 
 funcdef =
     'sub' - i:ident - '(' - p:params - ')' - b:block {
-        $$.set(saru::NODE_FUNC, i, p, b);
+        $$.set(kiji::NODE_FUNC, i, p, b);
     }
 
 lambda =
     '->' - p:params - b:block {
-        $$.set(saru::NODE_LAMBDA, p, b);
+        $$.set(kiji::NODE_LAMBDA, p, b);
     }
 
 params =
     (
-        v:term { $$.set(saru::NODE_PARAMS, v); v=$$; }
+        v:term { $$.set(kiji::NODE_PARAMS, v); v=$$; }
         ( - ',' - v1:term { v.push_child(v1); $$=v; } )*
         { $$=v; }
     )
-    | '' { $$.set_children(saru::NODE_PARAMS); }
+    | '' { $$.set_children(kiji::NODE_PARAMS); }
     # is it slow?
 
 block = 
     ('{' - s:statementlist - '}') { $$=s; }
-    | ('{' - '}' ) { $$.set_children(saru::NODE_STATEMENTS); }
+    | ('{' - '}' ) { $$.set_children(kiji::NODE_STATEMENTS); }
 
 array =
-    '[' e:expr { $$.set(saru::NODE_ARRAY, e); e=$$; } ( ',' e2:expr { e.push_child(e2); $$=e; } )* ']' { $$=e; }
-    | '[' - ']' { $$.set_children(saru::NODE_ARRAY); }
+    '[' e:expr { $$.set(kiji::NODE_ARRAY, e); e=$$; } ( ',' e2:expr { e.push_child(e2); $$=e; } )* ']' { $$=e; }
+    | '[' - ']' { $$.set_children(kiji::NODE_ARRAY); }
 
-my = 'my' ws v:variable { $$.set(saru::NODE_MY, v); }
+my = 'my' ws v:variable { $$.set(kiji::NODE_MY, v); }
 
 variable = scalar | array_var
 

@@ -1,7 +1,7 @@
 #pragma once
 // vim:ts=2:sw=2:tw=0:
 
-namespace saru {
+namespace kiji {
   // http://doc.perl6.org/type/Int
 
   // chr

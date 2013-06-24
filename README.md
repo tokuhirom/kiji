@@ -1,4 +1,4 @@
-saru - -Ofun interpreter on MoarVM
+kiji - -Ofun interpreter on MoarVM
 ===================================
 
 This is a new great toy for Perl hackers.
@@ -27,7 +27,7 @@ These things are not required at run time.
 Supported Environment
 ---------------------
 
-saru is tested on ubuntu 12.04. But saru may works any POSIX compliant environment.
+kiji is tested on ubuntu 12.04. But kiji may works any POSIX compliant environment.
 
 See also
 --------

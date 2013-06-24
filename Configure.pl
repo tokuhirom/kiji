@@ -191,12 +191,12 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sub$(O) \
 
 
-all: saru
+all: kiji
 
-saru: 3rd/MoarVM/moarvm src/saru.cc src/gen.node.h src/gen.saru.y.cc src/compiler.h src/node.h src/*.h src/gen.assembler.h src/gen.stdafx.pch src/builtin/array.h src/builtin/str.h src/builtin/hash.h src/builtin/int.h
-	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o saru src/saru.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS)
+kiji: 3rd/MoarVM/moarvm src/kiji.cc src/gen.node.h src/gen.kiji.y.cc src/compiler.h src/node.h src/*.h src/gen.assembler.h src/gen.stdafx.pch src/builtin/array.h src/builtin/str.h src/builtin/hash.h src/builtin/int.h
+	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS)
 
-test: saru
+test: kiji
 	prove -r t
 
 3rd/greg/greg:
@@ -209,7 +209,7 @@ test: saru
 	cd 3rd/MoarVM/ && make
 
 clean:
-	rm -rf saru src/gen.* 3rd/greg/greg 3rd/greg/*.o vgcore.* core
+	rm -rf kiji src/gen.* 3rd/greg/greg 3rd/greg/*.o vgcore.* core
 
 src/gen.stdafx.pch: src/stdafx.h
 	clang++ $(CXXFLAGS) -cc1 -emit-pch -x c++-header ./src/stdafx.h -o src/gen.stdafx.pch
@@ -217,12 +217,12 @@ src/gen.stdafx.pch: src/stdafx.h
 src/gen.assembler.h: build/asm.pl
 	perl build/asm.pl
 
-src/gen.saru.y.cc: src/saru.y 3rd/greg/greg
-	./3rd/greg/greg -o src/gen.saru.y.cc.new src/saru.y
-	mv src/gen.saru.y.cc.new src/gen.saru.y.cc
+src/gen.kiji.y.cc: src/kiji.y 3rd/greg/greg
+	./3rd/greg/greg -o src/gen.kiji.y.cc.new src/kiji.y
+	mv src/gen.kiji.y.cc.new src/gen.kiji.y.cc
 
-src/gen.node.h: build/saru-node.pl
-	perl build/saru-node.pl > src/gen.node.h
+src/gen.node.h: build/kiji-node.pl
+	perl build/kiji-node.pl > src/gen.node.h
 
 .PHONY: all clean test
 ...

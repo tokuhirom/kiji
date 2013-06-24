@@ -6,7 +6,7 @@
 #include <unistd.h>
 #endif
 #include "node.h"
-#include "gen.saru.y.cc"
+#include "gen.kiji.y.cc"
 extern "C" {
 #include "moarvm.h"
 }
@@ -21,15 +21,15 @@ void run_repl() {
     {
       std::unique_ptr<std::istringstream> iss(new std::istringstream(src));
 
-      saru::Node root;
+      kiji::Node root;
 
-      if (!saru::parse(&(*iss), root)) {
+      if (!kiji::parse(&(*iss), root)) {
         continue;
       }
 
-      saru::Interpreter interp;
-      saru::CompUnit cu(interp.main_thread());
-      saru::Compiler compiler(cu);
+      kiji::Interpreter interp;
+      kiji::CompUnit cu(interp.main_thread());
+      kiji::Compiler compiler(cu);
       compiler.compile(root);
       interp.run(cu);
     }
@@ -40,7 +40,7 @@ void run_repl() {
 int main(int argc, char** argv) {
   // This include apr_initialize().
   // You need to initialize before `apr_pool_create()`
-  saru::Interpreter interp;
+  kiji::Interpreter interp;
 
   apr_status_t rv;
   apr_pool_t *mp;
@@ -111,8 +111,8 @@ int main(int argc, char** argv) {
   instance->raw_clargs = (char **)(opt->argv + processed_args);
   */
 
-  saru::Node root_node;
-  if (!saru::parse(is, root_node)) {
+  kiji::Node root_node;
+  if (!kiji::parse(is, root_node)) {
     exit(1);
   }
 
@@ -121,8 +121,8 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  saru::CompUnit cu(interp.main_thread());
-  saru::Compiler compiler(cu);
+  kiji::CompUnit cu(interp.main_thread());
+  kiji::Compiler compiler(cu);
   compiler.compile(root_node);
   if (dump_bytecode) {
     cu.dump(interp.vm());

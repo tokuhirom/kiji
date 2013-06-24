@@ -10,7 +10,7 @@
 #include <sstream>
 #include "gen.node.h"
 
-namespace saru {
+namespace kiji {
   enum node_type_t {
     NODE_TYPE_UNDEF,
     NODE_TYPE_INT,
@@ -46,7 +46,7 @@ namespace saru {
         int64_t iv; // integer value
         double nv; // number value
         std::string *pv;
-        std::vector<saru::Node> *children;
+        std::vector<kiji::Node> *children;
     } body_;
     static void indent(int n) {
       for (int i=0; i<n*4; i++) {
@@ -55,7 +55,7 @@ namespace saru {
     }
   public:
     Node() : type_(NODE_UNDEF) { }
-    Node(const saru::Node &node) {
+    Node(const kiji::Node &node) {
       this->type_ = node.type_;
       switch (this->node_type()) {
       case NODE_TYPE_STR:
@@ -71,7 +71,7 @@ namespace saru {
         break;
       case NODE_TYPE_CHILDREN:
         this->body_.pv = NULL;
-        this->body_.children = new std::vector<saru::Node>();
+        this->body_.children = new std::vector<kiji::Node>();
         *(this->body_.children) = *(node.body_.children);
         break;
       default:
@@ -102,33 +102,33 @@ namespace saru {
 
     void set_clargs() {
       this->type_ = NODE_CLARGS;
-      this->body_.children = new std::vector<saru::Node>();
+      this->body_.children = new std::vector<kiji::Node>();
     }
     void set_nop() {
       this->type_ = NODE_NOP;
-      this->body_.children = new std::vector<saru::Node>();
+      this->body_.children = new std::vector<kiji::Node>();
     }
-    void set(NODE_TYPE type, const saru::Node &child) {
+    void set(NODE_TYPE type, const kiji::Node &child) {
       this->type_ = type;
-      this->body_.children = new std::vector<saru::Node>();
+      this->body_.children = new std::vector<kiji::Node>();
       this->body_.children->push_back(child);
     }
-    void set(NODE_TYPE type, const saru::Node &c1, const saru::Node &c2) {
+    void set(NODE_TYPE type, const kiji::Node &c1, const kiji::Node &c2) {
       this->type_ = type;
-      this->body_.children = new std::vector<saru::Node>();
+      this->body_.children = new std::vector<kiji::Node>();
       this->body_.children->push_back(c1);
       this->body_.children->push_back(c2);
     }
-    void set(NODE_TYPE type, const saru::Node &c1, const saru::Node &c2, const saru::Node &c3) {
+    void set(NODE_TYPE type, const kiji::Node &c1, const kiji::Node &c2, const kiji::Node &c3) {
       this->type_ = type;
-      this->body_.children = new std::vector<saru::Node>();
+      this->body_.children = new std::vector<kiji::Node>();
       this->body_.children->push_back(c1);
       this->body_.children->push_back(c2);
       this->body_.children->push_back(c3);
     }
     void set_children(NODE_TYPE type) {
       this->type_ = type;
-      this->body_.children = new std::vector<saru::Node>();
+      this->body_.children = new std::vector<kiji::Node>();
     }
     void set_number(const char*txt) {
       this->type_ = NODE_NUMBER;
@@ -171,11 +171,11 @@ namespace saru {
       assert(node_type() == NODE_TYPE_NUM);
       return this->body_.nv;
     } 
-    const std::vector<saru::Node> & children() const {
+    const std::vector<kiji::Node> & children() const {
       assert(node_type() == NODE_TYPE_CHILDREN);
       return *(this->body_.children);
     }
-    void push_child(saru::Node &child) {
+    void push_child(kiji::Node &child) {
       assert(node_type() == NODE_TYPE_CHILDREN);
       this->body_.children->push_back(child);
     }
@@ -250,4 +250,4 @@ namespace saru {
 
 };
 
-#define YYSTYPE saru::Node
+#define YYSTYPE kiji::Node

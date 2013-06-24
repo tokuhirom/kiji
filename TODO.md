@@ -89,7 +89,7 @@ TODO
 
 ## Step 2 Done at 2013-06-17
 
- * `s/SARU_NODE_/saru::NODE_/g`
+ * `s/SARU_NODE_/kiji::NODE_/g`
 
 ## Step 2.01 Done at 2013-06-17
 

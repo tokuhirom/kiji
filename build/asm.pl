@@ -132,7 +132,7 @@ __DATA__
 #include <vector>
 #include <stdint.h>
 
-namespace saru {
+namespace kiji {
   class Assembler {
   public:
     void op(MVMuint8 bank_num, MVMuint8 op_num) {

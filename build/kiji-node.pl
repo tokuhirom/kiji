@@ -72,12 +72,12 @@ my @types = qw(
 say qq!/* This file is generated from $0 */!;
 say qq!#pragma once!;
 say qq!!;
-say qq!namespace saru {!;
+say qq!namespace kiji {!;
 say qq!  typedef enum {!;
 say qq!      $_,! for @types;
 say qq!  } NODE_TYPE;!;
 
-say qq!  static const char* nqpc_node_type2name(saru::NODE_TYPE t) {!;
+say qq!  static const char* nqpc_node_type2name(kiji::NODE_TYPE t) {!;
 say qq!    switch (t) {!;
 say qq!      case $_: return "$_";! for @types;
 say qq!    }!;

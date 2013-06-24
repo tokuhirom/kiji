@@ -20,7 +20,7 @@ sub run_test_cases {
             $code = encode_utf8($code) if utf8::is_utf8($code);
             print {$tmp} $code;
 
-            my $ret = `./saru < $tmp`;
+            my $ret = `./kiji < $tmp`;
             ok(POSIX::WIFEXITED($?));
             is(POSIX::WEXITSTATUS($?), 0, 'exit status should be 0');
 

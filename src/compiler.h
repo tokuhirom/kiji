@@ -10,14 +10,14 @@
 #include <memory>
 #include "gen.assembler.h"
 
-namespace saru {
+namespace kiji {
   void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Hash(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Int(MVMCompUnit* cu, MVMThreadContext*tc);
 
-  bool parse(std::istream *is, saru::Node &root) {
+  bool parse(std::istream *is, kiji::Node &root) {
     bool retval = true;
     GREG g;
     yyinit(&g);
@@ -273,7 +273,7 @@ namespace saru {
 
       // setup hllconfig
       {
-        MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"saru");
+        MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
         cu_->hll_config = MVM_hll_get_config_for(tc, hll_name);
 
         MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
@@ -594,7 +594,7 @@ namespace saru {
       return cu_.push_callsite(callsite);
     }
 
-    int do_compile(const saru::Node &node) {
+    int do_compile(const kiji::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
       case NODE_RETURN: {
@@ -634,11 +634,11 @@ namespace saru {
         }
         std::string path = std::string("lib/") + name + ".p6";
         std::ifstream ifs(path);
-        saru::Node root_node;
+        kiji::Node root_node;
         if (!ifs) {
           MVM_panic(MVM_exitcode_compunit, "Cannot open file: %s", path.c_str());
         }
-        if (!saru::parse(&ifs, root_node)) {
+        if (!kiji::parse(&ifs, root_node)) {
           MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", path.c_str());
         }
 
@@ -1265,8 +1265,8 @@ namespace saru {
       }
       case NODE_FUNCALL: {
         assert(node.children().size() == 2);
-        const saru::Node &ident = node.children()[0];
-        const saru::Node &args  = node.children()[1];
+        const kiji::Node &ident = node.children()[0];
+        const kiji::Node &args  = node.children()[1];
         assert(args.type() == NODE_ARGS);
         
         if (node.children()[0].type() == NODE_IDENT) {
@@ -1519,7 +1519,7 @@ namespace saru {
         break;
       }
     }
-    int numeric_cmp_binop(const saru::Node& node, uint16_t op_i, uint16_t op_n) {
+    int numeric_cmp_binop(const kiji::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);
 
         int reg_num1 = do_compile(node.children()[0]);
@@ -1549,7 +1549,7 @@ namespace saru {
           abort();
         }
     }
-    int str_binop(const saru::Node& node, uint16_t op) {
+    int str_binop(const kiji::Node& node, uint16_t op) {
         assert(node.children().size() == 2);
 
         int reg_num1 = to_s(do_compile(node.children()[0]));
@@ -1558,7 +1558,7 @@ namespace saru {
         assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
     }
-    int binary_binop(const saru::Node& node, uint16_t op_i) {
+    int binary_binop(const kiji::Node& node, uint16_t op_i) {
         assert(node.children().size() == 2);
 
         int reg_num1 = to_i(do_compile(node.children()[0]));
@@ -1567,7 +1567,7 @@ namespace saru {
         assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
         return dst_reg;
     }
-    int numeric_binop(const saru::Node& node, uint16_t op_i, uint16_t op_n) {
+    int numeric_binop(const kiji::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);
 
         int reg_num1 = do_compile(node.children()[0]);
@@ -1636,7 +1636,7 @@ namespace saru {
         abort();
       }
     }
-    void compile_statements(const saru::Node &node, int dst_reg) {
+    void compile_statements(const kiji::Node &node, int dst_reg) {
       int reg = UNKNOWN_REG;
       if (node.type() == NODE_STATEMENTS || node.type() == NODE_ELSE) {
         for (int i=0, l=node.children().size(); i<l; i++) {
@@ -1655,7 +1655,7 @@ namespace saru {
     Compiler(CompUnit & cu): cu_(cu) {
       cu_.initialize();
     }
-    void compile(saru::Node &node) {
+    void compile(kiji::Node &node) {
       assembler().checkarity(0, -1);
 
 

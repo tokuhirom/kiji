@@ -1,7 +1,7 @@
 #pragma once
 // vim:ts=2:sw=2:tw=0:
 
-namespace saru {
+namespace kiji {
 
   static void File_eof(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
     MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;

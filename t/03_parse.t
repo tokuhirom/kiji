@@ -33,7 +33,7 @@ sub parse {
     my $tmp = File::Temp->new();
     print {$tmp} $src;
 
-    my $json = `./saru --dump-ast $tmp`;
+    my $json = `./kiji --dump-ast $tmp`;
     unless ($json =~ /\A\{/) {
         die "Cannot get json from '$src': $json";
     }

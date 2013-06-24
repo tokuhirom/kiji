@@ -3,7 +3,7 @@ use warnings;
 use utf8;
 use Test::More;
 
-is(`./saru eg/fib.p6`, "75025\n");
+is(`./kiji eg/fib.p6`, "75025\n");
 
 done_testing;
 
