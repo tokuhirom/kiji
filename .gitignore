@@ -2,6 +2,6 @@ gen.*
 /core
 vgcore.*
 /_build/
-/saru
+/kiji
 /foo.p6
 /Makefile
