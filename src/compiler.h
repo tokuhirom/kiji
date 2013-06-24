@@ -805,10 +805,23 @@ namespace saru {
           auto val = reg_obj();
           assembler().shift_o(val, iter_reg);
 
-          int it = push_lexical("$_", MVM_reg_obj);
-          assembler().bindlex(it, 0, val);
-
-          do_compile(node.children()[1]);
+          if (node.children()[1].type() == NODE_LAMBDA) {
+            auto body = do_compile(node.children()[1]);
+            MVMCallsite* callsite = new MVMCallsite;
+            memset(callsite, 0, sizeof(MVMCallsite));
+            callsite->arg_count = 1;
+            callsite->num_pos = 1;
+            callsite->arg_flags = new MVMCallsiteEntry[1];
+            callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
+            auto callsite_no = push_callsite(callsite);
+            assembler().prepargs(callsite_no);
+            assembler().arg_o(0, val);
+            assembler().invoke_v(body);
+          } else {
+            int it = push_lexical("$_", MVM_reg_obj);
+            assembler().bindlex(it, 0, val);
+            do_compile(node.children()[1]);
+          }
 
           if_any(iter_reg, label_for);
 

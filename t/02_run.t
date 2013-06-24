@@ -617,3 +617,12 @@ c
 (-> $n { say($n) })(5)
 --- expected
 5
+
+===
+--- code
+for <a b c> -> $s { say($s) }
+--- expected
+a
+b
+c
+

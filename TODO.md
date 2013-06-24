@@ -226,8 +226,15 @@ TODO
 
  * "\x6f\x6b 8"
 
+## Step 7.3 2013-06-24
+
+ * `for <a b c> -> $n { say($n); }`
+ * $?LINE
+
 ## Step 5.
 
+ * `for <a b c d> -> $a, $b { say($a, $b) }`
+ * `for <a b c> { .say }`
  * $hash.keys()
  * +(1,2,3)
  * next, last
@@ -246,8 +253,9 @@ TODO
  * slurp() function with encoding option
  * Array#map
  * Array#grep
- * `for <a b c> -> $n { say($n); }`
+ * caller
  * `(-> $n { say($n) })(5)`
+ * `for <a b c> -> $n { say($n); }`
  * implement builtin functions
     * sprintf
     * printf
@@ -302,7 +310,6 @@ TODO
  * One liner support
  * constant folding optimization
  * Optimize register allocation
- * $?LINE
 
 ## Step 50.
 

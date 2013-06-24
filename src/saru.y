@@ -5,6 +5,14 @@
 
 #define YYSTYPE saru::Node
 
+#define YY_XTYPE saru::ParserContext
+
+namespace saru {
+  struct ParserContext {
+    int line_number;
+  };
+};
+
 std::istream *global_input_stream;
 
 #define YY_INPUT(buf, result, max_size, D)		\
@@ -51,13 +59,16 @@ normal_stmt = return_stmt | bind_stmt
 
 return_stmt = 'return' ws e:expr { $$.set(saru::NODE_RETURN, e); }
 
+
 die_stmt = 'die' ws e:expr eat_terminator { $$.set(saru::NODE_DIE, e); }
 
 while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_WHILE, cond, body);
         }
 
-for_stmt = 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
+for_stmt =
+    'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - '{' - body:statementlist - '}' { $$.set(saru::NODE_FOR, src, body); }
+    | 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - body:lambda { $$.set(saru::NODE_FOR, src, body); }
 
 unless_stmt = 'unless' - cond:expr - '{' - body:statementlist - '}' {
             $$.set(saru::NODE_UNLESS, cond, body);
@@ -266,6 +277,7 @@ term =
     | '(' - e:expr  - ')' { $$ = e; }
     | '(' - l:list_expr  - ')' { $$ = l; }
     | variable
+    | '$?LINE' { $$.set_integer(G->data.line_number); }
     | array
     | funcall
     | qw
@@ -367,9 +379,9 @@ integer =
 
 string = dq_string | sq_string
 
-# Missing foo
 dq_string = '"' { $$.init_string(); } (
-        < [^"\\]+ > { $$.append_string(yytext, yyleng); }
+        "\n" { G->data.line_number++; $$.append_string("\n", 1); }
+        | < [^"\\\n]+ > { $$.append_string(yytext, yyleng); }
         | esc 'a' { $$.append_string("\a", 1); }
         | esc 'b' { $$.append_string("\b", 1); }
         | esc 't' { $$.append_string("\t", 1); }
@@ -391,7 +403,8 @@ dq_string = '"' { $$.init_string(); } (
 esc = '\\'
 
 sq_string = "'" { $$.init_string(); } (
-        < [^'\\]+ > { $$.append_string(yytext, yyleng); }
+        "\n" { G->data.line_number++; $$.append_string("\n", 1); }
+        | < [^'\\\n]+ > { $$.append_string(yytext, yyleng); }
         | esc "'" { $$.append_string("'", 1); }
         | esc esc { $$.append_string("\\", 1); }
         | < esc . > { $$.append_string(yytext, yyleng); }
@@ -404,7 +417,7 @@ ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
     | '#' [^\n]*
 - = ws*
 end-of-line = ( '\r\n' | '\n' | '\r' ) {
-    line_number++;
+    G->data.line_number++;
 }
 end-of-file = !'\0'
 

@@ -22,8 +22,10 @@ bool parse() {
     g.debug = 1;
 #endif
   */
+  g.data.line_number = 1;
+
   if (!yyparse(&g)) {
-    fprintf(stderr, "** Syntax error at line %d\n", line_number);
+    fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
     if (g.text[0]) {
       fprintf(stderr, "** near %s\n", g.text);
     }
@@ -73,8 +75,6 @@ void run_repl() {
 }
 
 int main(int argc, char** argv) {
-  line_number=0;
-
   // This include apr_initialize().
   // You need to initialize before `apr_pool_create()`
   saru::Interpreter interp;

@@ -134,6 +134,10 @@ namespace saru {
       this->type_ = NODE_NUMBER;
       this->body_.nv = atof(txt);
     }
+    void set_integer(int n) {
+      this->type_ = NODE_INT;
+      this->body_.iv = n;
+    }
     void set_integer(const char*txt, int base) {
       this->type_ = NODE_INT;
       this->body_.iv = strtoll(txt, NULL, base);
@@ -247,6 +251,5 @@ namespace saru {
 };
 
 static saru::Node node_global;
-static int line_number;
 
 #define YYSTYPE saru::Node
