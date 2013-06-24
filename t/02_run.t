@@ -626,3 +626,10 @@ a
 b
 c
 
+===
+--- code
+use Hello;
+say("YO");
+--- expected
+Hello, world!
+YO
