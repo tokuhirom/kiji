@@ -48,6 +48,17 @@ bool parse(std::istream *is, saru::Node &root) {
     fprintf(stderr, "\n\n");
     retval = false;
   }
+  if (!is->eof()) {
+    printf("Syntax error! Around:\n");
+    for (int i=0; !is->eof() && i<24; i++) {
+      char ch = is->get();
+      if (ch != EOF) {
+        printf("%c", ch);
+      }
+    }
+    printf("\n");
+    exit(1);
+  }
   yydeinit(&g);
   return retval;
 }
@@ -153,18 +164,6 @@ int main(int argc, char** argv) {
 
   saru::Node root_node;
   if (!parse(is, root_node)) {
-    exit(1);
-  }
-
-  if (!is->eof()) {
-    printf("Syntax error! Around:\n");
-    for (int i=0; !is->eof() && i<24; i++) {
-      char ch = is->get();
-      if (ch != EOF) {
-        printf("%c", ch);
-      }
-    }
-    printf("\n");
     exit(1);
   }
 
