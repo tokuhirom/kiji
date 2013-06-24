@@ -98,11 +98,12 @@ int main(int argc, char** argv) {
 
     is = &std::cin;
   } else {
-    is = new std::ifstream((char *)opt->argv[processed_args++]);
-    if (!*is) {
+    std::ifstream *ifs = new std::ifstream((char *)opt->argv[processed_args++]);
+    if (!ifs->is_open()) {
       std::cerr << "Cannot open file: " << opt->argv[processed_args-1] << std::endl;
       exit(1);
     }
+    is=ifs;
   }
   // stash the rest of the raw command line args in the instance
   interp.set_clargs(argc - processed_args, (char **)(opt->argv + processed_args));
