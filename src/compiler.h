@@ -17,6 +17,56 @@ namespace saru {
   void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Int(MVMCompUnit* cu, MVMThreadContext*tc);
 
+  bool parse(std::istream *is, saru::Node &root) {
+    bool retval = true;
+    GREG g;
+    yyinit(&g);
+    /*
+#ifdef YY_DEBUG
+      g.debug = 1;
+#endif
+    */
+    g.data.line_number = 1;
+    g.data.root = &root;
+    g.data.input_stream = is;
+
+    if (!yyparse(&g)) {
+      fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
+      if (g.text[0]) {
+        fprintf(stderr, "** near %s\n", g.text);
+      }
+      if (g.pos < g.limit || !feof(stdin)) {
+        g.buf[g.limit]= '\0';
+        fprintf(stderr, " before text \"");
+        while (g.pos < g.limit) {
+          if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
+          fputc(g.buf[g.pos++], stderr);
+        }
+        if (g.pos == g.limit) {
+          int c;
+          while (EOF != (c= fgetc(stdin)) && '\n' != c && '\r' != c)
+          fputc(c, stderr);
+        }
+        fputc('\"', stderr);
+      }
+      fprintf(stderr, "\n\n");
+      retval = false;
+    }
+    if (!is->eof()) {
+      printf("Syntax error! Around:\n");
+      for (int i=0; !is->eof() && i<24; i++) {
+        char ch = is->get();
+        if (ch != EOF) {
+          printf("%c", ch);
+        }
+      }
+      printf("\n");
+      exit(1);
+    }
+    yydeinit(&g);
+    return retval;
+  }
+
   void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     if (obj==NULL) {
       printf("(null)\n");
