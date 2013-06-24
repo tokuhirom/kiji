@@ -36,3 +36,8 @@ say("".length());
 2
 0
 
+=== .say
+--- code
+"hoge".say;
+--- expected
+hoge
