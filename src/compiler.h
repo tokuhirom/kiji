@@ -21,11 +21,9 @@ namespace saru {
     bool retval = true;
     GREG g;
     yyinit(&g);
-    /*
 #ifdef YY_DEBUG
       g.debug = 1;
 #endif
-    */
     g.data.line_number = 1;
     g.data.root = &root;
     g.data.input_stream = is;

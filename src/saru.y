@@ -52,10 +52,23 @@ statement =
           | while_stmt
           | unless_stmt
           | module_stmt
+          | class_stmt
+          | method_stmt
           | die_stmt
           | funcdef - ';'*
           | bl:block { $$.set(saru::NODE_BLOCK, bl); }
           | b:normal_stmt - eat_terminator { $$ = b; }
+          | e:funcall_stmt eat_terminator { $$=e; }
+
+funcall_stmt =
+    i:ident ws+ a:args {
+        // funcall without parens.
+        $$.set(saru::NODE_FUNCALL, i, a);
+    }
+
+class_stmt = 'class' ws i:ident - b:block { $$.set(saru::NODE_CLASS, i, b); }
+
+method_stmt = 'method' ws i:ident p:paren_args - b:block { $$.set(saru::NODE_METHOD, i, p, b); }
 
 normal_stmt = return_stmt | bind_stmt
 
@@ -152,8 +165,12 @@ loose_and_expr =
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:variable - ':=' - e:conditional_expr) { $$.set(saru::NODE_BIND, v, e); }
-    | conditional_expr
+    (v:variable - ':=' - e:loose_not_expr) { $$.set(saru::NODE_BIND, v, e); }
+    | loose_not_expr
+
+loose_not_expr =
+    'not' - f1:conditional_expr { $$.set(saru::NODE_NOT, f1); }
+    | f1:conditional_expr { $$=f1 }
 
 conditional_expr = e1:tight_or - '??' - e2:tight_or - '!!' - e3:tight_or { $$.set(saru::NODE_CONDITIONAL, e1, e2, e3); }
                 | tight_or
@@ -199,10 +216,6 @@ atpos_expr =
 
 funcall =
     (i:ident - '(' - a:args - ')') {
-        $$.set(saru::NODE_FUNCALL, i, a);
-    }
-    | (i:ident ws+ a:args) {
-        // funcall without parens.
         $$.set(saru::NODE_FUNCALL, i, a);
     }
 

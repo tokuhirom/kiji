@@ -269,6 +269,7 @@ TODO
  * wait
  * `for <a b c> -> $n { say($n); }`
  * END block
+ * exporter
  * implement builtin functions
     * sprintf
     * printf

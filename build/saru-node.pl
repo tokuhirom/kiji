@@ -65,6 +65,8 @@ my @types = qw(
     NODE_LAMBDA
     NODE_USE
     NODE_MODULE
+    NODE_CLASS
+    NODE_METHOD
 );
 
 say qq!/* This file is generated from $0 */!;

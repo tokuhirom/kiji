@@ -1,5 +1,4 @@
 // vim:ts=2:sw=2:tw=0:
-#define YY_DEBUG
 #include <stdio.h>
 #include <assert.h>
 #include <fstream>

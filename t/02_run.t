@@ -634,6 +634,7 @@ say("YO");
 Hello, world!
 YO
 
+===
 --- code
 use v6;
 use Hello;
@@ -641,3 +642,11 @@ say("YO");
 --- expected
 Hello, world!
 YO
+
+===
+--- code
+say((not 0) ?? 'OK' !! 'FAIL');
+say((not 1) ?? 'FAIL' !! 'OK');
+--- expected
+OK
+OK
