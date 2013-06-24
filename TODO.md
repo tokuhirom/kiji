@@ -231,7 +231,16 @@ TODO
  * `for <a b c> -> $n { say($n); }`
  * $?LINE
 
-## Step 5.
+## Step 7.4 2013-06-24
+
+ * `(-> $n { say($n) })(5)`
+ * `3.say`
+
+## Step 7.5
+
+ * use
+
+## Step 8.
 
  * `for <a b c d> -> $a, $b { say($a, $b) }`
  * `for <a b c> { .say }`
@@ -254,8 +263,12 @@ TODO
  * Array#map
  * Array#grep
  * caller
- * `(-> $n { say($n) })(5)`
+ * fork
+ * kill
+ * waitpid
+ * wait
  * `for <a b c> -> $n { say($n); }`
+ * END block
  * implement builtin functions
     * sprintf
     * printf
@@ -263,9 +276,6 @@ TODO
 ## Step 5.9
 
  * MOP things
-
-## Step 6
-
 
 ## Step 6.
 
@@ -278,12 +288,12 @@ TODO
  * `open('hoge.pl').slurp`
  * multi assign like `my ($x, $y) = (1,2)`
  * require
- * use
  * `"foo { 3+2 }"`
  * ++$i , $i++ , --$i , $i--
  * variable scope in 'for' stmt
  * variable scope in 'if' stmt
  * variable scope in 'while' stmt
+ * eval
  * heredocs?
   * needs 'assignment'
 
