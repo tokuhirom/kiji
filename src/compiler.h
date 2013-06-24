@@ -580,6 +580,30 @@ namespace saru {
         label_end.put();
         return UNKNOWN_REG;
       }
+      case NODE_BLOCK: {
+        auto frame_no = push_frame("block");
+        assembler().checkarity(0,0);
+        for (auto n:node.children()) {
+          (void)do_compile(n);
+        }
+        assembler().return_();
+        pop_frame();
+
+        auto frame_reg = reg_obj();
+        assembler().getcode(frame_reg, frame_no);
+
+        MVMCallsite* callsite = new MVMCallsite;
+        memset(callsite, 0, sizeof(MVMCallsite));
+        callsite->arg_count = 0;
+        callsite->num_pos = 0;
+        callsite->arg_flags = NULL;
+        auto callsite_no = push_callsite(callsite);
+        assembler().prepargs(callsite_no);
+
+        assembler().invoke_v(frame_reg); // trash result
+
+        return UNKNOWN_REG;
+      }
       case NODE_STRING: {
         int str_num = push_string(node.pv());
         int reg_num = reg_str();
@@ -618,7 +642,7 @@ namespace saru {
           assembler().bindlex(
             lex_no, // lex number
             outer,      // frame outer count
-            val     // value
+            val
           );
           return val;
           // $var := foo;

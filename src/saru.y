@@ -44,7 +44,7 @@ statement =
           | unless_stmt
           | die_stmt
           | funcdef - ';'*
-          | block
+          | bl:block { $$.set(saru::NODE_BLOCK, bl); }
           | b:normal_stmt - eat_terminator { $$ = b; }
 
 normal_stmt = return_stmt | bind_stmt

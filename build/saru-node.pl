@@ -61,6 +61,7 @@ my @types = qw(
     NODE_BIN_AND
     NODE_BIN_OR
     NODE_BIN_XOR
+    NODE_BLOCK
 );
 
 say qq!/* This file is generated from $0 */!;
