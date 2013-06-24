@@ -15,6 +15,7 @@ namespace saru {
   void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Hash(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
+  void bootstrap_Int(MVMCompUnit* cu, MVMThreadContext*tc);
 
   void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     if (obj==NULL) {
@@ -279,6 +280,7 @@ namespace saru {
       bootstrap_Str(cu_, tc);
       bootstrap_Hash(cu_, tc);
       bootstrap_File(cu_, tc);
+      bootstrap_Int(cu_, tc);
 
       cu_->num_scs = 1;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
@@ -1614,3 +1616,4 @@ namespace saru {
 #include "builtin/str.h"
 #include "builtin/hash.h"
 #include "builtin/io.h"
+#include "builtin/int.h"
