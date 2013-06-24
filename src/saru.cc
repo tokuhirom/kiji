@@ -13,7 +13,7 @@ extern "C" {
 }
 #include "compiler.h"
 
-bool parse(saru::Node &root) {
+bool parse(std::istream *is, saru::Node &root) {
   bool retval = true;
   GREG g;
   yyinit(&g);
@@ -24,6 +24,7 @@ bool parse(saru::Node &root) {
   */
   g.data.line_number = 1;
   g.data.root = &root;
+  g.data.input_stream = is;
 
   if (!yyparse(&g)) {
     fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
@@ -59,11 +60,10 @@ void run_repl() {
 
     {
       std::unique_ptr<std::istringstream> iss(new std::istringstream(src));
-      global_input_stream = &(*iss);
 
       saru::Node root;
 
-      if (!parse(root)) {
+      if (!parse(&(*iss), root)) {
         continue;
       }
 
@@ -125,8 +125,9 @@ int main(int argc, char** argv) {
   }
 
   processed_args = opt->ind;
+  std::istream *is;
   if (eval) {
-    global_input_stream = new std::istringstream(eval);
+    is = new std::istringstream(eval);
   } else if (processed_args == argc) {
 #ifdef __unix__
     if (isatty(fileno(stdin))) {
@@ -135,10 +136,10 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    global_input_stream = &std::cin;
+    is = &std::cin;
   } else {
-    global_input_stream = new std::ifstream((char *)opt->argv[processed_args++]);
-    if (!*global_input_stream) {
+    is = new std::ifstream((char *)opt->argv[processed_args++]);
+    if (!*is) {
       std::cerr << "Cannot open file: " << opt->argv[processed_args-1] << std::endl;
       exit(1);
     }
@@ -151,14 +152,14 @@ int main(int argc, char** argv) {
   */
 
   saru::Node root_node;
-  if (!parse(root_node)) {
+  if (!parse(is, root_node)) {
     exit(1);
   }
 
-  if (!global_input_stream->eof()) {
+  if (!is->eof()) {
     printf("Syntax error! Around:\n");
-    for (int i=0; !global_input_stream->eof() && i<24; i++) {
-      char ch = global_input_stream->get();
+    for (int i=0; !is->eof() && i<24; i++) {
+      char ch = is->get();
       if (ch != EOF) {
         printf("%c", ch);
       }

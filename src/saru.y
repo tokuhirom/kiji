@@ -11,14 +11,13 @@ namespace saru {
   struct ParserContext {
     int line_number;
     saru::Node *root;
+    std::istream *input_stream;
   };
 };
 
-std::istream *global_input_stream;
-
 #define YY_INPUT(buf, result, max_size, D)		\
   {							\
-    int yyc= global_input_stream->get();					\
+    int yyc= D.input_stream->get();					\
     result= (EOF == yyc) ? 0 : (*(buf)= yyc, 1);	\
     yyprintf((stderr, "<%c>", yyc));			\
   }
