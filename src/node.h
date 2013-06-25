@@ -168,6 +168,28 @@ namespace kiji {
       assert(this->type_ == NODE_STRING);
       this->body_.pv->append(txt, length);
     }
+    void append_string_from_hex(const char *txt, size_t length) {
+      assert(this->type_ == NODE_STRING);
+      assert(length==2);
+      // \o53
+      char buf[3];
+      buf[0] = txt[0];
+      buf[1] = txt[1];
+      buf[2] = '\0';
+      char c = strtol(buf, NULL, 16);
+      append_string(&c, 1);
+    }
+    void append_string_from_oct(const char *txt, size_t length) {
+      assert(this->type_ == NODE_STRING);
+      assert(length==2);
+      // \o53
+      char buf[3];
+      buf[0] = txt[0];
+      buf[1] = txt[1];
+      buf[2] = '\0';
+      char c = strtol(buf, NULL, 8);
+      append_string(&c, 1);
+    }
 
     long int iv() const {
       assert(node_type() == NODE_TYPE_INT);

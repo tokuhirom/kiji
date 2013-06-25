@@ -418,15 +418,19 @@ dq_string = '"' { $$.init_string(); } (
         | esc 'r' { $$.append_string("\r", 1); }
         | esc 'n' { $$.append_string("\n", 1); }
         | esc '"' { $$.append_string("\"", 1); }
-        | esc 'x' < [a-fA-F0-9] [a-fA-F0-9] > {
-            // \x53
-            char buf[3];
-            buf[0] = yytext[0];
-            buf[1] = yytext[1];
-            buf[2] = '\0';
-            char c = strtol(buf, NULL, 16);
-            $$.append_string(&c, 1);
+        | ( esc 'x' (
+                  '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) >
+            | '[' '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) > ']' )
+        ) {
+            $$.append_string_from_hex(yytext, yyleng);
         }
+        | esc 'o' < '0'? [0-7] [0-7] > {
+            $$.append_string_from_oct(yytext, yyleng);
+        }
+        | esc 'o['
+             '0'? < [0-7] [0-7] > { $$.append_string_from_oct(yytext, yyleng); } (
+            ',' '0'? < [0-7] [0-7] > { $$.append_string_from_oct(yytext, yyleng); }
+        )* ']'
         | esc esc { $$.append_string("\\", 1); }
     )* '"'
 
