@@ -663,3 +663,12 @@ YO
 say 'ok ', 0_0_1_4;
 --- expected
 ok 14
+
+===
+--- code
+
+# L<S01/"Random Thoughts"/specifically tell it you're running Perl 6>
+use v6;
+say("OK");
+--- expected
+OK

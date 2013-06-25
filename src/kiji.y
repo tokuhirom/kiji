@@ -43,23 +43,24 @@ statementlist =
     )
 
 statement =
-            use_stmt
-          | e:postfix_if_stmt eat_terminator { $$ = e; }
-          | e:postfix_unless_stmt eat_terminator { $$ = e; }
-          | e:postfix_for_stmt eat_terminator { $$ = e; }
-          | if_stmt
-          | for_stmt
-          | while_stmt
-          | unless_stmt
-          | module_stmt
-          | class_stmt
-          | method_stmt
-          | die_stmt
-          | funcdef - ';'*
-          | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
-          | b:normal_stmt - eat_terminator { $$ = b; }
-          | e:funcall_stmt eat_terminator { $$=e; }
-          | c:comment { $$.set_nop(); }
+        - (
+              use_stmt
+            | e:postfix_if_stmt eat_terminator { $$ = e; }
+            | e:postfix_unless_stmt eat_terminator { $$ = e; }
+            | e:postfix_for_stmt eat_terminator { $$ = e; }
+            | if_stmt
+            | for_stmt
+            | while_stmt
+            | unless_stmt
+            | module_stmt
+            | class_stmt
+            | method_stmt
+            | die_stmt
+            | funcdef - ';'*
+            | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
+            | b:normal_stmt - eat_terminator { $$ = b; }
+            | e:funcall_stmt eat_terminator { $$=e; }
+          )
 
 funcall_stmt =
     i:ident ' '+ a:args {
@@ -446,7 +447,7 @@ sq_string = "'" { $$.init_string(); } (
 
 # TODO
 
-comment= '#' [^\n]*
+comment= '#' [^\n]* end-of-line
 
 # white space
 ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
