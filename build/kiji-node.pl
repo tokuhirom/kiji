@@ -68,6 +68,7 @@ my @types = qw(
     NODE_CLASS
     NODE_METHOD
     NODE_UNARY_PLUS
+    NODE_UNARY_BIN_NEG
 );
 
 say qq!/* This file is generated from $0 */!;

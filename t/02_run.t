@@ -672,3 +672,9 @@ use v6;
 say("OK");
 --- expected
 OK
+
+===
+--- code
+say 7 +& +^1;
+--- expected
+6

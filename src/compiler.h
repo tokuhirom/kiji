@@ -1263,6 +1263,11 @@ namespace kiji {
         label_end.put();
         return dst_reg;
       }
+      case NODE_UNARY_BIN_NEG: {
+        auto reg = to_i(do_compile(node.children()[0]));
+        assembler().bnot_i(reg, reg);
+        return reg;
+      }
       case NODE_UNARY_PLUS: {
         return to_n(do_compile(node.children()[0]));
       }

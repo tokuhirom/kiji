@@ -240,6 +240,11 @@ TODO
 
  * use
 
+## Step 7.6 2013-06-25
+
+ * unary `+^`
+
+
 ## Step 8.
 
  * `for <a b c d> -> $a, $b { say($a, $b) }`

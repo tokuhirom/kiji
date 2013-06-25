@@ -274,7 +274,8 @@ multiplicative_expr =
     }
 
 symbolic_unary =
-    '+' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_PLUS, f1); }
+    '+^' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_BIN_NEG, f1); }
+    | '+' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_PLUS, f1); }
     | exponentiation_expr
 
 exponentiation_expr = 
