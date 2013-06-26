@@ -312,6 +312,14 @@ term =
     | twargs
     | hash
     | lambda
+    | it_method
+
+it_method = (
+        '.' i:ident { $$.set(kiji::NODE_IT_METHODCALL, i); i=$$; }
+        (
+            a:paren_args { i.push_child(a); }
+        )?
+    ) { $$=i; }
 
 ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
     $$.set_ident(yytext, yyleng);

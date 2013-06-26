@@ -672,3 +672,19 @@ use v6;
 say("OK");
 --- expected
 OK
+
+===
+--- code
+for 1,2,3 { .say() }
+--- expected
+1
+2
+3
+
+===
+--- code
+for 1,2,3 { .say }
+--- expected
+1
+2
+3

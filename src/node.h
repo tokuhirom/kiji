@@ -54,7 +54,9 @@ namespace kiji {
       }
     }
   public:
-    Node() : type_(NODE_UNDEF) { }
+    Node() : type_(NODE_UNDEF) {
+      this->body_.pv=NULL;
+    }
     Node(const kiji::Node &node) {
       this->type_ = node.type_;
       switch (this->node_type()) {
@@ -72,6 +74,8 @@ namespace kiji {
       case NODE_TYPE_CHILDREN:
         this->body_.pv = NULL;
         this->body_.children = new std::vector<kiji::Node>();
+        assert(this->body_.children);
+        assert(node.body_.children);
         *(this->body_.children) = *(node.body_.children);
         break;
       default:
@@ -202,6 +206,10 @@ namespace kiji {
     const std::vector<kiji::Node> & children() const {
       assert(node_type() == NODE_TYPE_CHILDREN);
       return *(this->body_.children);
+    }
+    kiji::Node & child_at(int n) const {
+      assert(node_type() == NODE_TYPE_CHILDREN);
+      return this->body_.children->at(n);
     }
     void push_child(kiji::Node &child) {
       assert(node_type() == NODE_TYPE_CHILDREN);

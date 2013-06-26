@@ -240,10 +240,13 @@ TODO
 
  * use
 
+## Step 7.6 2013-06-26
+
+ * `for <a b c> { .say }`
+
 ## Step 8.
 
  * `for <a b c d> -> $a, $b { say($a, $b) }`
- * `for <a b c> { .say }`
  * $hash.keys()
  * +(1,2,3)
  * next, last
@@ -296,7 +299,6 @@ TODO
  * variable scope in 'while' stmt
  * eval
  * try S32-str/lines.t in roast
- * `+"0x0a";`
  * heredocs?
   * needs 'assignment'
 

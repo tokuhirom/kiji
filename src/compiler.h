@@ -1059,6 +1059,16 @@ namespace kiji {
         assembler().atpos_o(dst, container, idx);
         return dst;
       }
+      case NODE_IT_METHODCALL: {
+        kiji::Node n;
+        kiji::Node node_it;
+        node_it.set_variable("$_", 2);
+        n.set(kiji::NODE_METHODCALL, node_it, node.children()[0]);
+        if (node.children().size() == 2) {
+          n.push_child(node.child_at(1));
+        }
+        return do_compile(n);
+      }
       case NODE_METHODCALL: {
         assert(node.children().size() == 3 || node.children().size()==2);
         auto obj = to_o(do_compile(node.children()[0]));
