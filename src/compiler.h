@@ -395,8 +395,34 @@ namespace kiji {
       return frames_.size();
     }
 
+    // Is a and b equivalent?
+    bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
+      if (a->arg_count != b->arg_count) {
+        return false;
+      }
+      if (a->num_pos != b->num_pos) {
+        return false;
+      }
+      // Should I use memcmp?
+      if (a->arg_count !=0) {
+        for (int i=0; i<a->arg_count; ++i) {
+          if (a->arg_flags[i] != b->arg_flags[i]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
     size_t push_callsite(MVMCallsite *callsite) {
-      // TODO: Make it unique?
+      int i=0;
+      for (auto c:callsites_) {
+        if (callsite_eq(c, callsite)) {
+          delete callsite; // free memory
+          return i;
+        }
+        ++i;
+      }
       callsites_.push_back(callsite);
       return callsites_.size() - 1;
     }
@@ -1345,8 +1371,6 @@ namespace kiji {
             // TODO support named params
             callsite->arg_count = args.children().size();
             callsite->num_pos   = args.children().size();
-
-            auto callsite_no = push_callsite(callsite);
             callsite->arg_flags = new MVMCallsiteEntry[args.children().size()];
 
             std::vector<uint16_t> arg_regs;
@@ -1381,6 +1405,7 @@ namespace kiji {
               ++i;
             }
 
+            auto callsite_no = push_callsite(callsite);
             assembler().prepargs(callsite_no);
 
             i=0;
