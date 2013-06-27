@@ -977,6 +977,8 @@ namespace kiji {
         //   shift iter
         //   if_o label_for
         // label_end:
+
+        LoopGuard loop(this);
           auto src_reg = box(do_compile(node.children()[0]));
           auto iter_reg = reg_obj();
           auto label_end = label_unsolved();
@@ -1009,6 +1011,7 @@ namespace kiji {
           if_any(iter_reg, label_for);
 
         label_end.put();
+        loop.put_last();
 
         return UNKNOWN_REG;
       }
