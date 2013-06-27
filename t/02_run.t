@@ -618,6 +618,12 @@ c
 --- expected
 5
 
+=== lambda without arguments
+--- code
+(-> { say("GO") })()
+--- expected
+GO
+
 ===
 --- code
 for <a b c> -> $s { say($s) }

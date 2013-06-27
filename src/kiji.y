@@ -352,23 +352,25 @@ qw_list =
 qw_item = < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
 
 funcdef =
-    'sub' - i:ident - '(' - p:params - ')' - b:block {
+    'sub' - i:ident - '(' - p:params? - ')' - b:block {
+        if (p.is_undefined()) {
+            p.set_children(kiji::NODE_PARAMS);
+        }
         $$.set(kiji::NODE_FUNC, i, p, b);
     }
 
 lambda =
-    '->' - p:params - b:block {
+    '->' - p:params? - b:block {
+        if (p.is_undefined()) {
+            p.set_children(kiji::NODE_PARAMS);
+        }
         $$.set(kiji::NODE_LAMBDA, p, b);
     }
 
 params =
-    (
-        v:term { $$.set(kiji::NODE_PARAMS, v); v=$$; }
-        ( - ',' - v1:term { v.push_child(v1); $$=v; } )*
-        { $$=v; }
-    )
-    | '' { $$.set_children(kiji::NODE_PARAMS); }
-    # is it slow?
+    v:term { $$.set(kiji::NODE_PARAMS, v); v=$$; }
+    ( - ',' - v1:term { v.push_child(v1); $$=v; } )*
+    { $$=v; }
 
 block = 
     ('{' - s:statementlist - '}') { $$=s; }

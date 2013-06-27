@@ -224,6 +224,7 @@ namespace kiji {
       }
     }
     NODE_TYPE type() const { return type_; }
+    bool is_undefined() const { return type_==NODE_UNDEF; }
     const std::string pv() const {
       assert(node_type() == NODE_TYPE_STR);
       return *(this->body_.pv);
