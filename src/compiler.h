@@ -109,6 +109,8 @@ namespace kiji {
     std::vector<MVMuint16> local_types_;
     std::vector<MVMuint16> lexical_types_;
 
+    std::vector<MVMFrameHandler*> handlers_;
+
     Assembler assembler_;
 
     void set_cuuid() {
@@ -156,7 +158,20 @@ namespace kiji {
       frame_.bytecode      = assembler_.bytecode();
       frame_.bytecode_size = assembler_.bytecode_size();
 
+      // frame handlers
+      frame_.num_handlers = handlers_.size();
+      frame_.handlers = new MVMFrameHandler[handlers_.size()];
+      int i=0;
+      for (auto f: handlers_) {
+        frame_.handlers[i] = *f;
+        ++i;
+      }
+
       return &frame_;
+    }
+
+    void push_handler(MVMFrameHandler* handler) {
+      handlers_.push_back(handler);
     }
 
     // reserve register
@@ -379,6 +394,9 @@ namespace kiji {
       return frames_.back()->find_lexical_by_name(name_cc, outer);
     }
 
+    void push_handler(MVMFrameHandler *handler) {
+      return frames_.back()->push_handler(handler);
+    }
     int push_frame(const std::string & name) {
       std::shared_ptr<Frame> frame = std::make_shared<Frame>(tc_, name);
       if (frames_.size() != 0) {
@@ -619,10 +637,22 @@ namespace kiji {
     size_t push_callsite(MVMCallsite *callsite) {
       return cu_.push_callsite(callsite);
     }
+    void push_handler(MVMFrameHandler *handler) {
+      return cu_.push_handler(handler);
+    }
 
     int do_compile(const kiji::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
+      case NODE_LAST: {
+        // break from for, while, loop.
+        auto ret = reg_obj();
+        assembler().throwcatlex(
+          ret,
+          MVM_EX_CAT_LAST
+        );
+        return ret;
+      }
       case NODE_RETURN: {
         assert(node.children().size() ==1);
         auto reg = do_compile(node.children()[0]);
@@ -702,6 +732,8 @@ namespace kiji {
          *    body
          *  label_end:
          */
+        MVMFrameHandler*handler =  new MVMFrameHandler();
+        handler->start_offset = assembler().bytecode_size()-1;
         auto label_while = label();
           int reg = do_compile(node.children()[0]);
           assert(reg != UNKNOWN_REG);
@@ -710,6 +742,11 @@ namespace kiji {
           do_compile(node.children()[1]);
           goto_(label_while);
         label_end.put();
+        handler->end_offset = assembler().bytecode_size()-1;
+        handler->category_mask = MVM_EX_CAT_LAST;
+        handler->block_reg = 0;
+        handler->goto_offset = assembler().bytecode_size()-1+1;
+        push_handler(handler);
         return UNKNOWN_REG;
       }
       case NODE_LAMBDA: {

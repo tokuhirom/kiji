@@ -69,6 +69,7 @@ my @types = qw(
     NODE_METHOD
     NODE_UNARY_PLUS
     NODE_IT_METHODCALL
+    NODE_LAST
 );
 
 say qq!/* This file is generated from $0 */!;

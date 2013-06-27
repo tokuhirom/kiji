@@ -694,3 +694,17 @@ for 1,2,3 { .say }
 1
 2
 3
+
+===
+--- ONLY
+--- code
+my $i:=0;
+while 1 {
+    $i:=$i+1;
+    say $i;
+    if $i == 3 { last }
+}
+--- expected
+1
+2
+3

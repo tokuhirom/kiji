@@ -56,11 +56,14 @@ statement =
             | class_stmt
             | method_stmt
             | die_stmt
+            | last_stmt
             | funcdef - ';'*
             | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
             | b:normal_stmt - eat_terminator { $$ = b; }
             | e:funcall_stmt eat_terminator { $$=e; }
           )
+
+last_stmt = 'last' { $$.set_children(kiji::NODE_LAST); }
 
 funcall_stmt =
     i:ident ' '+ a:args {
