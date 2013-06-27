@@ -696,7 +696,6 @@ for 1,2,3 { .say }
 3
 
 ===
---- ONLY
 --- code
 my $i:=0;
 while 1 {

@@ -641,6 +641,38 @@ namespace kiji {
       return cu_.push_handler(handler);
     }
 
+    class LoopGuard {
+    private:
+      kiji::Compiler *compiler_;
+      MVMuint32 start_offset_;
+      MVMuint32 last_offset_;
+    public:
+      LoopGuard(kiji::Compiler *compiler) :compiler_(compiler) {
+        start_offset_ = compiler_->assembler().bytecode_size()-1;
+      }
+      ~LoopGuard() {
+        MVMuint32 end_offset = compiler_->assembler().bytecode_size()-1;
+
+        MVMFrameHandler *last_handler = new MVMFrameHandler;
+        last_handler->start_offset = start_offset_;
+        last_handler->end_offset = end_offset;
+        last_handler->category_mask = MVM_EX_CAT_LAST;
+        last_handler->action = MVM_EX_ACTION_GOTO;
+        last_handler->block_reg = 0;
+        last_handler->goto_offset = last_offset_;
+
+        compiler_->cu_.push_handler(last_handler);
+      }
+      // fixme: `put` is not the best verb in English here.
+      void put_last() {
+        last_offset_ = compiler_->assembler().bytecode_size()-1+1;
+      }
+      void put_redo() {
+      }
+      void put_continue() {
+      }
+    };
+
     int do_compile(const kiji::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
@@ -732,8 +764,9 @@ namespace kiji {
          *    body
          *  label_end:
          */
-        MVMFrameHandler*handler =  new MVMFrameHandler();
-        handler->start_offset = assembler().bytecode_size()-1;
+
+        LoopGuard loop(this);
+
         auto label_while = label();
           int reg = do_compile(node.children()[0]);
           assert(reg != UNKNOWN_REG);
@@ -742,11 +775,9 @@ namespace kiji {
           do_compile(node.children()[1]);
           goto_(label_while);
         label_end.put();
-        handler->end_offset = assembler().bytecode_size()-1;
-        handler->category_mask = MVM_EX_CAT_LAST;
-        handler->block_reg = 0;
-        handler->goto_offset = assembler().bytecode_size()-1+1;
-        push_handler(handler);
+
+        loop.put_last();
+
         return UNKNOWN_REG;
       }
       case NODE_LAMBDA: {
