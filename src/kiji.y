@@ -129,8 +129,10 @@ postfix_for_stmt = body:normal_stmt - 'for' - ( src:array_var | src:list_expr | 
 
 # FIXME: simplify the code
 bind_stmt =
-          e1:my - ':=' - e2:list_expr { $$.set(kiji::NODE_BIND, e1, e2); }
-        | e3:my - ':=' - e4:expr { $$.set(kiji::NODE_BIND, e3, e4); }
+          e1:my - ':=' - (
+            e2:list_expr { $$.set(kiji::NODE_BIND, e1, e2); }
+            | e4:expr { $$.set(kiji::NODE_BIND, e1, e4); }
+        )
         | e5:expr { $$ = e5; }
 
 list_expr =
