@@ -1176,7 +1176,7 @@ namespace kiji {
         return dst_reg;
       }
       case NODE_LIST:
-      case NODE_ARRAY: {
+      case NODE_ARRAY: { // TODO: use 6model's container feature after released it.
         // create array
         auto array_reg = reg_obj();
         assembler().hlllist(array_reg);
