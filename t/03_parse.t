@@ -351,3 +351,12 @@ for @a { 1; }
 (statements
     (int 9)
 )
+
+===
+--- code
+my $i=3;
+--- expected
+(statements
+    (bind (my (variable "$i"))
+          (int "3"))
+)
