@@ -695,7 +695,7 @@ for 1,2,3 { .say }
 2
 3
 
-===
+=== last for 'while'
 --- code
 my $i:=0;
 while 1 {
@@ -708,14 +708,33 @@ while 1 {
 2
 3
 
-===
+=== last for 'for'
 --- code
-for 1,2,3,4,5 {
-    .say;
-    if $_ == 4 { last }
-}
+for 1,2,3,4,5 { .say; if $_ == 4 { last } }
 --- expected
 1
 2
 3
+4
+
+=== last for 'for'
+--- code
+for 1,2,3 { .say; next if $_==2; .say }
+--- expected
+1
+1
+2
+3
+3
+
+=== last for 'for'
+--- code
+my $i:=0; while $i<4 {  $i:=$i+1; say($i); next if $i==2; say($i); }
+--- expected
+1
+1
+2
+3
+3
+4
 4

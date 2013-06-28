@@ -646,6 +646,8 @@ namespace kiji {
       kiji::Compiler *compiler_;
       MVMuint32 start_offset_;
       MVMuint32 last_offset_;
+      MVMuint32 next_offset_;
+      MVMuint32 redo_offset_;
     public:
       LoopGuard(kiji::Compiler *compiler) :compiler_(compiler) {
         start_offset_ = compiler_->assembler().bytecode_size()-1;
@@ -660,16 +662,35 @@ namespace kiji {
         last_handler->action = MVM_EX_ACTION_GOTO;
         last_handler->block_reg = 0;
         last_handler->goto_offset = last_offset_;
-
         compiler_->cu_.push_handler(last_handler);
+
+        MVMFrameHandler *next_handler = new MVMFrameHandler;
+        next_handler->start_offset = start_offset_;
+        next_handler->end_offset = end_offset;
+        next_handler->category_mask = MVM_EX_CAT_NEXT;
+        next_handler->action = MVM_EX_ACTION_GOTO;
+        next_handler->block_reg = 0;
+        next_handler->goto_offset = next_offset_;
+        compiler_->cu_.push_handler(next_handler);
+
+        MVMFrameHandler *redo_handler = new MVMFrameHandler;
+        redo_handler->start_offset = start_offset_;
+        redo_handler->end_offset = end_offset;
+        redo_handler->category_mask = MVM_EX_CAT_REDO;
+        redo_handler->action = MVM_EX_ACTION_GOTO;
+        redo_handler->block_reg = 0;
+        redo_handler->goto_offset = redo_offset_;
+        compiler_->cu_.push_handler(redo_handler);
       }
       // fixme: `put` is not the best verb in English here.
       void put_last() {
         last_offset_ = compiler_->assembler().bytecode_size()-1+1;
       }
       void put_redo() {
+        redo_offset_ = compiler_->assembler().bytecode_size()-1+1;
       }
-      void put_continue() {
+      void put_next() {
+        next_offset_ = compiler_->assembler().bytecode_size()-1+1;
       }
     };
 
@@ -682,6 +703,24 @@ namespace kiji {
         assembler().throwcatlex(
           ret,
           MVM_EX_CAT_LAST
+        );
+        return ret;
+      }
+      case NODE_REDO: {
+        // redo from for, while, loop.
+        auto ret = reg_obj();
+        assembler().throwcatlex(
+          ret,
+          MVM_EX_CAT_REDO
+        );
+        return ret;
+      }
+      case NODE_NEXT: {
+        // continue from for, while, loop.
+        auto ret = reg_obj();
+        assembler().throwcatlex(
+          ret,
+          MVM_EX_CAT_NEXT
         );
         return ret;
       }
@@ -768,6 +807,7 @@ namespace kiji {
         LoopGuard loop(this);
 
         auto label_while = label();
+        loop.put_next();
           int reg = do_compile(node.children()[0]);
           assert(reg != UNKNOWN_REG);
           auto label_end = label_unsolved();
@@ -986,6 +1026,7 @@ namespace kiji {
           unless_any(iter_reg, label_end);
 
         auto label_for = label();
+        loop.put_next();
 
           auto val = reg_obj();
           assembler().shift_o(val, iter_reg);

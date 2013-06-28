@@ -56,7 +56,6 @@ statement =
             | class_stmt
             | method_stmt
             | die_stmt
-            | last_stmt
             | funcdef - ';'*
             | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
             | b:normal_stmt - eat_terminator { $$ = b; }
@@ -64,6 +63,8 @@ statement =
           )
 
 last_stmt = 'last' { $$.set_children(kiji::NODE_LAST); }
+
+next_stmt = 'next' { $$.set_children(kiji::NODE_NEXT); }
 
 funcall_stmt =
     i:ident ' '+ a:args {
@@ -75,7 +76,7 @@ class_stmt = 'class' ws i:ident - b:block { $$.set(kiji::NODE_CLASS, i, b); }
 
 method_stmt = 'method' ws i:ident p:paren_args - b:block { $$.set(kiji::NODE_METHOD, i, p, b); }
 
-normal_stmt = return_stmt | bind_stmt
+normal_stmt = return_stmt | bind_stmt | last_stmt | next_stmt
 
 return_stmt = 'return' ws e:expr { $$.set(kiji::NODE_RETURN, e); }
 
