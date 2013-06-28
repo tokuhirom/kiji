@@ -20,7 +20,7 @@ namespace kiji {
   bool parse(std::istream *is, kiji::Node &root) {
     bool retval = true;
     GREG g;
-    yyinit(&g);
+    kiji_yyinit(&g);
 #ifdef YY_DEBUG
       g.debug = 1;
 #endif
@@ -28,7 +28,7 @@ namespace kiji {
     g.data.root = &root;
     g.data.input_stream = is;
 
-    if (!yyparse(&g)) {
+    if (!kiji_yyparse(&g)) {
       fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
       if (g.text[0]) {
         fprintf(stderr, "** near %s\n", g.text);
@@ -61,7 +61,7 @@ namespace kiji {
       printf("\n");
       exit(1);
     }
-    yydeinit(&g);
+    kiji_yydeinit(&g);
     return retval;
   }
 

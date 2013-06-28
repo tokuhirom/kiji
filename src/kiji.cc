@@ -1,4 +1,6 @@
 // vim:ts=2:sw=2:tw=0:
+#define YY_NAME(n) kiji_yy##n
+
 #include <stdio.h>
 #include <assert.h>
 #include <fstream>
