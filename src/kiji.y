@@ -137,8 +137,13 @@ list_expr =
         (- ','  - b:methodcall_expr { a.push_child(b); $$ = a; } )+
     ) { $$=a }
 
-paren_args = '(' - a:args - ')' { $$=a; }
-           | '(' - ')' { $$.set_children(kiji::NODE_ARGS); }
+paren_args = '(' - a:args? - ')' {
+        if (a.is_undefined()) {
+            $$.set_children(kiji::NODE_ARGS);
+        } else {
+            $$=a;
+        }
+    }
 
 args =
     (
