@@ -76,7 +76,7 @@ class_stmt = 'class' ws i:ident - b:block { $$.set(kiji::NODE_CLASS, i, b); }
 
 method_stmt = 'method' ws i:ident p:paren_args - b:block { $$.set(kiji::NODE_METHOD, i, p, b); }
 
-normal_stmt = return_stmt | bind_stmt | last_stmt | next_stmt
+normal_stmt = return_stmt | last_stmt | next_stmt | expr
 
 return_stmt = 'return' ws e:expr { $$.set(kiji::NODE_RETURN, e); }
 
@@ -95,8 +95,8 @@ while_stmt = 'while' ws+ cond:expr - '{' - body:statementlist - '}' {
         }
 
 for_stmt =
-    'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - '{' - body:statementlist - '}' { $$.set(kiji::NODE_FOR, src, body); }
-    | 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) - body:lambda { $$.set(kiji::NODE_FOR, src, body); }
+    'for' - src:expr - '{' - body:statementlist - '}' { $$.set(kiji::NODE_FOR, src, body); }
+    | 'for' - src:expr - body:lambda { $$.set(kiji::NODE_FOR, src, body); }
 
 unless_stmt = 'unless' - cond:expr - '{' - body:statementlist - '}' {
             $$.set(kiji::NODE_UNLESS, cond, body);
@@ -125,28 +125,17 @@ postfix_if_stmt = body:normal_stmt - 'if' - cond:expr { $$.set(kiji::NODE_IF, co
 
 postfix_unless_stmt = body:normal_stmt - 'unless' - cond:expr { $$.set(kiji::NODE_UNLESS, cond, body); }
 
-postfix_for_stmt = body:normal_stmt - 'for' - ( src:array_var | src:list_expr | src:qw | src:twargs ) { $$.set(kiji::NODE_FOR, src, body); }
+postfix_for_stmt = body:normal_stmt - 'for' - src:expr { $$.set(kiji::NODE_FOR, src, body); }
 
-# FIXME: simplify the code
-bind_stmt =
-          e1:my - ':=' - (
-            e2:list_expr { $$.set(kiji::NODE_BIND, e1, e2); }
-            | e4:expr { $$.set(kiji::NODE_BIND, e1, e4); }
-        )
-        | e5:expr { $$ = e5; }
-
-list_expr =
-    (a:methodcall_expr { $$.set(kiji::NODE_LIST, a); a = $$; }
-        (- ','  - b:methodcall_expr { a.push_child(b); $$ = a; } )+
-    ) { $$=a }
-
-paren_args = '(' - a:args? - ')' {
-        if (a.is_undefined()) {
-            $$.set_children(kiji::NODE_ARGS);
+paren_args = '(' - a:expr - ')' {
+        if (a.type() == kiji::NODE_LIST) {
+            $$ = a;
+            $$.change_type(kiji::NODE_ARGS);
         } else {
-            $$=a;
+            $$.set(kiji::NODE_ARGS, a);
         }
     }
+    | '(' - ')' { $$.set_children(kiji::NODE_ARGS); }
 
 args =
     (
@@ -178,8 +167,20 @@ loose_and_expr =
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:variable - ':=' - e:loose_unary_expr) { $$.set(kiji::NODE_BIND, v, e); }
-    | loose_unary_expr
+    (v:variable - ':=' - e:comma_operator_expr) { $$.set(kiji::NODE_BIND, v, e); }
+    | (v:my - ':=' - e:comma_operator_expr) { $$.set(kiji::NODE_BIND, v, e); }
+    | comma_operator_expr
+
+
+comma_operator_expr = a:loose_unary_expr { $$=a; } ( ',' b:loose_unary_expr {
+        if (a.type()==kiji::NODE_LIST) {
+            a.push_child(b);
+            $$=a;
+        } else {
+            $$.set(kiji::NODE_LIST, a, b);
+            a=$$;
+        }
+    } )*
 
 loose_unary_expr =
     'not' - f1:conditional_expr { $$.set(kiji::NODE_NOT, f1); }
@@ -314,7 +315,6 @@ term =
     | dec_number
     | string
     | '(' - e:expr  - ')' { $$ = e; }
-    | '(' - l:list_expr  - ')' { $$ = l; }
     | variable
     | '$?LINE' { $$.set_integer(G->data.line_number); }
     | array
@@ -387,8 +387,9 @@ block =
     ('{' - s:statementlist - '}') { $$=s; }
     | ('{' - '}' ) { $$.set_children(kiji::NODE_STATEMENTS); }
 
+# XXX optimizable
 array =
-    '[' e:expr { $$.set(kiji::NODE_ARRAY, e); e=$$; } ( ',' e2:expr { e.push_child(e2); $$=e; } )* ']' { $$=e; }
+    '[' e:expr ']' { $$=e; $$.change_type(kiji::NODE_ARRAY); }
     | '[' - ']' { $$.set_children(kiji::NODE_ARRAY); }
 
 my = 'my' ws v:variable { $$.set(kiji::NODE_MY, v); }
