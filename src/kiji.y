@@ -225,7 +225,7 @@ atpos_expr =
     | not_expr
 
 funcall =
-    (i:ident - '(' - a:args - ')') {
+    i:ident - a:paren_args {
         $$.set(kiji::NODE_FUNCALL, i, a);
     }
 
@@ -300,7 +300,7 @@ autoincrement_expr = method_postfix_expr
 
 method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$.set(kiji::NODE_ATKEY, container, k); }
            | ( container:term '<' - k:ident - '>' ) { k.change_type(kiji::NODE_STRING); $$.set(kiji::NODE_ATKEY, container, k); }
-           | ( container:term '(' - k:args - ')' ) { $$.set(kiji::NODE_FUNCALL, container, k); }
+           | ( container:term a:paren_args ) { $$.set(kiji::NODE_FUNCALL, container, a); }
            | term
 
 term = 
