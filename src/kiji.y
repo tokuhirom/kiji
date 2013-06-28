@@ -178,10 +178,10 @@ loose_and_expr =
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:variable - ':=' - e:loose_not_expr) { $$.set(kiji::NODE_BIND, v, e); }
-    | loose_not_expr
+    (v:variable - ':=' - e:loose_unary_expr) { $$.set(kiji::NODE_BIND, v, e); }
+    | loose_unary_expr
 
-loose_not_expr =
+loose_unary_expr =
     'not' - f1:conditional_expr { $$.set(kiji::NODE_NOT, f1); }
     | f1:conditional_expr { $$=f1 }
 
