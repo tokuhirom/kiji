@@ -6,3 +6,4 @@ vgcore.*
 /foo.p6
 /Makefile
 /kiji.dSYM
+/callgrind.out.*

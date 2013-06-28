@@ -45,9 +45,6 @@ statementlist =
 statement =
         - (
               use_stmt
-            | e:postfix_if_stmt eat_terminator { $$ = e; }
-            | e:postfix_unless_stmt eat_terminator { $$ = e; }
-            | e:postfix_for_stmt eat_terminator { $$ = e; }
             | if_stmt
             | for_stmt
             | while_stmt
@@ -58,9 +55,17 @@ statement =
             | die_stmt
             | funcdef - ';'*
             | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
-            | b:normal_stmt - eat_terminator { $$ = b; }
+            | b:normal_or_postfix_stmt { $$ = b; }
             | e:funcall_stmt eat_terminator { $$=e; }
           )
+
+normal_or_postfix_stmt =
+    n:normal_stmt (
+          ( ' '+ 'if' - cond_if:expr - eat_terminator ) { $$.set(kiji::NODE_IF, cond_if, n); }
+        | ( ' '+ 'unless' - cond_unless:expr - eat_terminator ) { $$.set(kiji::NODE_UNLESS, cond_unless, n); }
+        | ( ' '+ 'for' - cond_for:expr - eat_terminator ) { $$.set(kiji::NODE_FOR, cond_for, n); }
+        | ( - eat_terminator ) { $$=n; }
+    )
 
 last_stmt = 'last' { $$.set_children(kiji::NODE_LAST); }
 
@@ -119,12 +124,6 @@ if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
                 if_cond.push_child(else_body);
             }
         )? { $$=if_cond; }
-
-postfix_if_stmt = body:normal_stmt - 'if' - cond:expr { $$.set(kiji::NODE_IF, cond, body); }
-
-postfix_unless_stmt = body:normal_stmt - 'unless' - cond:expr { $$.set(kiji::NODE_UNLESS, cond, body); }
-
-postfix_for_stmt = body:normal_stmt - 'for' - src:expr { $$.set(kiji::NODE_FOR, src, body); }
 
 paren_args = '(' - a:expr - ')' {
         if (a.type() == kiji::NODE_LIST) {
