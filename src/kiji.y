@@ -151,8 +151,8 @@ loose_and_expr =
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:variable - ':=' - e:comma_operator_expr) { $$.set(kiji::NODE_BIND, v, e); }
-    | (v:my - ':=' - e:comma_operator_expr) { $$.set(kiji::NODE_BIND, v, e); }
+    (v:variable - ':'? '=' - e:comma_operator_expr) { $$.set(kiji::NODE_BIND, v, e); }
+    | (v:my - ':'? '=' - e:comma_operator_expr) { $$.set(kiji::NODE_BIND, v, e); }
     | comma_operator_expr
 
 
