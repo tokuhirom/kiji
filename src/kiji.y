@@ -67,10 +67,9 @@ last_stmt = 'last' { $$.set_children(kiji::NODE_LAST); }
 next_stmt = 'next' { $$.set_children(kiji::NODE_NEXT); }
 
 funcall_stmt =
-    i:ident ' '+ a:args {
-        // funcall without parens.
-        $$.set(kiji::NODE_FUNCALL, i, a);
-    }
+    i:ident ' '+ a:expr { $$.set(kiji::NODE_ARGS, a); a=$$; } (
+        - ',' - b:expr  { a.push_child(b); }
+    )* { $$.set(kiji::NODE_FUNCALL, i, a); }
 
 class_stmt = 'class' ws i:ident - b:block { $$.set(kiji::NODE_CLASS, i, b); }
 
@@ -136,20 +135,6 @@ paren_args = '(' - a:expr - ')' {
         }
     }
     | '(' - ')' { $$.set_children(kiji::NODE_ARGS); }
-
-args =
-    (
-        s1:expr {
-            $$.set(kiji::NODE_ARGS, s1);
-            s1 = $$;
-        }
-        ( - ',' - s2:expr {
-            s1.push_child(s2);
-            $$ = s1;
-        } )*
-    )
-    | '' { $$.set_children(kiji::NODE_ARGS); }
-    # ↑ it makes slower?
 
 expr = sequencer_expr
 
