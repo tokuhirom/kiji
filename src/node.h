@@ -168,9 +168,35 @@ namespace kiji {
       this->type_ = NODE_STRING;
       this->body_.pv = new std::string();
     }
+    void append_string_variable(Node&var) {
+      if (this->type_ == NODE_STRING) {
+        Node tmp(*this);
+        this->set(NODE_STRING_CONCAT, tmp);
+        this->push_child(var);
+      } else if (this->type_ == NODE_STRING_CONCAT) {
+        Node tmp(*this);
+        this->set(NODE_STRING_CONCAT, tmp, var);
+      } else {
+        this->dump_json();
+        abort();
+      }
+    }
     void append_string(const char *txt, size_t length) {
-      assert(this->type_ == NODE_STRING);
-      this->body_.pv->append(txt, length);
+      if (this->type_ == NODE_STRING) {
+        assert(this->type_ == NODE_STRING);
+        this->body_.pv->append(txt, length);
+      } else if (this->type() == NODE_STRING_CONCAT) {
+        if (this->body_.children->back().type() == NODE_STRING) {
+          this->body_.children->back().body_.pv->append(txt, length);
+        } else {
+          Node s;
+          s.set_string(txt, length);
+          Node tmp(*this);
+          this->set(NODE_STRING_CONCAT, tmp, s);
+        }
+      } else {
+        abort();
+      }
     }
     void append_string_from_hex(const char *txt, size_t length) {
       assert(this->type_ == NODE_STRING);

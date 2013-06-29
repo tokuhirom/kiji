@@ -360,3 +360,39 @@ my $i=3;
     (bind (my (variable "$i"))
           (int "3"))
 )
+
+===
+--- code
+my $i=3;
+--- expected
+(statements
+    (bind (my (variable "$i"))
+          (int "3"))
+)
+
+===
+--- code
+"3$x4"
+--- expected
+(statements
+    (string_concat
+        (string "3")
+        (variable "$x4")))
+
+===
+--- code
+"3$x 4"
+--- expected
+(statements
+    (string_concat
+        (string_concat
+            (string "3")
+            (variable "$x"))
+        (string " 4")))
+
+===
+--- code
+"3\x494"
+--- expected
+(statements
+    (string "3I4"))

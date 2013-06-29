@@ -738,3 +738,11 @@ my $i:=0; while $i<4 {  $i:=$i+1; say($i); next if $i==2; say($i); }
 3
 4
 4
+
+===
+--- code
+my $i=5;
+say("i=$i\nGah!");
+--- expected
+i=5
+Gah!

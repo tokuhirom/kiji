@@ -423,30 +423,34 @@ integer =
 
 string = dq_string | sq_string
 
-dq_string = '"' { $$.init_string(); } (
-        "\n" { G->data.line_number++; $$.append_string("\n", 1); }
-        | < [^"\\\n]+ > { $$.append_string(yytext, yyleng); }
-        | esc 'a' { $$.append_string("\a", 1); }
-        | esc 'b' { $$.append_string("\b", 1); }
-        | esc 't' { $$.append_string("\t", 1); }
-        | esc 'r' { $$.append_string("\r", 1); }
-        | esc 'n' { $$.append_string("\n", 1); }
-        | esc '"' { $$.append_string("\"", 1); }
+dq_string_start='"' { $$.init_string(); }
+
+dq_string = s:dq_string_start { s.init_string(); } (
+        "\n" { G->data.line_number++; s.append_string("\n", 1); }
+        | < [^"\\\n$]+ > { s.append_string(yytext, yyleng); }
+        | v:variable { s.append_string_variable(v); }
+        | esc 'a' { s.append_string("\a", 1); }
+        | esc 'b' { s.append_string("\b", 1); }
+        | esc 't' { s.append_string("\t", 1); }
+        | esc 'r' { s.append_string("\r", 1); }
+        | esc 'n' { s.append_string("\n", 1); }
+        | esc '"' { s.append_string("\"", 1); }
+        | esc '$' { s.append_string("\"", 1); }
         | ( esc 'x' (
                   '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) >
             | '[' '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) > ']' )
         ) {
-            $$.append_string_from_hex(yytext, yyleng);
+            s.append_string_from_hex(yytext, yyleng);
         }
         | esc 'o' < '0'? [0-7] [0-7] > {
-            $$.append_string_from_oct(yytext, yyleng);
+            s.append_string_from_oct(yytext, yyleng);
         }
         | esc 'o['
-             '0'? < [0-7] [0-7] > { $$.append_string_from_oct(yytext, yyleng); } (
-            ',' '0'? < [0-7] [0-7] > { $$.append_string_from_oct(yytext, yyleng); }
+             '0'? < [0-7] [0-7] > { s.append_string_from_oct(yytext, yyleng); } (
+            ',' '0'? < [0-7] [0-7] > { s.append_string_from_oct(yytext, yyleng); }
         )* ']'
-        | esc esc { $$.append_string("\\", 1); }
-    )* '"'
+        | esc esc { s.append_string("\\", 1); }
+    )* '"' { $$=s; }
 
 esc = '\\'
 
