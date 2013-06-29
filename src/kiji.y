@@ -284,7 +284,11 @@ exponentiation_expr =
     }
 
 # ++, -- is not supported yet
-autoincrement_expr = method_postfix_expr
+autoincrement_expr =
+    n:method_postfix_expr (
+        '++' { $$.set(kiji::NODE_POSTINC, n); }
+        | '' { $$=n; }
+    )
 
 method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$.set(kiji::NODE_ATKEY, container, k); }
            | ( container:term '<' - k:ident - '>' ) { k.change_type(kiji::NODE_STRING); $$.set(kiji::NODE_ATKEY, container, k); }

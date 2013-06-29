@@ -697,6 +697,31 @@ namespace kiji {
     int do_compile(const kiji::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
+      case NODE_POSTINC: {
+        // break from for, while, loop.
+        assert(node.children().size() == 1);
+        if (node.children()[0].type() != kiji::NODE_VARIABLE) {
+          MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
+        }
+        auto reg_no = reg_obj();
+        int outer = 0;
+        auto lex_no = find_lexical_by_name(node.children()[0].pv(), outer);
+        assembler().getlex(
+          reg_no,
+          lex_no,
+          outer // outer frame
+        );
+        auto i_tmp = to_i(reg_no);
+        assembler().inc_i(
+          i_tmp
+        );
+        assembler().bindlex(
+          lex_no,
+          outer,
+          to_o(i_tmp)
+        );
+        return reg_no;
+      }
       case NODE_LAST: {
         // break from for, while, loop.
         auto ret = reg_obj();
