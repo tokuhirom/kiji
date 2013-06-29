@@ -285,8 +285,11 @@ exponentiation_expr =
 
 # ++, -- is not supported yet
 autoincrement_expr =
-    n:method_postfix_expr (
+      '++' v:variable { $$.set(kiji::NODE_PREINC, v); }
+    | '--' v:variable { $$.set(kiji::NODE_PREDEC, v); }
+    | n:method_postfix_expr (
         '++' { $$.set(kiji::NODE_POSTINC, n); }
+        | '--' { $$.set(kiji::NODE_POSTDEC, n); }
         | '' { $$=n; }
     )
 

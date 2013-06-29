@@ -24,3 +24,41 @@ say($i);
 2
 3
 
+===
+--- code
+my $i=5;
+say($i--);
+say($i--);
+say($i--);
+say($i);
+--- expected
+5
+4
+3
+2
+
+===
+--- code
+my $i=0;
+say(++$i);
+say(++$i);
+say(++$i);
+say($i);
+--- expected
+1
+2
+3
+3
+
+===
+--- code
+my $i=5;
+say(--$i);
+say(--$i);
+say(--$i);
+say($i);
+--- expected
+4
+3
+2
+2

@@ -73,6 +73,9 @@ my @types = qw(
     NODE_NEXT
     NODE_REDO
     NODE_POSTINC
+    NODE_POSTDEC
+    NODE_PREINC
+    NODE_PREDEC
 );
 
 say qq!/* This file is generated from $0 */!;
