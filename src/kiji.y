@@ -22,6 +22,37 @@ namespace kiji {
     yyprintf((stderr, "<%c>", yyc));			\
   }
 
+// See http://perlcabal.org/syn/S03.html
+//
+//  A  Level             Examples
+//  =  =====             ========
+//  N  Terms             42 3.14 "eek" qq["foo"] $x :!verbose @$array
+//  L  Method postfix    .meth .+ .? .* .() .[] .{} .<> .«» .:: .= .^ .:
+//  N  Autoincrement     ++ --
+//  R  Exponentiation    **
+//  L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
+//  L  Multiplicative    * / % %% +& +< +> ~& ~< ~> ?& div mod gcd lcm
+//  L  Additive          + - +| +^ ~| ~^ ?| ?^
+//  L  Replication       x xx
+//  X  Concatenation     ~
+//  X  Junctive and      & (&) ∩
+//  X  Junctive or       | ^ (|) (^) ∪ (-)
+//  L  Named unary       temp let
+//  N  Structural infix  but does <=> leg cmp .. ..^ ^.. ^..^
+//  C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
+//  X  Tight and         &&
+//  X  Tight or          || ^^ // min max
+//  R  Conditional       ?? !! ff fff
+//  R  Item assignment   = => += -= **= xx= .=
+//  L  Loose unary       so not
+//  X  Comma operator    , :
+//  X  List infix        Z minmax X X~ X* Xeqv ...
+//  R  List prefix       print push say die map substr ... [+] [*] any Z=
+//  X  Loose and         and andthen
+//  X  Loose or          or xor orelse
+//  X  Sequencer         <== ==> <<== ==>>
+//  N  Terminator        ; {...} unless extra ) ] }
+
 %}
 
 comp_init = e:statementlist end-of-file {
@@ -218,10 +249,10 @@ funcall =
     }
 
 not_expr =
-    ( '!' - a:add_expr ) { $$.set(kiji::NODE_NOT, a); }
-    | add_expr
+    ( '!' - a:additive_expr ) { $$.set(kiji::NODE_NOT, a); }
+    | additive_expr
 
-add_expr =
+additive_expr =
     l:multiplicative_expr (
           - '+' - r1:multiplicative_expr {
             $$.set(kiji::NODE_ADD, l, r1);
@@ -265,12 +296,22 @@ multiplicative_expr =
             $$.set(kiji::NODE_BIN_AND, l, r);
             l = $$;
         }
+        | - '+>' - r:symbolic_unary {
+            $$.set(kiji::NODE_BRSHIFT, l, r);
+            l = $$;
+        }
+        | - '+<' - r:symbolic_unary {
+            $$.set(kiji::NODE_BLSHIFT, l, r);
+            l = $$;
+        }
     )* {
         $$ = l;
     }
 
 symbolic_unary =
     '+' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_PLUS, f1); }
+    | '!' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_PLUS, f1); }
+    | '+^' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_BITWISE_NEGATION, f1); }
     | exponentiation_expr
 
 exponentiation_expr = 
