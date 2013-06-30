@@ -22,6 +22,37 @@ namespace kiji {
     yyprintf((stderr, "<%c>", yyc));			\
   }
 
+// See http://perlcabal.org/syn/S03.html
+//
+//  A  Level             Examples
+//  =  =====             ========
+//  N  Terms             42 3.14 "eek" qq["foo"] $x :!verbose @$array
+//  L  Method postfix    .meth .+ .? .* .() .[] .{} .<> .«» .:: .= .^ .:
+//  N  Autoincrement     ++ --
+//  R  Exponentiation    **
+//  L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
+//  L  Multiplicative    * / % %% +& +< +> ~& ~< ~> ?& div mod gcd lcm
+//  L  Additive          + - +| +^ ~| ~^ ?| ?^
+//  L  Replication       x xx
+//  X  Concatenation     ~
+//  X  Junctive and      & (&) ∩
+//  X  Junctive or       | ^ (|) (^) ∪ (-)
+//  L  Named unary       temp let
+//  N  Structural infix  but does <=> leg cmp .. ..^ ^.. ^..^
+//  C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
+//  X  Tight and         &&
+//  X  Tight or          || ^^ // min max
+//  R  Conditional       ?? !! ff fff
+//  R  Item assignment   = => += -= **= xx= .=
+//  L  Loose unary       so not
+//  X  Comma operator    , :
+//  X  List infix        Z minmax X X~ X* Xeqv ...
+//  R  List prefix       print push say die map substr ... [+] [*] any Z=
+//  X  Loose and         and andthen
+//  X  Loose or          or xor orelse
+//  X  Sequencer         <== ==> <<== ==>>
+//  N  Terminator        ; {...} unless extra ) ] }
+
 %}
 
 comp_init = e:statementlist end-of-file {
@@ -199,29 +230,38 @@ cmp_expr = f1:methodcall_expr (
     }
 
 methodcall_expr =
-    a1:atpos_expr (
+    a1:named_unary_expr (
         '.' a2:ident { $$.set(kiji::NODE_METHODCALL, a1, a2); a1=$$; }
         (
             a3:paren_args { a1.push_child(a3) }
         )?
     )? { $$=a1; }
 
-atpos_expr =
-    f1:not_expr - '[' - f2:not_expr - ']' {
-        $$.set(kiji::NODE_ATPOS, f1, f2);
-    }
-    | not_expr
-
 funcall =
     i:ident - a:paren_args {
         $$.set(kiji::NODE_FUNCALL, i, a);
     }
 
-not_expr =
-    ( '!' - a:add_expr ) { $$.set(kiji::NODE_NOT, a); }
-    | add_expr
+#  L  Named unary       temp let
+named_unary_expr =
+    'abs' ws+ a:junctive_or_expr { $$.set(kiji::NODE_ABS, a); }
+    | junctive_or_expr
 
-add_expr =
+junctive_or_expr =
+    junctive_and_expr
+
+junctive_and_expr =
+    concatenation_expr
+
+#  X  Concatenation     ~
+concatenation_expr =
+    replication_expr
+
+#  L  Replication       x xx
+replication_expr =
+    additive_expr
+
+additive_expr =
     l:multiplicative_expr (
           - '+' - r1:multiplicative_expr {
             $$.set(kiji::NODE_ADD, l, r1);
@@ -265,12 +305,24 @@ multiplicative_expr =
             $$.set(kiji::NODE_BIN_AND, l, r);
             l = $$;
         }
+        | - '+>' - r:symbolic_unary {
+            $$.set(kiji::NODE_BRSHIFT, l, r);
+            l = $$;
+        }
+        | - '+<' - r:symbolic_unary {
+            $$.set(kiji::NODE_BLSHIFT, l, r);
+            l = $$;
+        }
     )* {
         $$ = l;
     }
 
+#  L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
 symbolic_unary =
     '+' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_PLUS, f1); }
+    | '-' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_MINUS, f1); }
+    | '!' - f1:exponentiation_expr { $$.set(kiji::NODE_NOT, f1); }
+    | '+^' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_BITWISE_NEGATION, f1); }
     | exponentiation_expr
 
 exponentiation_expr = 
@@ -293,16 +345,17 @@ autoincrement_expr =
         | '' { $$=n; }
     )
 
+# FIXME: optimizable
 method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$.set(kiji::NODE_ATKEY, container, k); }
            | ( container:term '<' - k:ident - '>' ) { k.change_type(kiji::NODE_STRING); $$.set(kiji::NODE_ATKEY, container, k); }
+           | f1:term - '[' - f2:term - ']' {
+                $$.set(kiji::NODE_ATPOS, f1, f2);
+            }
            | ( container:term a:paren_args ) { $$.set(kiji::NODE_FUNCALL, container, a); }
            | term
 
 term = 
-    ( '-' ( integer | dec_number) ) {
-        $$.negate();
-    }
-    | integer
+    integer
     | dec_number
     | string
     | '(' - e:expr  - ')' { $$ = e; }

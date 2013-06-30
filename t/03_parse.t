@@ -127,7 +127,7 @@ __END__
 ===
 --- code: -5963
 --- expected
-(statements (int "-5963"))
+(statements (unary_minus (int 5963)))
 
 ===
 --- code: 3*4
@@ -396,3 +396,10 @@ my $i=3;
 --- expected
 (statements
     (string "3I4"))
+
+===
+--- code
+-(-1)
+--- expected
+(statements
+    (unary_minus (unary_minus (int 1))))

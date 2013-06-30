@@ -795,6 +795,29 @@ namespace kiji {
         );
         return dst_reg;
       }
+      case NODE_UNARY_BITWISE_NEGATION: { // +^1
+        auto reg = to_i(do_compile(node.children()[0]));
+        assembler().bnot_i(reg, reg);
+        return reg;
+      }
+      case NODE_BRSHIFT: { // +>
+        auto l = to_i(do_compile(node.children()[0]));
+        auto r = to_i(do_compile(node.children()[1]));
+        assembler().brshift_i(r, l, r);
+        return r;
+      }
+      case NODE_BLSHIFT: { // +<
+        auto l = to_i(do_compile(node.children()[0]));
+        auto r = to_i(do_compile(node.children()[1]));
+        assembler().blshift_i(r, l, r);
+        return r;
+      }
+      case NODE_ABS: {
+        // TODO support abs_n?
+        auto r = to_i(do_compile(node.children()[0]));
+        assembler().abs_i(r, r);
+        return r;
+      }
       case NODE_LAST: {
         // break from for, while, loop.
         auto ret = reg_obj();
@@ -1511,6 +1534,17 @@ namespace kiji {
       }
       case NODE_UNARY_PLUS: {
         return to_n(do_compile(node.children()[0]));
+      }
+      case NODE_UNARY_MINUS: {
+        auto reg = do_compile(node.children()[0]);
+        if (get_local_type(reg) == MVM_reg_int64) {
+          assembler().neg_i(reg, reg);
+          return reg;
+        } else {
+          reg = to_n(reg);
+          assembler().neg_n(reg, reg);
+          return reg;
+        }
       }
       case NODE_FUNCALL: {
         assert(node.children().size() == 2);

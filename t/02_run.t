@@ -746,3 +746,11 @@ say("i=$i\nGah!");
 --- expected
 i=5
 Gah!
+
+===
+--- code
+say(abs -2);
+say(abs 2);
+--- expected
+2
+2
