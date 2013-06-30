@@ -241,14 +241,6 @@ namespace kiji {
       assert(node_type() == NODE_TYPE_CHILDREN);
       this->body_.children->push_back(child);
     }
-    void negate() {
-      assert(node_type() != NODE_TYPE_CHILDREN);
-      if (this->type_ == NODE_INT) {
-        this->body_.iv = - this->body_.iv;
-      } else {
-        this->body_.nv = - this->body_.nv;
-      }
-    }
     NODE_TYPE type() const { return type_; }
     bool is_undefined() const { return type_==NODE_UNDEF; }
     const std::string pv() const {

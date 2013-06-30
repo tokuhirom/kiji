@@ -68,6 +68,7 @@ my @types = qw(
     NODE_CLASS
     NODE_METHOD
     NODE_UNARY_PLUS
+    NODE_UNARY_MINUS
     NODE_IT_METHODCALL
     NODE_LAST
     NODE_NEXT
@@ -79,6 +80,7 @@ my @types = qw(
     NODE_UNARY_BITWISE_NEGATION
     NODE_BRSHIFT
     NODE_BLSHIFT
+    NODE_ABS
 );
 
 say qq!/* This file is generated from $0 */!;
