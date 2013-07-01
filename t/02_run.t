@@ -754,3 +754,9 @@ say(abs 2);
 --- expected
 2
 2
+
+===
+--- code
+1 and say 'ok 1';
+--- expected
+ok 1

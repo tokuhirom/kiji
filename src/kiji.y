@@ -87,7 +87,6 @@ statement =
             | funcdef - ';'*
             | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
             | b:normal_or_postfix_stmt { $$ = b; }
-            | e:funcall_stmt eat_terminator { $$=e; }
           )
 
 normal_or_postfix_stmt =
@@ -101,11 +100,6 @@ normal_or_postfix_stmt =
 last_stmt = 'last' { $$.set_children(kiji::NODE_LAST); }
 
 next_stmt = 'next' { $$.set_children(kiji::NODE_NEXT); }
-
-funcall_stmt =
-    i:ident ' '+ a:expr { $$.set(kiji::NODE_ARGS, a); a=$$; } (
-        - ',' - b:expr  { a.push_child(b); }
-    )* { $$.set(kiji::NODE_FUNCALL, i, a); }
 
 class_stmt = 'class' ws i:ident - b:block { $$.set(kiji::NODE_CLASS, i, b); }
 
@@ -166,6 +160,15 @@ paren_args = '(' - a:expr - ')' {
     }
     | '(' - ')' { $$.set_children(kiji::NODE_ARGS); }
 
+bare_args = a:expr {
+        if (a.type() == kiji::NODE_LIST) {
+            $$ = a;
+            $$.change_type(kiji::NODE_ARGS);
+        } else {
+            $$.set(kiji::NODE_ARGS, a);
+        }
+    }
+
 expr = sequencer_expr
 
 # TODO
@@ -187,7 +190,7 @@ list_prefix_expr =
     | comma_operator_expr
 
 
-comma_operator_expr = a:loose_unary_expr { $$=a; } ( ',' b:loose_unary_expr {
+comma_operator_expr = a:loose_unary_expr { $$=a; } ( - ',' - b:loose_unary_expr {
         if (a.type()==kiji::NODE_LIST) {
             a.push_child(b);
             $$=a;
@@ -198,8 +201,13 @@ comma_operator_expr = a:loose_unary_expr { $$=a; } ( ',' b:loose_unary_expr {
     } )*
 
 loose_unary_expr =
-    'not' - f1:conditional_expr { $$.set(kiji::NODE_NOT, f1); }
-    | f1:conditional_expr { $$=f1 }
+    'not' - f1:item_assignment_expr { $$.set(kiji::NODE_NOT, f1); }
+    | f1:item_assignment_expr { $$=f1 }
+
+item_assignment_expr =
+    a:conditional_expr (
+        '=>' b:conditional_expr { $$.set(kiji::NODE_PAIR, a, b); a=$$; }
+    )* { $$=a; }
 
 conditional_expr = e1:tight_or - '??' - e2:tight_or - '!!' - e3:tight_or { $$.set(kiji::NODE_CONDITIONAL, e1, e2, e3); }
                 | tight_or
@@ -245,6 +253,7 @@ funcall =
 #  L  Named unary       temp let
 named_unary_expr =
     'abs' ws+ a:junctive_or_expr { $$.set(kiji::NODE_ABS, a); }
+    | i:ident ws+ a:bare_args { $$.set(kiji::NODE_FUNCALL, i, a); }
     | junctive_or_expr
 
 junctive_or_expr =
@@ -385,7 +394,7 @@ hash = '{' -
     p1:pair { $$.set(kiji::NODE_HASH, p1); p1=$$; } ( -  ',' - p2:pair { p1.push_child(p2); $$=p1; } )*
     - '}' { $$=p1; }
 
-pair = k:hash_key - '=>' - v:expr { $$.set(kiji::NODE_PAIR, k, v); }
+pair = k:hash_key - '=>' - v:loose_unary_expr { $$.set(kiji::NODE_PAIR, k, v); }
 
 hash_key =
     < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
