@@ -562,13 +562,28 @@ say(8 || 0);
 8
 
 ===
+--- SKIP
+--- code
+say(0 ^^ 0);
+say(0 ^^ 5);
+say(4 ^^ 5);
+say(3 ^^ 2);
+say(8 ^^ 0);
+--- expected
+0
+5
+Nil
+Nil
+8
+
+===
 --- code
 0 or say(3);
 1 or say(4);
 0 and say(5);
 1 and say(6);
 --- expected
-4
+3
 6
 
 === ** is weaken than *
@@ -760,3 +775,11 @@ say(abs 2);
 1 and say 'ok 1';
 --- expected
 ok 1
+
+===
+--- code
+0 ^^ say 'ok 6';
+0 xor say 'ok 7';
+--- expected
+ok 6
+ok 7

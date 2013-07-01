@@ -176,7 +176,8 @@ sequencer_expr = loose_or_expr
 
 loose_or_expr =
     f1:loose_and_expr (
-        - 'or' - f2:loose_and_expr { $$.set(kiji::NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        - 'or' - f2:loose_and_expr { $$.set(kiji::NODE_LOGICAL_OR, f1, f2); f1=$$; }
+        | - 'xor' - f2:loose_and_expr { $$.set(kiji::NODE_LOGICAL_XOR, f1, f2); f1=$$; }
     )* { $$=f1; }
 
 loose_and_expr =
@@ -214,6 +215,7 @@ conditional_expr = e1:tight_or - '??' - e2:tight_or - '!!' - e3:tight_or { $$.se
 
 tight_or = f1:tight_and (
         - '||' - f2:tight_and { $$.set(kiji::NODE_LOGICAL_OR, f1, f2); f1 = $$; }
+        | - '^^' - f2:tight_and { $$.set(kiji::NODE_LOGICAL_XOR, f1, f2); f1 = $$; }
     )* { $$ = f1; }
 
 tight_and = f1:cmp_expr (

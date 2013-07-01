@@ -1486,6 +1486,52 @@ namespace kiji {
         }
         return hash;
       }
+      case NODE_LOGICAL_XOR: { // '^^'
+        //   calc_arg1
+        //   calc_arg2
+        //   if_o arg1, label_a1_true
+        //   # arg1 is false.
+        //   unless_o arg2, label_both_false
+        //   # arg1=false, arg2=true
+        //   set dst_reg, arg2
+        //   goto label_end
+        // label_both_false:
+        //   null dst_reg
+        //   goto label_end
+        // label_a1_true:
+        //   if_o arg2, label_both_true
+        //   set dst_reg, arg1
+        //   goto label_end
+        // label_both_true:
+        //   set dst_reg, arg1
+        //   goto label_end
+        // label_end:
+        auto label_both_false = label_unsolved();
+        auto label_a1_true    = label_unsolved();
+        auto label_both_true  = label_unsolved();
+        auto label_end        = label_unsolved();
+
+        auto dst_reg = reg_obj();
+
+          auto arg1 = to_o(do_compile(node.children()[0]));
+          auto arg2 = to_o(do_compile(node.children()[1]));
+          if_any(arg1, label_a1_true);
+          unless_any(arg2, label_both_false);
+          assembler().set(dst_reg, arg2);
+          goto_(label_end);
+        label_both_false.put();
+          assembler().set(dst_reg, arg1);
+          goto_(label_end);
+        label_a1_true.put(); // a1:true, a2:unknown
+          if_any(arg2, label_both_true);
+          assembler().set(dst_reg, arg1);
+          goto_(label_end);
+        label_both_true.put();
+          assembler().null(dst_reg);
+          goto_(label_end);
+        label_end.put();
+        return dst_reg;
+      }
       case NODE_LOGICAL_OR: { // '||'
         //   calc_arg1
         //   if_o arg1, label_a1
