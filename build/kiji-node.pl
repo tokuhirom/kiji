@@ -82,6 +82,7 @@ my @types = qw(
     NODE_BRSHIFT
     NODE_BLSHIFT
     NODE_ABS
+    NODE_CHAIN
 );
 
 say qq!/* This file is generated from $0 */!;

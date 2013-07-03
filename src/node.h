@@ -251,6 +251,26 @@ namespace kiji {
       return nqpc_node_type2name(this->type());
     }
 
+    bool is_chained() const {
+      switch (type_) {
+      case NODE_STREQ:
+      case NODE_STRNE:
+      case NODE_STRGT:
+      case NODE_STRGE:
+      case NODE_STRLT:
+      case NODE_STRLE:
+      case NODE_EQ:
+      case NODE_NE:
+      case NODE_LT:
+      case NODE_LE:
+      case NODE_GT:
+      case NODE_GE:
+        return true;
+      default:
+        return false;
+      }
+    }
+
     void dump_json(unsigned int depth) const {
       printf("{\n");
       indent(depth+1);

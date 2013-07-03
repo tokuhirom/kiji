@@ -162,7 +162,7 @@ __END__
 ===
 --- code: 3==4
 --- expected
-(statements (eq (int 3) (int 4)))
+(statements (chain (int 3) (eq (int 4))))
 
 ===
 --- code: say()

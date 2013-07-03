@@ -1415,24 +1415,6 @@ namespace kiji {
       case NODE_BIN_XOR: {
         return this->binary_binop(node, MVM_OP_bxor_i);
       }
-      case NODE_EQ: {
-        return this->numeric_cmp_binop(node, MVM_OP_eq_i, MVM_OP_eq_n);
-      }
-      case NODE_NE: {
-        return this->numeric_cmp_binop(node, MVM_OP_ne_i, MVM_OP_ne_n);
-      }
-      case NODE_LT: {
-        return this->numeric_cmp_binop(node, MVM_OP_lt_i, MVM_OP_lt_n);
-      }
-      case NODE_LE: {
-        return this->numeric_cmp_binop(node, MVM_OP_le_i, MVM_OP_le_n);
-      }
-      case NODE_GT: {
-        return this->numeric_cmp_binop(node, MVM_OP_gt_i, MVM_OP_gt_n);
-      }
-      case NODE_GE: {
-        return this->numeric_cmp_binop(node, MVM_OP_ge_i, MVM_OP_ge_n);
-      }
       case NODE_MUL: {
         return this->numeric_binop(node, MVM_OP_mul_i, MVM_OP_mul_n);
       }
@@ -1451,18 +1433,6 @@ namespace kiji {
       case NODE_POW: {
         return this->numeric_binop(node, MVM_OP_pow_i, MVM_OP_pow_n);
       }
-      case NODE_STREQ:
-        return this->str_binop(node, MVM_OP_eq_s);
-      case NODE_STRNE:
-        return this->str_binop(node, MVM_OP_ne_s);
-      case NODE_STRGT:
-        return this->str_binop(node, MVM_OP_gt_s);
-      case NODE_STRGE:
-        return this->str_binop(node, MVM_OP_ge_s);
-      case NODE_STRLT:
-        return this->str_binop(node, MVM_OP_lt_s);
-      case NODE_STRLE:
-        return this->str_binop(node, MVM_OP_le_s);
       case NODE_NOP:
         return -1;
       case NODE_ATKEY: {
@@ -1592,6 +1562,12 @@ namespace kiji {
           return reg;
         }
       }
+      case NODE_CHAIN:
+        if (node.children().size()==1) {
+          return do_compile(node.children()[0]);
+        } else {
+          return this->compile_chained_comparisions(node);
+        }
       case NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const kiji::Node &ident = node.children()[0];
@@ -1847,36 +1823,6 @@ namespace kiji {
         break;
       }
     }
-    int numeric_cmp_binop(const kiji::Node& node, uint16_t op_i, uint16_t op_n) {
-        assert(node.children().size() == 2);
-
-        int reg_num1 = do_compile(node.children()[0]);
-        int reg_num_dst = reg_int64();
-        if (get_local_type(reg_num1) == MVM_reg_int64) {
-          int reg_num2 = this->to_i(do_compile(node.children()[1]));
-          assert(get_local_type(reg_num1) == MVM_reg_int64);
-          assert(get_local_type(reg_num2) == MVM_reg_int64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
-          return reg_num_dst;
-        } else if (get_local_type(reg_num1) == MVM_reg_num64) {
-          int reg_num2 = this->to_n(do_compile(node.children()[1]));
-          assert(get_local_type(reg_num2) == MVM_reg_num64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
-          return reg_num_dst;
-        } else if (get_local_type(reg_num1) == MVM_reg_obj) {
-          // TODO should I use intify instead if the object is int?
-          int dst_num = reg_num64();
-          assembler().op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
-
-          int reg_num2 = this->to_n(do_compile(node.children()[1]));
-          assert(get_local_type(reg_num2) == MVM_reg_num64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
-          return reg_num_dst;
-        } else {
-          // NOT IMPLEMENTED
-          abort();
-        }
-    }
     int str_binop(const kiji::Node& node, uint16_t op) {
         assert(node.children().size() == 2);
 
@@ -1977,6 +1923,83 @@ namespace kiji {
         assembler().null(dst_reg);
       } else {
         assembler().set(dst_reg, to_o(reg));
+      }
+    }
+    // Compile chained comparisions like `1 < $n < 3`.
+    // TODO: optimize simple case like `1 < $n`
+    uint16_t compile_chained_comparisions(const Node & node) {
+      auto lhs = do_compile(node.children()[0]);
+      auto dst_reg = reg_int64();
+      auto label_end = label_unsolved();
+      auto label_false = label_unsolved();
+      for (auto iter=node.children().begin()+1; iter!=node.children().end(); ++iter) {
+        auto rhs = do_compile(iter->children()[0]);
+        // result will store to lhs.
+        uint16_t ret = do_compare(iter->type(), lhs, rhs);
+        unless_any(ret, label_false);
+        lhs = rhs;
+      }
+      assembler().const_i64(dst_reg, 1);
+      goto_(label_end);
+    label_false.put();
+      assembler().const_i64(dst_reg, 0);
+      // goto_(label_end());
+    label_end.put();
+      return dst_reg;
+    }
+    int num_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n) {
+        int reg_num_dst = reg_int64();
+        if (get_local_type(lhs) == MVM_reg_int64) {
+          assert(get_local_type(lhs) == MVM_reg_int64);
+          // assert(get_local_type(rhs) == MVM_reg_int64);
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, lhs, to_i(rhs));
+          return reg_num_dst;
+        } else if (get_local_type(lhs) == MVM_reg_num64) {
+          assert(get_local_type(rhs) == MVM_reg_num64);
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, lhs, rhs);
+          return reg_num_dst;
+        } else if (get_local_type(lhs) == MVM_reg_obj) {
+          // TODO should I use intify instead if the object is int?
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, to_n(lhs), to_n(rhs));
+          return reg_num_dst;
+        } else {
+          // NOT IMPLEMENTED
+          abort();
+        }
+    }
+    int str_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op) {
+        int reg_num_dst = reg_int64();
+        assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, to_s(lhs), to_s(rhs));
+        return reg_num_dst;
+    }
+    uint16_t do_compare(NODE_TYPE type, uint16_t lhs, uint16_t rhs) {
+      switch (type) {
+      case NODE_STREQ:
+        return this->str_cmp_binop(lhs, rhs, MVM_OP_eq_s);
+      case NODE_STRNE:
+        return this->str_cmp_binop(lhs, rhs, MVM_OP_ne_s);
+      case NODE_STRGT:
+        return this->str_cmp_binop(lhs, rhs, MVM_OP_gt_s);
+      case NODE_STRGE:
+        return this->str_cmp_binop(lhs, rhs, MVM_OP_ge_s);
+      case NODE_STRLT:
+        return this->str_cmp_binop(lhs, rhs, MVM_OP_lt_s);
+      case NODE_STRLE:
+        return this->str_cmp_binop(lhs, rhs, MVM_OP_le_s);
+      case NODE_EQ:
+        return this->num_cmp_binop(lhs, rhs, MVM_OP_eq_i, MVM_OP_eq_n);
+      case NODE_NE:
+        return this->num_cmp_binop(lhs, rhs, MVM_OP_ne_i, MVM_OP_ne_n);
+      case NODE_LT:
+        return this->num_cmp_binop(lhs, rhs, MVM_OP_lt_i, MVM_OP_lt_n);
+      case NODE_LE:
+        return this->num_cmp_binop(lhs, rhs, MVM_OP_le_i, MVM_OP_le_n);
+      case NODE_GT:
+        return this->num_cmp_binop(lhs, rhs, MVM_OP_gt_i, MVM_OP_gt_n);
+      case NODE_GE:
+        return this->num_cmp_binop(lhs, rhs, MVM_OP_ge_i, MVM_OP_ge_n);
+      default:
+        abort();
       }
     }
   public:
