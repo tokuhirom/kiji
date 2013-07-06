@@ -98,6 +98,7 @@ my @types = qw(
     NODE_INPLACE_CONCAT_S
     NODE_REPEAT_S
     NODE_INPLACE_REPEAT_S
+    NODE_UNARY_TILDE
 );
 
 say qq!/* This file is generated from $0 */!;

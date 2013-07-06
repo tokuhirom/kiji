@@ -763,6 +763,16 @@ namespace kiji {
     void push_handler(MVMFrameHandler *handler) {
       return cu_.push_handler(handler);
     }
+    void compile_array(uint16_t array_reg, const Node& node) {
+      if (node.type()==NODE_LIST) {
+        for (auto m:node.children()) {
+          compile_array(array_reg, m);
+        }
+      } else {
+        auto reg = this->box(do_compile(node));
+        assembler().push_o(array_reg, reg);
+      }
+    }
 
     class LoopGuard {
     private:
@@ -1411,8 +1421,7 @@ namespace kiji {
 
         // push elements
         for (auto n:node.children()) {
-          auto reg = this->box(do_compile(n));
-          assembler().push_o(array_reg, reg);
+          compile_array(array_reg, n);
         }
         return array_reg;
       }
@@ -1578,6 +1587,9 @@ namespace kiji {
       case NODE_INPLACE_REPEAT_S: { // x=
         return this->str_inplace(node, MVM_OP_repeat_s, MVM_reg_int64);
       }
+      case NODE_UNARY_TILDE: { // ~
+        return to_s(do_compile(node.children()[0]));
+      }
       case NODE_NOP:
         return -1;
       case NODE_ATKEY: {
@@ -1723,7 +1735,7 @@ namespace kiji {
           if (ident.pv() == "say") {
             int i=0;
             for (auto a:args.children()) {
-              uint16_t reg_num = stringify(do_compile(a));
+              uint16_t reg_num = to_s(do_compile(a));
               if (i==args.children().size()-1) {
                 assembler().say(reg_num);
               } else {

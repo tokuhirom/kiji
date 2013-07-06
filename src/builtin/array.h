@@ -255,6 +255,24 @@ namespace kiji {
     MVM_gc_root_temp_pop_n(tc, joiner ? 2 : 1);
   }
 
+  // Stringifies the elements of the list and joins them with spaces (same as .join(' ')).
+  static void Array_Str(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
+    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
+    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
+    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
+    MVM_args_proc_cleanup(tc, &arg_ctx);
+
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&self);
+
+    MVMString * joiner = MVM_string_ascii_decode(tc, tc->instance->VMString, (char*)" ", 1);
+
+    MVMString * result = MVM_string_join(tc, joiner, self);
+
+    MVM_args_set_result_str(tc, result, MVM_RETURN_CURRENT_FRAME);
+
+    MVM_gc_root_temp_pop_n(tc, 1);
+  }
+
   void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc) {
     ClassBuilder b(cu->hll_config->slurpy_array_type, tc);
     b.add_method("shift", strlen("shift"), Array_shift);
@@ -263,6 +281,7 @@ namespace kiji {
     b.add_method("unshift", strlen("unshift"), Array_unshift);
     b.add_method("elems", strlen("elems"), Array_elems);
     b.add_method("join", strlen("join"), Array_join);
+    b.add_method("Str", strlen("Str"), Array_Str);
   }
 
 };

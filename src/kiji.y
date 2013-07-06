@@ -358,6 +358,7 @@ symbolic_unary =
     | '-' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_MINUS, f1); }
     | '!' - f1:exponentiation_expr { $$.set(kiji::NODE_NOT, f1); }
     | '+^' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_BITWISE_NEGATION, f1); }
+    | '~' - f1:exponentiation_expr { $$.set(kiji::NODE_UNARY_TILDE, f1); }
     | exponentiation_expr
 
 exponentiation_expr = 
