@@ -20,6 +20,7 @@ my @types = qw(
     NODE_MOD
     NODE_VARIABLE
     NODE_MY
+    NODE_OUR
     NODE_BIND
     NODE_STRING_CONCAT
     NODE_IF

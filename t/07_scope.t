@@ -27,3 +27,10 @@ say($j);
 4
 3
 4
+
+===
+--- code
+our $n=3;
+say($n);
+--- expected
+3
