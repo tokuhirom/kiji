@@ -1528,6 +1528,39 @@ namespace kiji {
       case NODE_POW: {
         return this->numeric_binop(node, MVM_OP_pow_i, MVM_OP_pow_n);
       }
+      case NODE_INPLACE_ADD: {
+        return this->numeric_inplace(node, MVM_OP_add_i, MVM_OP_add_n);
+      }
+      case NODE_INPLACE_SUB: {
+        return this->numeric_inplace(node, MVM_OP_sub_i, MVM_OP_sub_n);
+      }
+      case NODE_INPLACE_MUL: {
+        return this->numeric_inplace(node, MVM_OP_mul_i, MVM_OP_mul_n);
+      }
+      case NODE_INPLACE_DIV: {
+        return this->numeric_inplace(node, MVM_OP_div_i, MVM_OP_div_n);
+      }
+      case NODE_INPLACE_POW: { // **=
+        return this->numeric_inplace(node, MVM_OP_pow_i, MVM_OP_pow_n);
+      }
+      case NODE_INPLACE_MOD: { // %=
+        return this->numeric_inplace(node, MVM_OP_mod_i, MVM_OP_mod_n);
+      }
+      case NODE_INPLACE_BIN_OR: { // +|=
+        return this->binary_inplace(node, MVM_OP_bor_i);
+      }
+      case NODE_INPLACE_BIN_AND: { // +&=
+        return this->binary_inplace(node, MVM_OP_band_i);
+      }
+      case NODE_INPLACE_BIN_XOR: { // +^=
+        return this->binary_inplace(node, MVM_OP_bxor_i);
+      }
+      case NODE_INPLACE_BLSHIFT: { // +<=
+        return this->binary_inplace(node, MVM_OP_blshift_i);
+      }
+      case NODE_INPLACE_BRSHIFT: { // +>=
+        return this->binary_inplace(node, MVM_OP_brshift_i);
+      }
       case NODE_NOP:
         return -1;
       case NODE_ATKEY: {
@@ -1880,9 +1913,12 @@ namespace kiji {
         return reg_num;
       }
       case MVM_reg_obj: {
-        int dst_num = reg_int64();
-        assembler().unbox_i(dst_num, reg_num);
-        return dst_num;
+        int dst_num = reg_num64();
+        int dst_int = reg_int64();
+        // TODO: I need smrt_intify?
+        assembler().smrt_numify(dst_num, reg_num);
+        assembler().coerce_ni(dst_int, dst_num);
+        return dst_int;
       }
       default:
         // TODO
@@ -1935,6 +1971,28 @@ namespace kiji {
         auto dst_reg = reg_int64();
         assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
         return dst_reg;
+    }
+    int numeric_inplace(const kiji::Node& node, uint16_t op_i, uint16_t op_n) {
+        assert(node.children().size() == 2);
+        assert(node.children()[0].type() == NODE_VARIABLE);
+
+        auto lhs = get_variable(node.children()[0].pv());
+        auto rhs = do_compile(node.children()[1]);
+        auto tmp = reg_num64();
+        assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, tmp, to_n(lhs), to_n(rhs));
+        set_variable(node.children()[0].pv(), to_o(tmp));
+        return tmp;
+    }
+    int binary_inplace(const kiji::Node& node, uint16_t op) {
+        assert(node.children().size() == 2);
+        assert(node.children()[0].type() == NODE_VARIABLE);
+
+        auto lhs = get_variable(node.children()[0].pv());
+        auto rhs = do_compile(node.children()[1]);
+        auto tmp = reg_int64();
+        assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op, tmp, to_i(lhs), to_i(rhs));
+        set_variable(node.children()[0].pv(), to_o(tmp));
+        return tmp;
     }
     int numeric_binop(const kiji::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);

@@ -207,7 +207,20 @@ loose_unary_expr =
 
 item_assignment_expr =
     a:conditional_expr (
-        '=>' b:conditional_expr { $$.set(kiji::NODE_PAIR, a, b); a=$$; }
+        - (
+              '=>'  - b:conditional_expr { $$.set(kiji::NODE_PAIR,            a, b); a=$$; }
+            | '+='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_ADD,     a, b); a=$$; }
+            | '-='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_SUB,     a, b); a=$$; }
+            | '*='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_MUL,     a, b); a=$$; }
+            | '/='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_DIV,     a, b); a=$$; }
+            | '%='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_MOD,     a, b); a=$$; }
+            | '**=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_POW,     a, b); a=$$; }
+            | '+|=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_OR,  a, b); a=$$; }
+            | '+&=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_AND, a, b); a=$$; }
+            | '+^=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_XOR, a, b); a=$$; }
+            | '+<=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BLSHIFT, a, b); a=$$; }
+            | '+>=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BRSHIFT, a, b); a=$$; }
+        )
     )* { $$=a; }
 
 conditional_expr = e1:tight_or - '??' - e2:tight_or - '!!' - e3:tight_or { $$.set(kiji::NODE_CONDITIONAL, e1, e2, e3); }
@@ -456,7 +469,7 @@ variable = scalar | array_var
 
 array_var = < '@' [a-zA-Z_] [a-zA-Z0-9]* > { $$.set_variable(yytext, yyleng); }
 
-scalar = < '$' [a-zA-Z_] [a-zA-Z0-9]* > { assert(yyleng > 0); $$.set_variable(yytext, yyleng); }
+scalar = < '$' [a-zA-Z_] [a-zA-Z0-9_]* > { assert(yyleng > 0); $$.set_variable(yytext, yyleng); }
 
 #  <?MARKED('endstmt')>
 #  <?terminator>
