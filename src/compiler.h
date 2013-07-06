@@ -1391,6 +1391,17 @@ namespace kiji {
         );
         return dst_reg;
       }
+      case NODE_REPEAT_S: { // x operator
+        auto dst_reg = reg_str();
+        auto lhs = node.children()[0];
+        auto rhs = node.children()[1];
+        assembler().repeat_s(
+          dst_reg,
+          to_s(do_compile(lhs)),
+          to_i(do_compile(rhs))
+        );
+        return dst_reg;
+      }
       case NODE_LIST:
       case NODE_ARRAY: { // TODO: use 6model's container feature after released it.
         // create array
@@ -1560,6 +1571,12 @@ namespace kiji {
       }
       case NODE_INPLACE_BRSHIFT: { // +>=
         return this->binary_inplace(node, MVM_OP_brshift_i);
+      }
+      case NODE_INPLACE_CONCAT_S: { // ~=
+        return this->str_inplace(node, MVM_OP_concat_s, MVM_reg_str);
+      }
+      case NODE_INPLACE_REPEAT_S: { // x=
+        return this->str_inplace(node, MVM_OP_repeat_s, MVM_reg_int64);
       }
       case NODE_NOP:
         return -1;
@@ -1991,6 +2008,17 @@ namespace kiji {
         auto rhs = do_compile(node.children()[1]);
         auto tmp = reg_int64();
         assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op, tmp, to_i(lhs), to_i(rhs));
+        set_variable(node.children()[0].pv(), to_o(tmp));
+        return tmp;
+    }
+    int str_inplace(const kiji::Node& node, uint16_t op, uint16_t rhs_type) {
+        assert(node.children().size() == 2);
+        assert(node.children()[0].type() == NODE_VARIABLE);
+
+        auto lhs = get_variable(node.children()[0].pv());
+        auto rhs = do_compile(node.children()[1]);
+        auto tmp = reg_str();
+        assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, tmp, to_s(lhs), rhs_type == MVM_reg_int64 ? to_i(rhs) : to_s(rhs));
         set_variable(node.children()[0].pv(), to_o(tmp));
         return tmp;
     }

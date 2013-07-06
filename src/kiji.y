@@ -208,18 +208,20 @@ loose_unary_expr =
 item_assignment_expr =
     a:conditional_expr (
         - (
-              '=>'  - b:conditional_expr { $$.set(kiji::NODE_PAIR,            a, b); a=$$; }
-            | '+='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_ADD,     a, b); a=$$; }
-            | '-='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_SUB,     a, b); a=$$; }
-            | '*='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_MUL,     a, b); a=$$; }
-            | '/='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_DIV,     a, b); a=$$; }
-            | '%='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_MOD,     a, b); a=$$; }
-            | '**=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_POW,     a, b); a=$$; }
-            | '+|=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_OR,  a, b); a=$$; }
-            | '+&=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_AND, a, b); a=$$; }
-            | '+^=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_XOR, a, b); a=$$; }
-            | '+<=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BLSHIFT, a, b); a=$$; }
-            | '+>=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BRSHIFT, a, b); a=$$; }
+              '=>'  - b:conditional_expr { $$.set(kiji::NODE_PAIR,             a, b); a=$$; }
+            | '+='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_ADD,      a, b); a=$$; }
+            | '-='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_SUB,      a, b); a=$$; }
+            | '*='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_MUL,      a, b); a=$$; }
+            | '/='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_DIV,      a, b); a=$$; }
+            | '%='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_MOD,      a, b); a=$$; }
+            | '**=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_POW,      a, b); a=$$; }
+            | '+|=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_OR,   a, b); a=$$; }
+            | '+&=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_AND,  a, b); a=$$; }
+            | '+^=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BIN_XOR,  a, b); a=$$; }
+            | '+<=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BLSHIFT,  a, b); a=$$; }
+            | '+>=' - b:conditional_expr { $$.set(kiji::NODE_INPLACE_BRSHIFT,  a, b); a=$$; }
+            | '~='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_CONCAT_S, a, b); a=$$; }
+            | 'x='  - b:conditional_expr { $$.set(kiji::NODE_INPLACE_REPEAT_S, a, b); a=$$; }
         )
     )* { $$=a; }
 
@@ -283,8 +285,16 @@ concatenation_expr =
     replication_expr
 
 #  L  Replication       x xx
+# TODO: xx
 replication_expr =
-    additive_expr
+    l:additive_expr (
+        - (
+            'x' - r:additive_expr {
+                $$.set(kiji::NODE_REPEAT_S, l, r);
+                l=$$;
+            }
+        )
+    )* { $$=l; }
 
 additive_expr =
     l:multiplicative_expr (

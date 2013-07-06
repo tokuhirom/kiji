@@ -95,6 +95,9 @@ my @types = qw(
     NODE_INPLACE_BIN_XOR
     NODE_INPLACE_BLSHIFT
     NODE_INPLACE_BRSHIFT
+    NODE_INPLACE_CONCAT_S
+    NODE_REPEAT_S
+    NODE_INPLACE_REPEAT_S
 );
 
 say qq!/* This file is generated from $0 */!;
