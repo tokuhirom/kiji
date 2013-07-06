@@ -2093,7 +2093,9 @@ namespace kiji {
       {
         auto lex = push_lexical("$?PACKAGE", MVM_reg_obj);
         auto package = reg_obj();
-        assembler().hllhash(package);
+        auto hash_type = reg_obj();
+        assembler().hllhash(hash_type);
+        assembler().create(package, hash_type);
         assembler().bindlex(lex, 0, package);
       }
 
