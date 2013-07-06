@@ -251,7 +251,7 @@ namespace kiji {
         ++outer;
       }
       // TODO I should use MVM_panic instead.
-      printf("Unknown lexical variable: %s\n", name_cc.c_str());
+      printf("Unknown lexical variable in find_variable_by_name: %s\n", name_cc.c_str());
       exit(0);
     }
 
@@ -271,7 +271,7 @@ namespace kiji {
         f = f->outer;
         ++outer;
       }
-      printf("Unknown lexical variable: %s\n", name_cc.c_str());
+      printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
       exit(0);
     }
   };
@@ -453,7 +453,7 @@ namespace kiji {
       }
       frames_.push_back(frame);
       used_frames_.push_back(frames_.back());
-      return frames_.size()-1;
+      return used_frames_.size()-1;
     }
     void pop_frame() {
       frames_.pop_back();
@@ -574,6 +574,7 @@ namespace kiji {
   private:
     // Interpreter &interp_;
     CompUnit & cu_;
+    int frame_no_;
 
     class Label {
     private:
@@ -688,14 +689,37 @@ namespace kiji {
         return reg;
       }
     }
-    void set_variable(const std::string &name, uint16_t reg) {
-      int outer = 0;
-      auto lex_no = find_lexical_by_name(name, outer);
-      assembler().bindlex(
-        lex_no,
-        outer,
-        reg
-      );
+    void set_variable(const std::string &name, uint16_t val_reg) {
+      int lex_no = -1;
+      int outer = -1;
+      variable_type_t vartype = cu_.find_variable_by_name(name, lex_no, outer);
+      if (vartype==VARIABLE_TYPE_MY) {
+        assembler().bindlex(
+          lex_no,
+          outer,
+          val_reg
+        );
+      } else {
+        auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+        auto reg = reg_obj();
+        auto varname = push_string(name);
+        auto varname_s = reg_str();
+        assembler().getlex(
+          reg,
+          lex_no,
+          outer // outer frame
+        );
+        assembler().const_s(
+          varname_s,
+          varname
+        );
+        // TODO getwho
+        assembler().bindkey_o(
+          reg,
+          varname_s,
+          val_reg
+        );
+      }
     }
 
     // This reg returns register number contains true value.
@@ -726,7 +750,9 @@ namespace kiji {
       cu_.push_pkg_var(name);
     }
     int push_frame(const std::string & name) {
-      return cu_.push_frame(name);
+      std::ostringstream oss;
+      oss << name << frame_no_++;
+      return cu_.push_frame(oss.str());
     }
     void pop_frame() {
       cu_.pop_frame();
@@ -1095,16 +1121,10 @@ namespace kiji {
           );
           return val;
         } else if (lhs.type() == NODE_VARIABLE) {
-          int outer;
-          auto lex_no = find_lexical_by_name(lhs.pv(), outer);
-          int val    = this->box(do_compile(rhs));
-          assembler().bindlex(
-            lex_no, // lex number
-            outer,      // frame outer count
-            val
-          );
-          return val;
           // $var := foo;
+          int val    = this->box(do_compile(rhs));
+          set_variable(lhs.pv(), val);
+          return val;
         } else {
           printf("You can't bind value to %s, currently.\n", lhs.type_name());
           abort();
@@ -1237,6 +1257,19 @@ namespace kiji {
         label_end.put();
         loop.put_last();
 
+        return UNKNOWN_REG;
+      }
+      case NODE_OUR: {
+        if (node.children().size() != 1) {
+          printf("NOT IMPLEMENTED\n");
+          abort();
+        }
+        auto n = node.children()[0];
+        if (n.type() != NODE_VARIABLE) {
+          printf("This is variable: %s\n", n.type_name());
+          exit(0);
+        }
+        push_pkg_var(n.pv());
         return UNKNOWN_REG;
       }
       case NODE_MY: {
@@ -2064,7 +2097,7 @@ namespace kiji {
       }
     }
   public:
-    Compiler(CompUnit & cu): cu_(cu) {
+    Compiler(CompUnit & cu): cu_(cu), frame_no_(0) {
       cu_.initialize();
     }
     void compile(kiji::Node &node) {
