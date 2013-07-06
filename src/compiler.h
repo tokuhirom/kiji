@@ -17,6 +17,11 @@ namespace kiji {
   void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Int(MVMCompUnit* cu, MVMThreadContext*tc);
 
+  enum variable_type_t {
+    VARIABLE_TYPE_MY,
+    VARIABLE_TYPE_OUR
+  };
+
   bool parse(std::istream *is, kiji::Node &root) {
     bool retval = true;
     GREG g;
@@ -103,11 +108,13 @@ namespace kiji {
   class Frame {
   private:
     MVMStaticFrame frame_; // frame itself
+    std::shared_ptr<Frame> outer_;
     MVMThreadContext *tc_;
     std::string *name_; // TODO no pointer
 
     std::vector<MVMuint16> local_types_;
     std::vector<MVMuint16> lexical_types_;
+    std::vector<std::string> package_variables_;
 
     std::vector<MVMFrameHandler*> handlers_;
 
@@ -208,8 +215,44 @@ namespace kiji {
       return idx;
     }
 
+    // TODO Throw exception at this code: `our $n; my $n`
+    void push_pkg_var(const std::string &name_cc) {
+      package_variables_.push_back(name_cc);
+    }
+
     void set_outer(const std::shared_ptr<Frame>&frame) {
       frame_.outer = &(frame->frame_);
+      outer_ = frame;
+    }
+
+    variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+      Frame* f = this;
+      outer = 0;
+      while (f) {
+        // check lexical variables
+        MVMLexicalHashEntry *lexical_names = f->frame_.lexical_names;
+        MVMLexicalHashEntry *entry;
+        MVM_HASH_GET(tc_, lexical_names, name, entry);
+
+        if (entry) {
+          lex_no = entry->value;
+          return VARIABLE_TYPE_MY;
+        }
+
+        // check package variables
+        for (auto n: f->package_variables_) {
+          if (n==name_cc) {
+            return VARIABLE_TYPE_OUR;
+          }
+        }
+
+        f = &(*(f->outer_));
+        ++outer;
+      }
+      // TODO I should use MVM_panic instead.
+      printf("Unknown lexical variable in find_variable_by_name: %s\n", name_cc.c_str());
+      exit(0);
     }
 
     // lexical variable number by name
@@ -228,7 +271,7 @@ namespace kiji {
         f = f->outer;
         ++outer;
       }
-      printf("Unknown lexical variable: %s\n", name_cc.c_str());
+      printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
       exit(0);
     }
   };
@@ -388,10 +431,16 @@ namespace kiji {
     int push_lexical(const std::string name, MVMuint16 type) {
       return frames_.back()->push_lexical(name, type);
     }
+    void push_pkg_var(const std::string name) {
+      frames_.back()->push_pkg_var(name);
+    }
 
     // lexical variable number by name
     int find_lexical_by_name(const std::string &name_cc, int &outer) {
       return frames_.back()->find_lexical_by_name(name_cc, outer);
+    }
+    variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
+      return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
     }
 
     void push_handler(MVMFrameHandler *handler) {
@@ -404,7 +453,7 @@ namespace kiji {
       }
       frames_.push_back(frame);
       used_frames_.push_back(frames_.back());
-      return frames_.size()-1;
+      return used_frames_.size()-1;
     }
     void pop_frame() {
       frames_.pop_back();
@@ -525,6 +574,7 @@ namespace kiji {
   private:
     // Interpreter &interp_;
     CompUnit & cu_;
+    int frame_no_;
 
     class Label {
     private:
@@ -604,6 +654,74 @@ namespace kiji {
     int reg_int64() { return cu_.push_local_type(MVM_reg_int64); }
     int reg_num64() { return cu_.push_local_type(MVM_reg_num64); }
 
+    uint16_t get_variable(const std::string &name) {
+      int outer = 0;
+      int lex_no = 0;
+      variable_type_t vartype = cu_.find_variable_by_name(name, lex_no, outer);
+      if (vartype==VARIABLE_TYPE_MY) {
+        auto reg_no = reg_obj();
+        assembler().getlex(
+          reg_no,
+          lex_no,
+          outer // outer frame
+        );
+        return reg_no;
+      } else {
+        auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+        auto reg = reg_obj();
+        auto varname = push_string(name);
+        auto varname_s = reg_str();
+        assembler().getlex(
+          reg,
+          lex_no,
+          outer // outer frame
+        );
+        assembler().const_s(
+          varname_s,
+          varname
+        );
+        // TODO getwho
+        assembler().atkey_o(
+          reg,
+          reg,
+          varname_s
+        );
+        return reg;
+      }
+    }
+    void set_variable(const std::string &name, uint16_t val_reg) {
+      int lex_no = -1;
+      int outer = -1;
+      variable_type_t vartype = cu_.find_variable_by_name(name, lex_no, outer);
+      if (vartype==VARIABLE_TYPE_MY) {
+        assembler().bindlex(
+          lex_no,
+          outer,
+          val_reg
+        );
+      } else {
+        auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+        auto reg = reg_obj();
+        auto varname = push_string(name);
+        auto varname_s = reg_str();
+        assembler().getlex(
+          reg,
+          lex_no,
+          outer // outer frame
+        );
+        assembler().const_s(
+          varname_s,
+          varname
+        );
+        // TODO getwho
+        assembler().bindkey_o(
+          reg,
+          varname_s,
+          val_reg
+        );
+      }
+    }
+
     // This reg returns register number contains true value.
     int const_true() {
       auto reg = reg_int64();
@@ -628,8 +746,13 @@ namespace kiji {
     int push_lexical(const std::string &name, MVMuint16 type) {
       return cu_.push_lexical(name, type);
     }
+    void push_pkg_var(const std::string &name) {
+      cu_.push_pkg_var(name);
+    }
     int push_frame(const std::string & name) {
-      return cu_.push_frame(name);
+      std::ostringstream oss;
+      oss << name << frame_no_++;
+      return cu_.push_frame(oss.str());
     }
     void pop_frame() {
       cu_.pop_frame();
@@ -702,23 +825,10 @@ namespace kiji {
         if (node.children()[0].type() != kiji::NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = reg_obj();
-        int outer = 0;
-        auto lex_no = find_lexical_by_name(node.children()[0].pv(), outer);
-        assembler().getlex(
-          reg_no,
-          lex_no,
-          outer // outer frame
-        );
+        auto reg_no = get_variable(node.children()[0].pv());
         auto i_tmp = to_i(reg_no);
-        assembler().dec_i(
-          i_tmp
-        );
-        assembler().bindlex(
-          lex_no,
-          outer,
-          to_o(i_tmp)
-        );
+        assembler().dec_i(i_tmp);
+        set_variable(node.children()[0].pv(), to_o(i_tmp));
         return reg_no;
       }
       case NODE_POSTINC: { // $i++
@@ -726,23 +836,11 @@ namespace kiji {
         if (node.children()[0].type() != kiji::NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = reg_obj();
-        int outer = 0;
-        auto lex_no = find_lexical_by_name(node.children()[0].pv(), outer);
-        assembler().getlex(
-          reg_no,
-          lex_no,
-          outer // outer frame
-        );
+        auto reg_no = get_variable(node.children()[0].pv());
         auto i_tmp = to_i(reg_no);
-        assembler().inc_i(
-          i_tmp
-        );
-        assembler().bindlex(
-          lex_no,
-          outer,
-          to_o(i_tmp)
-        );
+        assembler().inc_i(i_tmp);
+        auto dst_reg = to_o(i_tmp);
+        set_variable(node.children()[0].pv(), dst_reg);
         return reg_no;
       }
       case NODE_PREINC: { // ++$i
@@ -750,24 +848,11 @@ namespace kiji {
         if (node.children()[0].type() != kiji::NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = reg_obj();
-        int outer = 0;
-        auto lex_no = find_lexical_by_name(node.children()[0].pv(), outer);
-        assembler().getlex(
-          reg_no,
-          lex_no,
-          outer // outer frame
-        );
+        auto reg_no = get_variable(node.children()[0].pv());
         auto i_tmp = to_i(reg_no);
-        assembler().inc_i(
-          i_tmp
-        );
+        assembler().inc_i(i_tmp);
         auto dst_reg = to_o(i_tmp);
-        assembler().bindlex(
-          lex_no,
-          outer,
-          dst_reg
-        );
+        set_variable(node.children()[0].pv(), dst_reg);
         return dst_reg;
       }
       case NODE_PREDEC: { // --$i
@@ -775,24 +860,11 @@ namespace kiji {
         if (node.children()[0].type() != kiji::NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = reg_obj();
-        int outer = 0;
-        auto lex_no = find_lexical_by_name(node.children()[0].pv(), outer);
-        assembler().getlex(
-          reg_no,
-          lex_no,
-          outer // outer frame
-        );
+        auto reg_no = get_variable(node.children()[0].pv());
         auto i_tmp = to_i(reg_no);
-        assembler().dec_i(
-          i_tmp
-        );
+        assembler().dec_i(i_tmp);
         auto dst_reg = to_o(i_tmp);
-        assembler().bindlex(
-          lex_no,
-          outer,
-          dst_reg
-        );
+        set_variable(node.children()[0].pv(), dst_reg);
         return dst_reg;
       }
       case NODE_UNARY_BITWISE_NEGATION: { // +^1
@@ -1024,17 +1096,35 @@ namespace kiji {
             val     // value
           );
           return val;
-        } else if (lhs.type() == NODE_VARIABLE) {
-          int outer;
-          auto lex_no = find_lexical_by_name(lhs.pv(), outer);
-          int val    = this->box(do_compile(rhs));
-          assembler().bindlex(
-            lex_no, // lex number
-            outer,      // frame outer count
+        } else if (lhs.type() == NODE_OUR) {
+          // our $var := foo;
+          assert(lhs.children()[0].type() == NODE_VARIABLE);
+          push_pkg_var(lhs.children()[0].pv());
+          auto varname = push_string(lhs.children()[0].pv());
+          int val    = to_o(do_compile(rhs));
+          int outer = 0;
+          auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+          auto package = reg_obj();
+          assembler().getlex(
+            package,
+            lex_no,
+            outer // outer frame
+          );
+          // TODO getwho
+          auto varname_s = reg_str();
+          assembler().const_s(varname_s, varname);
+          // 0x0F    bindkey_o           r(obj) r(str) r(obj)
+          assembler().bindkey_o(
+            package,
+            varname_s,
             val
           );
           return val;
+        } else if (lhs.type() == NODE_VARIABLE) {
           // $var := foo;
+          int val    = this->box(do_compile(rhs));
+          set_variable(lhs.pv(), val);
+          return val;
         } else {
           printf("You can't bind value to %s, currently.\n", lhs.type_name());
           abort();
@@ -1116,15 +1206,7 @@ namespace kiji {
       }
       case NODE_VARIABLE: {
         // copy lexical variable to register
-        auto reg_no = reg_obj();
-        int outer = 0;
-        auto lex_no = find_lexical_by_name(node.pv(), outer);
-        assembler().getlex(
-          reg_no,
-          lex_no,
-          outer // outer frame
-        );
-        return reg_no;
+        return get_variable(node.pv());
       }
       case NODE_CLARGS: { // @*ARGS
         auto retval = reg_obj();
@@ -1175,6 +1257,19 @@ namespace kiji {
         label_end.put();
         loop.put_last();
 
+        return UNKNOWN_REG;
+      }
+      case NODE_OUR: {
+        if (node.children().size() != 1) {
+          printf("NOT IMPLEMENTED\n");
+          abort();
+        }
+        auto n = node.children()[0];
+        if (n.type() != NODE_VARIABLE) {
+          printf("This is variable: %s\n", n.type_name());
+          exit(0);
+        }
+        push_pkg_var(n.pv());
         return UNKNOWN_REG;
       }
       case NODE_MY: {
@@ -1955,8 +2050,7 @@ namespace kiji {
           assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, lhs, to_i(rhs));
           return reg_num_dst;
         } else if (get_local_type(lhs) == MVM_reg_num64) {
-          assert(get_local_type(rhs) == MVM_reg_num64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, lhs, rhs);
+          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, lhs, to_n(rhs));
           return reg_num_dst;
         } else if (get_local_type(lhs) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
@@ -2003,7 +2097,7 @@ namespace kiji {
       }
     }
   public:
-    Compiler(CompUnit & cu): cu_(cu) {
+    Compiler(CompUnit & cu): cu_(cu), frame_no_(0) {
       cu_.initialize();
     }
     void compile(kiji::Node &node) {
@@ -2025,6 +2119,18 @@ namespace kiji {
       assembler().prepargs(callsite_no);
       assembler().invoke_o( dest_reg, code);
       */
+
+      // bootstrap $?PACKAGE
+      // TODO I should wrap it to any object. And set WHO.
+      // $?PACKAGE.WHO<bar> should work.
+      {
+        auto lex = push_lexical("$?PACKAGE", MVM_reg_obj);
+        auto package = reg_obj();
+        auto hash_type = reg_obj();
+        assembler().hllhash(hash_type);
+        assembler().create(package, hash_type);
+        assembler().bindlex(lex, 0, package);
+      }
 
       do_compile(node);
 

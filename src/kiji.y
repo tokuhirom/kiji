@@ -85,7 +85,7 @@ statement =
             | method_stmt
             | die_stmt
             | funcdef - ';'*
-            | bl:block { $$.set(kiji::NODE_BLOCK, bl); }
+            | bl:block ';'* { $$.set(kiji::NODE_BLOCK, bl); }
             | b:normal_or_postfix_stmt { $$ = b; }
           )
 
@@ -254,6 +254,8 @@ funcall =
 #  L  Named unary       temp let
 named_unary_expr =
     'abs' ws+ a:junctive_or_expr { $$.set(kiji::NODE_ABS, a); }
+    | 'my' ws+ a:junctive_or_expr { $$.set(kiji::NODE_MY, a); }
+    | 'our' ws+ a:junctive_or_expr { $$.set(kiji::NODE_OUR, a); }
     | i:ident ws+ a:bare_args { $$.set(kiji::NODE_FUNCALL, i, a); }
     | junctive_or_expr
 
@@ -446,7 +448,9 @@ array =
     '[' e:expr ']' { $$=e; $$.change_type(kiji::NODE_ARRAY); }
     | '[' - ']' { $$.set_children(kiji::NODE_ARRAY); }
 
-my = 'my' ws v:variable { $$.set(kiji::NODE_MY, v); }
+my = 
+    'my' ws+ v:variable { $$.set(kiji::NODE_MY, v); }
+    | 'our' ws+ v:variable { $$.set(kiji::NODE_OUR, v); }
 
 variable = scalar | array_var
 

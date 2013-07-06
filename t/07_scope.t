@@ -27,3 +27,31 @@ say($j);
 4
 3
 4
+
+===
+--- code
+our $n=3;
+say($n);
+--- expected
+3
+
+===
+--- code
+our $n=3;
+$n=4;
+say($n);
+--- expected
+4
+
+===
+--- code
+our $x = 5; { my $x; }; { say 3; }
+--- expected
+3
+
+===
+--- code
+{ say("HO") }; { say("YO"); }
+--- expected
+HO
+YO
