@@ -87,6 +87,11 @@ statement =
             | funcdef - ';'*
             | bl:block ';'* { $$.set(kiji::NODE_BLOCK, bl); }
             | b:normal_or_postfix_stmt { $$ = b; }
+            | i:ident eat_terminator {
+                kiji::Node a;
+                a.set_children(kiji::NODE_ARGS);
+                $$.set(kiji::NODE_FUNCALL, i, a);
+            }
           )
 
 normal_or_postfix_stmt =
@@ -442,12 +447,18 @@ qw_list =
 # https://github.com/nddrylliog/greg/issues/12
 qw_item = < [a-zA-Z0-9_]+ > { $$.set_string(yytext, yyleng); }
 
+# TODO optimize
 funcdef =
     'sub' - i:ident - '(' - p:params? - ')' - b:block {
         if (p.is_undefined()) {
             p.set_children(kiji::NODE_PARAMS);
         }
         $$.set(kiji::NODE_FUNC, i, p, b);
+    }
+    | 'sub' - i:ident - b:block {
+        kiji::Node pp;
+        pp.set_children(kiji::NODE_PARAMS);
+        $$.set(kiji::NODE_FUNC, i, pp, b);
     }
 
 lambda =
