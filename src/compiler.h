@@ -2190,6 +2190,8 @@ namespace kiji {
         return this->num_cmp_binop(lhs, rhs, MVM_OP_gt_i, MVM_OP_gt_n);
       case NODE_GE:
         return this->num_cmp_binop(lhs, rhs, MVM_OP_ge_i, MVM_OP_ge_n);
+      case NODE_EQV:
+        return this->str_cmp_binop(lhs, rhs, MVM_OP_eq_s);
       default:
         abort();
       }

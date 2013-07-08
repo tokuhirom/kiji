@@ -24,6 +24,7 @@ my @types = qw(
     NODE_BIND
     NODE_STRING_CONCAT
     NODE_IF
+    NODE_EQV
     NODE_EQ
     NODE_NE
     NODE_LT

@@ -244,18 +244,19 @@ tight_and = f1:chaining_infix_expr (
 
 #  C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
 chaining_infix_expr = f1:methodcall_expr { $$.set(kiji::NODE_CHAIN, f1); f1=$$; } (
-          - '==' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_EQ, f2); f1.push_child(tmp); }
-        | - '!=' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_NE,    f2); f1.push_child(tmp); }
-        | - '<'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_LT,    f2);f1.push_child(tmp) ; }
-        | - '<=' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_LE,    f2);f1.push_child(tmp) ; }
-        | - '>'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_GT,    f2);f1.push_child(tmp) ; }
-        | - '>=' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_GE,    f2);f1.push_child(tmp) ; }
-        | - 'eq' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STREQ, f2);f1.push_child(tmp) ; }
-        | - 'ne' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRNE, f2);f1.push_child(tmp) ; }
-        | - 'gt' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRGT, f2);f1.push_child(tmp) ; }
-        | - 'ge' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRGE, f2);f1.push_child(tmp) ; }
-        | - 'lt' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRLT, f2); f1.push_child(tmp) ; }
-        | - 'le' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRLE, f2); f1.push_child(tmp) ; }
+          - '=='  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_EQ, f2);    f1.push_child(tmp); }
+        | - '!='  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_NE,    f2); f1.push_child(tmp); }
+        | - '<'   - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_LT,    f2); f1.push_child(tmp); }
+        | - '<='  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_LE,    f2); f1.push_child(tmp); }
+        | - '>'   - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_GT,    f2); f1.push_child(tmp); }
+        | - '>='  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_GE,    f2); f1.push_child(tmp); }
+        | - 'eqv' - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_EQV,   f2); f1.push_child(tmp); }
+        | - 'eq'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STREQ, f2); f1.push_child(tmp); }
+        | - 'ne'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRNE, f2); f1.push_child(tmp); }
+        | - 'gt'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRGT, f2); f1.push_child(tmp); }
+        | - 'ge'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRGE, f2); f1.push_child(tmp); }
+        | - 'lt'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRLT, f2); f1.push_child(tmp); }
+        | - 'le'  - f2:methodcall_expr { kiji::Node tmp; tmp.set(kiji::NODE_STRLE, f2); f1.push_child(tmp); }
     )* { if (f1.children().size()==1) { $$=f1.children()[0]; } else { $$=f1; } }
 
 methodcall_expr =
