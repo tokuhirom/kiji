@@ -1366,7 +1366,7 @@ namespace kiji {
           }
 
           elsif_poses.front().put();
-          elsif_poses.pop_back();
+          elsif_poses.pop_front();
           compile_statements(iter->children()[1], dst_reg);
           goto_(label_end);
         }
