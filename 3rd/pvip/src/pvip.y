@@ -552,11 +552,6 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* "'"
 
-#  <?MARKED('endstmt')>
-#  <?terminator>
-eat_terminator =
-    (';' -) | end-of-file
-
 comment= '#' [^\n]* end-of-line
 
 # white space
