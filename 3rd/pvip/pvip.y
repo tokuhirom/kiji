@@ -635,6 +635,10 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
     return root;
 }
 
+/*
+XXX Output error message to stderr is ugly.
+XXX We need to add APIs for getting error message.
+ */
 PVIPNode * PVIP_parse_fp(FILE *fp, int debug) {
     GREG g;
     YY_NAME(init)(&g);
