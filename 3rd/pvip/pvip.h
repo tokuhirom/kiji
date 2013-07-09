@@ -35,19 +35,25 @@ PVIPNode* PVIP_node_new_children(PVIP_node_type_t type);
 PVIPNode* PVIP_node_new_children1(PVIP_node_type_t type, PVIPNode* n1);
 PVIPNode* PVIP_node_new_children2(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2);
 PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2, PVIPNode *n3);
-PVIPNode * PVIP_node_new_int(PVIP_node_type_t type, int64_t n);
-PVIPNode * PVIP_node_new_intf(PVIP_node_type_t type, const char *str, size_t len, int base);
-PVIPNode * PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t len);
-void PVIP_node_destroy(PVIPNode *node);
+PVIPNode* PVIP_node_new_int(PVIP_node_type_t type, int64_t n);
+PVIPNode* PVIP_node_new_intf(PVIP_node_type_t type, const char *str, size_t len, int base);
+PVIPNode* PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t len);
+PVIPNode* PVIP_node_new_number(PVIP_node_type_t type, const char *str, size_t len);
+
 void PVIP_node_push_child(PVIPNode* node, PVIPNode* child);
-void PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf);
+
+void PVIP_node_destroy(PVIPNode *node);
+
 PVIPNode* PVIP_node_append_string(PVIPNode *node, const char* str, size_t len);
 PVIPNode* PVIP_node_append_string_from_hex(PVIPNode * node, const char *str, size_t len);
 PVIPNode* PVIP_node_append_string_from_oct(PVIPNode * node, const char *str, size_t len);
-PVIPNode* PVIP_node_new_number(PVIP_node_type_t type, const char *str, size_t len);
-void PVIP_node_change_type(PVIPNode *node, PVIP_node_type_t type);
-PVIP_category_t PVIP_node_category(PVIP_node_type_t type);
 PVIPNode* PVIP_node_append_string_variable(PVIPNode*node, PVIPNode*var);
+
+void PVIP_node_change_type(PVIPNode *node, PVIP_node_type_t type);
+
+PVIP_category_t PVIP_node_category(PVIP_node_type_t type);
+
+void PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf);
 void PVIP_node_dump_sexp(PVIPNode * node);
 
 /* string */
