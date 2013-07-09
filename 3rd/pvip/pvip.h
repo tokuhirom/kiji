@@ -46,5 +46,6 @@ int PVIP_str_eq_c_str(PVIPString *str, const char *buf, int len);
 
 /* parser */
 PVIPNode * PVIP_parse_string(const char *string, int len, int debug);
+PVIPNode * PVIP_parse_fp(FILE *fp, int debug);
 
 #endif /* PVIP_H_ */

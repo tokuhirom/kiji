@@ -92,7 +92,6 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
 #ifdef YY_DEBUG
     g.debug=debug;
 #endif
-printf("PARSE\n");
 
     g.data.line_number = 1;
     g.data.is_string   = 1;
@@ -148,8 +147,55 @@ printf("PARSE\n");
     return root;
 }
 
-PVIPNode * PVIP_parse_fh(const char *string, int len) {
-/* TODO */
-    return NULL;
+PVIPNode * PVIP_parse_fp(FILE *fp, int debug) {
+    GREG g;
+    YY_NAME(init)(&g);
+
+#ifdef YY_DEBUG
+    g.debug=debug;
+#endif
+
+    g.data.line_number = 1;
+    g.data.is_string   = 0;
+    g.data.fp = fp;
+
+    if (!YY_NAME(parse)(&g)) {
+      fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
+      if (g.text[0]) {
+        fprintf(stderr, "** near %s\n", g.text);
+      }
+      if (g.pos < g.limit || !feof(fp)) {
+        g.buf[g.limit]= '\0';
+        fprintf(stderr, " before text \"");
+        while (g.pos < g.limit) {
+          if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
+          fputc(g.buf[g.pos++], stderr);
+        }
+        if (g.pos == g.limit) {
+          int c;
+          while (EOF != (c= fgetc(fp)) && '\n' != c && '\r' != c)
+          fputc(c, stderr);
+        }
+        fputc('\"', stderr);
+      }
+      fprintf(stderr, "\n\n");
+      return NULL;
+    }
+    if (!feof(fp)) {
+      printf("Syntax error! Around:\n");
+      for (int i=0; !feof(fp) && i<24; i++) {
+        char ch = fgetc(fp);
+        if (ch != EOF) {
+          printf("%c", ch);
+        }
+      }
+      printf("\n");
+      exit(1);
+    }
+    free(g.data.str);
+    PVIPNode *root = g.data.root;
+    assert(g.data.root);
+    YY_NAME(deinit)(&g);
+    return root;
 }
 
