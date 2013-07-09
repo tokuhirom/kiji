@@ -8,11 +8,8 @@ pvip: libpvip.a main.c
 libpvip.a: gen.pvip.y.o pvip.h pvip_node.o gen.node.o gen.node.o
 	ar rsv libpvip.a gen.pvip.y.o pvip_node.o gen.node.o
 
-test: pvip-test
-	prove -v ./pvip-test
-
-pvip-test: gen.pvip.y.c pvip.h pvip_node.c gen.node.o libpvip.a test.c
-	gcc -L. -lpvip -Wall -g $(CFLAGS) -o pvip-test test.c
+test: pvip
+	prove -lr t
 
 .c.o:
 	cc $(CFLAGS) -c $<
@@ -24,7 +21,7 @@ gen.pvip.y.c: pvip.y pvip.h gen.node.c
 	../greg/greg -o gen.pvip.y.c pvip.y
 
 clean:
-	rm -f *.o gen.* pvip-test
+	rm -f *.o gen.* pvip
 
 .PHONY: all test
 
