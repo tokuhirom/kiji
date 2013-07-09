@@ -100,19 +100,6 @@ namespace kiji {
     }
     ~Node() { }
 
-    void flatten_children(std::vector<kiji::Node>& dst) const {
-      for (auto n: *(body_.children)) {
-        if (n.type_==NODE_LIST) {
-          printf("LIST!\n");
-          for (auto m: n.children()) {
-            m.flatten_children(dst);
-          }
-        } else {
-          dst.emplace_back(n);
-        }
-      }
-    }
-
     void change_type(NODE_TYPE type) {
       this->type_ = type;
     }
