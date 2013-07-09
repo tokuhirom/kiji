@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include "pvip.h"
 
 #ifndef MIN
@@ -186,7 +187,7 @@ void PVIP_string_concat(PVIPString *str, const char *src, size_t len) {
 
 void PVIP_string_concat_int(PVIPString *str, int64_t n) {
     char buf[1024];
-    int res = snprintf(buf, 1023, "%lld", n);
+    int res = snprintf(buf, 1023, "%" PRIi64, n);
     PVIP_string_concat(str, buf, res);
 }
 
@@ -231,7 +232,6 @@ static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
         int i=0;
         for (i=0; i<node->children.size; i++) {
             const char *name = PVIP_node_name(node->children.nodes[i]->type);
-            printf("%d %s\n", i, name);
             _PVIP_node_as_sexp(node->children.nodes[i], buf, indent+1);
             if (i!=node->children.size-1) {
                 PVIP_string_concat(buf, " ", 1);
