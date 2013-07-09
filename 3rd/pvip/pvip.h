@@ -62,7 +62,6 @@ void PVIP_string_destroy(PVIPString *str);
 void PVIP_string_concat(PVIPString *str, const char *src, size_t len);
 void PVIP_string_concat_int(PVIPString *str, int64_t n);
 void PVIP_string_say(PVIPString *str);
-int PVIP_str_eq_c_str(PVIPString *str, const char *buf, size_t len);
 
 /* parser */
 PVIPNode * PVIP_parse_string(const char *string, int len, int debug);

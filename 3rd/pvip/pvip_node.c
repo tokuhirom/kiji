@@ -212,15 +212,6 @@ void PVIP_string_say(PVIPString *str) {
     fwrite("\n", 1, 1, stdout);
 }
 
-/* Compare PVIPString with C sring.
- * It returns true if both strings are same value. */
-int PVIP_str_eq_c_str(PVIPString *str, const char *buf, size_t len) {
-    if (str->len != len) {
-        return 0;
-    }
-    return memcmp(str->buf, buf, len)==0;
-}
-
 static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
     PVIP_string_concat(buf, "(", 1);
     const char *name = PVIP_node_name(node->type);
