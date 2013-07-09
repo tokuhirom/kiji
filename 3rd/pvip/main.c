@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
 #include "pvip.h"
 
 int main(int argc, char **argv) {
@@ -14,7 +15,18 @@ int main(int argc, char **argv) {
         PVIP_string_say(buf);
         PVIP_string_destroy(buf);
         PVIP_node_destroy(node);
-    } else {
+    } else if (argc==2) {
+        int debug = 0;
+        FILE *fp = fopen(argv[1], "rb");
+        PVIPString *buf = PVIP_string_new();
+        PVIPNode *node = PVIP_parse_fp(fp, debug);
+        assert(node);
+        PVIP_node_as_sexp(node, buf);
+        PVIP_string_say(buf);
+        PVIP_string_destroy(buf);
+        PVIP_node_destroy(node);
+        fclose(fp);
+    } else if (argc==1) {
         /* TODO: read from file */
         int debug = 0;
         PVIPString *buf = PVIP_string_new();
@@ -24,6 +36,8 @@ int main(int argc, char **argv) {
         PVIP_string_say(buf);
         PVIP_string_destroy(buf);
         PVIP_node_destroy(node);
+    } else {
+        abort();
     }
 
     return 0;

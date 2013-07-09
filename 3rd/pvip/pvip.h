@@ -1,12 +1,13 @@
 #ifndef PVIP_H_
 #define PVIP_H_
 
+#include <stdint.h>
 #include "gen.node.h"
 
 typedef enum {
     PVIP_CATEGORY_STR,
     PVIP_CATEGORY_INT,
-    PVIP_CATEGORY_DOUBLE,
+    PVIP_CATEGORY_NUMBER,
     PVIP_CATEGORY_CHILDREN
 } PVIP_category_t;
 
@@ -19,9 +20,9 @@ typedef struct {
 typedef struct _PVIPNode {
     PVIP_node_type_t type;
     union {
-        int    iv;
+        int64_t iv;
         double nv;
-        PVIPString pv;
+        PVIPString *pv;
         struct {
             int size;
             struct _PVIPNode **nodes;
@@ -31,18 +32,30 @@ typedef struct _PVIPNode {
 
 /* node */
 PVIPNode* PVIP_node_new_children(PVIP_node_type_t type);
-PVIPNode * PVIP_node_new_int(PVIP_node_type_t type, int n);
+PVIPNode* PVIP_node_new_children1(PVIP_node_type_t type, PVIPNode* n1);
+PVIPNode* PVIP_node_new_children2(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2);
+PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2, PVIPNode *n3);
+PVIPNode * PVIP_node_new_int(PVIP_node_type_t type, int64_t n);
+PVIPNode * PVIP_node_new_intf(PVIP_node_type_t type, const char *str, size_t len, int base);
+PVIPNode * PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t len);
 void PVIP_node_destroy(PVIPNode *node);
 void PVIP_node_push_child(PVIPNode* node, PVIPNode* child);
 void PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf);
+void PVIP_node_append_string(PVIPNode * node, const char *str, size_t len);
+void PVIP_node_append_string_from_hex(PVIPNode * node, const char *str, size_t len);
+void PVIP_node_append_string_from_oct(PVIPNode * node, const char *str, size_t len);
+PVIPNode* PVIP_node_new_number(PVIP_node_type_t type, const char *str, size_t len);
+void PVIP_node_change_type(PVIPNode *node, PVIP_node_type_t type);
+PVIP_category_t PVIP_node_category(PVIP_node_type_t type);
+PVIPNode* PVIP_node_append_string_variable(PVIPNode*node, PVIPNode*var);
 
 /* string */
 PVIPString *PVIP_string_new();
 void PVIP_string_destroy(PVIPString *str);
 void PVIP_string_concat(PVIPString *str, const char *src, size_t len);
-void PVIP_string_concat_int(PVIPString *str, int n);
+void PVIP_string_concat_int(PVIPString *str, int64_t n);
 void PVIP_string_say(PVIPString *str);
-int PVIP_str_eq_c_str(PVIPString *str, const char *buf, int len);
+int PVIP_str_eq_c_str(PVIPString *str, const char *buf, size_t len);
 
 /* parser */
 PVIPNode * PVIP_parse_string(const char *string, int len, int debug);

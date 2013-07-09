@@ -8,7 +8,7 @@ use autodie;
 my @types = qw(
     PVIP_NODE_UNDEF
     PVIP_NODE_INT
-    PVIP_NODE_DOUBLE
+    PVIP_NODE_NUMBER
     PVIP_NODE_STATEMENTS
     PVIP_NODE_DIV
     PVIP_NODE_MUL
