@@ -39,35 +39,45 @@ PVIPNode * PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t l
     return node;
 }
 
-void PVIP_node_append_string(PVIPNode *node, const char* str, size_t len) {
-    assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STR);
-    PVIP_string_concat(node->pv, str, len);
+PVIPNode* PVIP_node_append_string(PVIPNode *node, const char* txt, size_t length) {
+    if (node->type == PVIP_NODE_STRING) {
+        PVIP_string_concat(node->pv, txt, length);
+        return node;
+    } else if (node->type == PVIP_NODE_STRING_CONCAT) {
+        if (node->children.nodes[node->children.size-1]->type == PVIP_NODE_STRING) {
+            PVIP_string_concat(node->children.nodes[node->children.size-1]->pv, txt, length);
+            return node;
+        } else {
+            PVIPNode *s = PVIP_node_new_string(PVIP_NODE_STRING, txt, length);
+            return PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, node, s);
+        }
+    } else {
+        abort();
+    }
 }
 
-void PVIP_node_append_string_from_hex(PVIPNode *node, const char* str, size_t len) {
+PVIPNode* PVIP_node_append_string_from_hex(PVIPNode *node, const char* str, size_t len) {
     assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STR);
     assert(len==2);
 
-    PVIP_string_concat(node->pv, str, len);
     char buf[3];
     buf[0] = str[0];
     buf[1] = str[1];
     buf[2] = '\0';
     char c = strtol(buf, NULL, 16);
-    PVIP_node_append_string(node, &c, 1);
+    return PVIP_node_append_string(node, &c, 1);
 }
 
-void PVIP_node_append_string_from_oct(PVIPNode *node, const char* str, size_t len) {
+PVIPNode* PVIP_node_append_string_from_oct(PVIPNode *node, const char* str, size_t len) {
     assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STR);
     assert(len==2);
 
-    PVIP_string_concat(node->pv, str, len);
     char buf[3];
     buf[0] = str[0];
     buf[1] = str[1];
     buf[2] = '\0';
     char c = strtol(buf, NULL, 8);
-    PVIP_node_append_string(node, &c, 1);
+    return PVIP_node_append_string(node, &c, 1);
 }
 
 PVIPNode* PVIP_node_append_string_variable(PVIPNode*node, PVIPNode*var) {
@@ -100,9 +110,8 @@ PVIPNode* PVIP_node_new_children(PVIP_node_type_t type) {
     assert(type != PVIP_NODE_NUMBER);
     assert(type != PVIP_NODE_INT);
     node->type = type;
-    node->children.size = 0;
-    node->children.nodes = malloc(0);
-    assert(node->children.nodes);
+    node->children.size  = 0;
+    node->children.nodes = NULL;
     return node;
 }
 PVIPNode* PVIP_node_new_children1(PVIP_node_type_t type, PVIPNode* n1) {
@@ -127,7 +136,8 @@ PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode 
 }
 
 void PVIP_node_push_child(PVIPNode* node, PVIPNode* child) {
-    node->children.nodes = (PVIPNode**)realloc(node->children.nodes, node->children.size+1);
+    node->children.nodes = (PVIPNode**)realloc(node->children.nodes, sizeof(PVIPNode*)*(node->children.size+1));
+    assert(node->children.nodes);
     node->children.nodes[node->children.size] = child;
     node->children.size++;
 }
@@ -248,3 +258,9 @@ void PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf) {
     _PVIP_node_as_sexp(node, buf, 0);
 }
 
+void PVIP_node_dump_sexp(PVIPNode * node) {
+    PVIPString*buf = PVIP_string_new();
+    PVIP_node_as_sexp(node, buf);
+    PVIP_string_say(buf);
+    PVIP_string_destroy(buf);
+}

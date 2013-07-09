@@ -516,40 +516,40 @@ string = dq_string | sq_string
 dq_string_start='"' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); }
 
 dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
-        "\n" { G->data.line_number++; PVIP_node_append_string(s, "\n", 1); }
-        | < [^"\\\n$]+ > { PVIP_node_append_string(s, yytext, yyleng); }
-        | v:variable { PVIP_node_append_string_variable(s, v); }
-        | esc 'a' { PVIP_node_append_string(s, "\a", 1); }
-        | esc 'b' { PVIP_node_append_string(s, "\b", 1); }
-        | esc 't' { PVIP_node_append_string(s, "\t", 1); }
-        | esc 'r' { PVIP_node_append_string(s, "\r", 1); }
-        | esc 'n' { PVIP_node_append_string(s, "\n", 1); }
-        | esc '"' { PVIP_node_append_string(s, "\"", 1); }
-        | esc '$' { PVIP_node_append_string(s, "\"", 1); }
+        "\n" { G->data.line_number++; s=PVIP_node_append_string(s, "\n", 1); }
+        | < [^"\\\n$]+ > { s=PVIP_node_append_string(s, yytext, yyleng); }
+        | v:variable { s=PVIP_node_append_string_variable(s, v); }
+        | esc 'a' { s=PVIP_node_append_string(s, "\a", 1); }
+        | esc 'b' { s=PVIP_node_append_string(s, "\b", 1); }
+        | esc 't' { s=PVIP_node_append_string(s, "\t", 1); }
+        | esc 'r' { s=PVIP_node_append_string(s, "\r", 1); }
+        | esc 'n' { s=PVIP_node_append_string(s, "\n", 1); }
+        | esc '"' { s=PVIP_node_append_string(s, "\"", 1); }
+        | esc '$' { s=PVIP_node_append_string(s, "\"", 1); }
         | ( esc 'x' (
                   '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) >
             | '[' '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) > ']' )
         ) {
-            PVIP_node_append_string_from_hex(s, yytext, yyleng);
+            s=PVIP_node_append_string_from_hex(s, yytext, yyleng);
         }
         | esc 'o' < '0'? [0-7] [0-7] > {
-            PVIP_node_append_string_from_oct(s, yytext, yyleng);
+            s=PVIP_node_append_string_from_oct(s, yytext, yyleng);
         }
         | esc 'o['
-             '0'? < [0-7] [0-7] > { PVIP_node_append_string_from_oct(s, yytext, yyleng); } (
-            ',' '0'? < [0-7] [0-7] > { PVIP_node_append_string_from_oct(s, yytext, yyleng); }
+             '0'? < [0-7] [0-7] > { s=PVIP_node_append_string_from_oct(s, yytext, yyleng); } (
+            ',' '0'? < [0-7] [0-7] > { s=PVIP_node_append_string_from_oct(s, yytext, yyleng); }
         )* ']'
-        | esc esc { PVIP_node_append_string(s, "\\", 1); }
+        | esc esc { s=PVIP_node_append_string(s, "\\", 1); }
     )* '"' { $$=s; }
 
 esc = '\\'
 
 sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
-        "\n" { G->data.line_number++; PVIP_node_append_string($$, "\n", 1); }
-        | < [^'\\\n]+ > { PVIP_node_append_string($$, yytext, yyleng); }
-        | esc "'" { PVIP_node_append_string($$, "'", 1); }
-        | esc esc { PVIP_node_append_string($$, "\\", 1); }
-        | < esc . > { PVIP_node_append_string($$, yytext, yyleng); }
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^'\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* "'"
 
 #  <?MARKED('endstmt')>
