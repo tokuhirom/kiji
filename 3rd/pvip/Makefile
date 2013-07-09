@@ -2,26 +2,26 @@ CFLAGS=-Wall -DYY_DEBUG=1 -g
 
 all: pvip
 
-pvip: libpvip.a main.c
-	gcc $(CFLAGS) -L. -lpvip -o pvip main.c
+pvip: libpvip.a src/main.c
+	gcc $(CFLAGS) -o pvip src/main.c libpvip.a
 
-libpvip.a: gen.pvip.y.o pvip.h pvip_node.o gen.node.o gen.node.o
-	ar rsv libpvip.a gen.pvip.y.o pvip_node.o gen.node.o
+libpvip.a: src/gen.pvip.y.o src/pvip.h src/pvip_node.o src/gen.node.o src/pvip_string.o
+	ar rsv libpvip.a src/gen.pvip.y.o src/pvip_node.o src/gen.node.o src/pvip_string.o
 
 test: pvip
 	prove -lr t
 
 .c.o:
-	cc $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-gen.node.c: build/node.pl
+src/gen.node.c: build/node.pl
 	perl build/node.pl
 
-gen.pvip.y.c: pvip.y pvip.h gen.node.c
-	../greg/greg -o gen.pvip.y.c pvip.y
+src/gen.pvip.y.c: src/pvip.y src/pvip.h src/gen.node.c
+	../greg/greg -o src/gen.pvip.y.c src/pvip.y
 
 clean:
-	rm -f *.o gen.* pvip
+	rm -f src/*.o src/gen.* pvip libpvip.a
 
 .PHONY: all test
 

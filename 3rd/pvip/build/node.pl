@@ -104,7 +104,7 @@ my @types = qw(
 );
 
 {
-    open my $fh, '>', 'gen.node.h';
+    open my $fh, '>', 'src/gen.node.h';
     say $fh qq!/* This file is generated from $0 */!;
     say $fh qq!#pragma once!;
     say $fh qq!!;
@@ -115,7 +115,7 @@ my @types = qw(
 }
 
 {
-    open my $fh, '>', 'gen.node.c';
+    open my $fh, '>', 'src/gen.node.c';
     say $fh qq!/* This file is generated from $0 */!;
     say $fh qq!#include "gen.node.h"!;
     say $fh qq!const char* PVIP_node_name(PVIP_node_type_t t) {!;
