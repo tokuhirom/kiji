@@ -617,7 +617,8 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
     /*
     if (g.data.str->len!=g.data.str->pos) {
       printf("Syntax error! Around:\n");
-      for (int i=0; g.data.str->len!=g.data.str->pos && i<24; i++) {
+      int i;
+      for (i=0; g.data.str->len!=g.data.str->pos && i<24; i++) {
         char ch = g.data.str->buf[g.data.str->pos++];
         if (ch) {
           printf("%c", ch);
@@ -670,7 +671,8 @@ PVIPNode * PVIP_parse_fp(FILE *fp, int debug) {
     }
     if (!feof(fp)) {
       printf("Syntax error! Around:\n");
-      for (int i=0; !feof(fp) && i<24; i++) {
+      int i;
+      for (i=0; !feof(fp) && i<24; i++) {
         char ch = fgetc(fp);
         if (ch != EOF) {
           printf("%c", ch);
