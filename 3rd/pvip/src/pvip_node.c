@@ -175,11 +175,27 @@ static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
     PVIP_string_concat(buf, name, strlen(name));
     PVIP_string_concat(buf, " ", 1);
     switch (PVIP_node_category(node->type)) {
-    case PVIP_CATEGORY_STR:
+    case PVIP_CATEGORY_STR: {
+        int i;
         PVIP_string_concat(buf, "\"", 1);
-        PVIP_string_concat(buf, node->pv->buf, node->pv->len);
+        for (i=0; i<node->pv->len; i++) {
+            char c = node->pv->buf[i];
+            switch (c) {
+            case '\\': PVIP_string_concat(buf, "\\\\",    2); break;
+            case '"':  PVIP_string_concat(buf, "\\\"",    2); break;
+            case '/':  PVIP_string_concat(buf, "\\/",     2); break;
+            case '\b': PVIP_string_concat(buf, "\\b",     2); break;
+            case '\f': PVIP_string_concat(buf, "\\f",     2); break;
+            case '\n': PVIP_string_concat(buf, "\\n",     2); break;
+            case '\r': PVIP_string_concat(buf, "\\r",     2); break;
+            case '\t': PVIP_string_concat(buf, "\\t",     2); break;
+            case '\a': PVIP_string_concat(buf, "\\u0007", 6); break;
+            default:   PVIP_string_concat(buf, &c,        1); break;
+            }
+        }
         PVIP_string_concat(buf, "\"", 1);
         break;
+    }
     case PVIP_CATEGORY_INT:
         PVIP_string_concat_int(buf, node->iv);
         break;

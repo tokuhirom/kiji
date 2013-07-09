@@ -11,7 +11,7 @@ libpvip.a: src/gen.pvip.y.o src/pvip.h src/pvip_node.o src/gen.node.o src/pvip_s
 test: pvip
 	prove -lr t
 
-.c.o:
+.c.o: src/pvip.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 src/gen.node.c: build/node.pl

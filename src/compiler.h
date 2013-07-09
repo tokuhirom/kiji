@@ -716,7 +716,7 @@ namespace kiji {
       return cu_.push_handler(handler);
     }
     void compile_array(uint16_t array_reg, const Node& node) {
-      if (node.type()==NODE_LIST) {
+      if (node.type()==PVIP_NODE_LIST) {
         for (auto m:node.children()) {
           compile_array(array_reg, m);
         }
@@ -782,9 +782,9 @@ namespace kiji {
     int do_compile(const kiji::Node &node) {
       // printf("node: %s\n", node.type_name());
       switch (node.type()) {
-      case NODE_POSTDEC: { // $i--
+      case PVIP_NODE_POSTDEC: { // $i--
         assert(node.children().size() == 1);
-        if (node.children()[0].type() != kiji::NODE_VARIABLE) {
+        if (node.children()[0].type() != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
         auto reg_no = get_variable(node.children()[0].pv());
@@ -793,9 +793,9 @@ namespace kiji {
         set_variable(node.children()[0].pv(), to_o(i_tmp));
         return reg_no;
       }
-      case NODE_POSTINC: { // $i++
+      case PVIP_NODE_POSTINC: { // $i++
         assert(node.children().size() == 1);
-        if (node.children()[0].type() != kiji::NODE_VARIABLE) {
+        if (node.children()[0].type() != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
         auto reg_no = get_variable(node.children()[0].pv());
@@ -805,9 +805,9 @@ namespace kiji {
         set_variable(node.children()[0].pv(), dst_reg);
         return reg_no;
       }
-      case NODE_PREINC: { // ++$i
+      case PVIP_NODE_PREINC: { // ++$i
         assert(node.children().size() == 1);
-        if (node.children()[0].type() != kiji::NODE_VARIABLE) {
+        if (node.children()[0].type() != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
         auto reg_no = get_variable(node.children()[0].pv());
@@ -817,9 +817,9 @@ namespace kiji {
         set_variable(node.children()[0].pv(), dst_reg);
         return dst_reg;
       }
-      case NODE_PREDEC: { // --$i
+      case PVIP_NODE_PREDEC: { // --$i
         assert(node.children().size() == 1);
-        if (node.children()[0].type() != kiji::NODE_VARIABLE) {
+        if (node.children()[0].type() != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
         auto reg_no = get_variable(node.children()[0].pv());
@@ -829,30 +829,30 @@ namespace kiji {
         set_variable(node.children()[0].pv(), dst_reg);
         return dst_reg;
       }
-      case NODE_UNARY_BITWISE_NEGATION: { // +^1
+      case PVIP_NODE_UNARY_BITWISE_NEGATION: { // +^1
         auto reg = to_i(do_compile(node.children()[0]));
         assembler().bnot_i(reg, reg);
         return reg;
       }
-      case NODE_BRSHIFT: { // +>
+      case PVIP_NODE_BRSHIFT: { // +>
         auto l = to_i(do_compile(node.children()[0]));
         auto r = to_i(do_compile(node.children()[1]));
         assembler().brshift_i(r, l, r);
         return r;
       }
-      case NODE_BLSHIFT: { // +<
+      case PVIP_NODE_BLSHIFT: { // +<
         auto l = to_i(do_compile(node.children()[0]));
         auto r = to_i(do_compile(node.children()[1]));
         assembler().blshift_i(r, l, r);
         return r;
       }
-      case NODE_ABS: {
+      case PVIP_NODE_ABS: {
         // TODO support abs_n?
         auto r = to_i(do_compile(node.children()[0]));
         assembler().abs_i(r, r);
         return r;
       }
-      case NODE_LAST: {
+      case PVIP_NODE_LAST: {
         // break from for, while, loop.
         auto ret = reg_obj();
         assembler().throwcatlex(
@@ -861,7 +861,7 @@ namespace kiji {
         );
         return ret;
       }
-      case NODE_REDO: {
+      case PVIP_NODE_REDO: {
         // redo from for, while, loop.
         auto ret = reg_obj();
         assembler().throwcatlex(
@@ -870,7 +870,7 @@ namespace kiji {
         );
         return ret;
       }
-      case NODE_NEXT: {
+      case PVIP_NODE_NEXT: {
         // continue from for, while, loop.
         auto ret = reg_obj();
         assembler().throwcatlex(
@@ -879,7 +879,7 @@ namespace kiji {
         );
         return ret;
       }
-      case NODE_RETURN: {
+      case PVIP_NODE_RETURN: {
         assert(node.children().size() ==1);
         auto reg = do_compile(node.children()[0]);
         if (reg < 0) {
@@ -904,11 +904,14 @@ namespace kiji {
         }
         return UNKNOWN_REG;
       }
-      case NODE_MODULE: {
+      case PVIP_NODE_MODULE: {
         // nop, for now.
         return UNKNOWN_REG;
       }
-      case NODE_USE: {
+      case PVIP_NODE_USE: {
+                            // DISALBED FOR NOW(pvip)
+                            abort();
+                            /*
         assert(node.children().size()==1);
         auto name = node.children()[0].pv();
         if (name == "v6") {
@@ -942,15 +945,16 @@ namespace kiji {
         assembler().invoke_v(code_reg);
 
         return UNKNOWN_REG;
+        */
       }
-      case NODE_DIE: {
+      case PVIP_NODE_DIE: {
         int msg_reg = to_s(do_compile(node.children()[0]));
         int dst_reg = reg_obj();
         assert(msg_reg != UNKNOWN_REG);
         assembler().die(dst_reg, msg_reg);
         return UNKNOWN_REG;
       }
-      case NODE_WHILE: {
+      case PVIP_NODE_WHILE: {
         /*
          *  label_while:
          *    cond
@@ -975,7 +979,7 @@ namespace kiji {
 
         return UNKNOWN_REG;
       }
-      case NODE_LAMBDA: {
+      case PVIP_NODE_LAMBDA: {
         auto frame_no = push_frame("lambda");
         assembler().checkarity(
           node.children()[0].children().size(),
@@ -1003,7 +1007,7 @@ namespace kiji {
 
         return dst_reg;
       }
-      case NODE_BLOCK: {
+      case PVIP_NODE_BLOCK: {
         auto frame_no = push_frame("block");
         assembler().checkarity(0,0);
         for (auto n:node.children()) {
@@ -1027,28 +1031,28 @@ namespace kiji {
 
         return UNKNOWN_REG;
       }
-      case NODE_STRING: {
+      case PVIP_NODE_STRING: {
         int str_num = push_string(node.pv());
         int reg_num = reg_str();
         assembler().const_s(reg_num, str_num);
         return reg_num;
       }
-      case NODE_INT: {
+      case PVIP_NODE_INT: {
         uint16_t reg_num = reg_int64();
         int64_t n = node.iv();
         assembler().const_i64(reg_num, n);
         return reg_num;
       }
-      case NODE_NUMBER: {
+      case PVIP_NODE_NUMBER: {
         uint16_t reg_num = reg_num64();
         MVMnum64 n = node.nv();
         assembler().const_n64(reg_num, n);
         return reg_num;
       }
-      case NODE_BIND: {
+      case PVIP_NODE_BIND: {
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
-        if (lhs.type() == NODE_MY) {
+        if (lhs.type() == PVIP_NODE_MY) {
           // my $var := foo;
           int lex_no = do_compile(lhs);
           int val    = this->box(do_compile(rhs));
@@ -1058,9 +1062,9 @@ namespace kiji {
             val     // value
           );
           return val;
-        } else if (lhs.type() == NODE_OUR) {
+        } else if (lhs.type() == PVIP_NODE_OUR) {
           // our $var := foo;
-          assert(lhs.children()[0].type() == NODE_VARIABLE);
+          assert(lhs.children()[0].type() == PVIP_NODE_VARIABLE);
           push_pkg_var(lhs.children()[0].pv());
           auto varname = push_string(lhs.children()[0].pv());
           int val    = to_o(do_compile(rhs));
@@ -1082,7 +1086,7 @@ namespace kiji {
             val
           );
           return val;
-        } else if (lhs.type() == NODE_VARIABLE) {
+        } else if (lhs.type() == PVIP_NODE_VARIABLE) {
           // $var := foo;
           int val    = this->box(do_compile(rhs));
           set_variable(lhs.pv(), val);
@@ -1092,7 +1096,7 @@ namespace kiji {
           abort();
         }
       }
-      case NODE_FUNC: {
+      case PVIP_NODE_FUNC: {
         const std::string& name = node.children()[0].pv();
 
         auto funcreg = reg_obj();
@@ -1129,7 +1133,7 @@ namespace kiji {
         bool returned = false;
         {
           const Node &stmts = node.children()[2];
-          assert(stmts.type() == NODE_STATEMENTS);
+          assert(stmts.type() == PVIP_NODE_STATEMENTS);
           for (auto iter=stmts.children().begin()
               ; iter!=stmts.children().end() ; ++iter) {
             int reg = do_compile(*iter);
@@ -1166,16 +1170,16 @@ namespace kiji {
 
         return funcreg;
       }
-      case NODE_VARIABLE: {
+      case PVIP_NODE_VARIABLE: {
         // copy lexical variable to register
         return get_variable(node.pv());
       }
-      case NODE_CLARGS: { // @*ARGS
+      case PVIP_NODE_CLARGS: { // @*ARGS
         auto retval = reg_obj();
         assembler().wval(retval, 0,0);
         return retval;
       }
-      case NODE_FOR: {
+      case PVIP_NODE_FOR: {
         //   init_iter
         // label_for:
         //   body
@@ -1196,7 +1200,7 @@ namespace kiji {
           auto val = reg_obj();
           assembler().shift_o(val, iter_reg);
 
-          if (node.children()[1].type() == NODE_LAMBDA) {
+          if (node.children()[1].type() == PVIP_NODE_LAMBDA) {
             auto body = do_compile(node.children()[1]);
             MVMCallsite* callsite = new MVMCallsite;
             memset(callsite, 0, sizeof(MVMCallsite));
@@ -1221,33 +1225,33 @@ namespace kiji {
 
         return UNKNOWN_REG;
       }
-      case NODE_OUR: {
+      case PVIP_NODE_OUR: {
         if (node.children().size() != 1) {
           printf("NOT IMPLEMENTED\n");
           abort();
         }
         auto n = node.children()[0];
-        if (n.type() != NODE_VARIABLE) {
+        if (n.type() != PVIP_NODE_VARIABLE) {
           printf("This is variable: %s\n", n.type_name());
           exit(0);
         }
         push_pkg_var(n.pv());
         return UNKNOWN_REG;
       }
-      case NODE_MY: {
+      case PVIP_NODE_MY: {
         if (node.children().size() != 1) {
           printf("NOT IMPLEMENTED\n");
           abort();
         }
         auto n = node.children()[0];
-        if (n.type() != NODE_VARIABLE) {
+        if (n.type() != PVIP_NODE_VARIABLE) {
           printf("This is variable: %s\n", n.type_name());
           exit(0);
         }
         int idx = push_lexical(n.pv(), MVM_reg_obj);
         return idx;
       }
-      case NODE_UNLESS: {
+      case PVIP_NODE_UNLESS: {
         //   cond
         //   if_o label_end
         //   body
@@ -1259,7 +1263,7 @@ namespace kiji {
         label_end.put();
         return dst_reg;
       }
-      case NODE_IF: {
+      case PVIP_NODE_IF: {
         //   if_cond
         //   if_o if_cond, label_if
         //   elsif1_cond
@@ -1290,7 +1294,7 @@ namespace kiji {
         // put else if conditions
         std::list<Label> elsif_poses;
         for (auto iter=node.children().begin()+2; iter!=node.children().end(); ++iter) {
-          if (iter->type() == NODE_ELSE) {
+          if (iter->type() == PVIP_NODE_ELSE) {
             break;
           }
           auto reg = do_compile(iter->children()[0]);
@@ -1299,7 +1303,7 @@ namespace kiji {
         }
 
         // compile else clause
-        if (node.children().back().type() == NODE_ELSE) {
+        if (node.children().back().type() == PVIP_NODE_ELSE) {
           compile_statements(node.children().back(), dst_reg);
         }
 
@@ -1313,7 +1317,7 @@ namespace kiji {
 
         // compile elsif body
         for (auto iter=node.children().begin()+2; iter!=node.children().end(); ++iter) {
-          if (iter->type() == NODE_ELSE) {
+          if (iter->type() == PVIP_NODE_ELSE) {
             break;
           }
 
@@ -1328,19 +1332,19 @@ namespace kiji {
 
         return dst_reg;
       }
-      case NODE_ELSIF:
-      case NODE_ELSE: {
+      case PVIP_NODE_ELSIF:
+      case PVIP_NODE_ELSE: {
         abort();
       }
-      case NODE_IDENT:
+      case PVIP_NODE_IDENT:
         break;
-      case NODE_STATEMENTS:
+      case PVIP_NODE_STATEMENTS:
         for (auto n: node.children()) {
           // should i return values?
           do_compile(n);
         }
         return UNKNOWN_REG;
-      case NODE_STRING_CONCAT: {
+      case PVIP_NODE_STRING_CONCAT: {
         auto dst_reg = reg_str();
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
@@ -1353,7 +1357,7 @@ namespace kiji {
         );
         return dst_reg;
       }
-      case NODE_REPEAT_S: { // x operator
+      case PVIP_NODE_REPEAT_S: { // x operator
         auto dst_reg = reg_str();
         auto lhs = node.children()[0];
         auto rhs = node.children()[1];
@@ -1364,8 +1368,8 @@ namespace kiji {
         );
         return dst_reg;
       }
-      case NODE_LIST:
-      case NODE_ARRAY: { // TODO: use 6model's container feature after released it.
+      case PVIP_NODE_LIST:
+      case PVIP_NODE_ARRAY: { // TODO: use 6model's container feature after released it.
         // create array
         auto array_reg = reg_obj();
         assembler().hlllist(array_reg);
@@ -1377,7 +1381,7 @@ namespace kiji {
         }
         return array_reg;
       }
-      case NODE_ATPOS: {
+      case PVIP_NODE_ATPOS: {
         assert(node.children().size() == 2);
         auto container = do_compile(node.children()[0]);
         auto idx       = this->to_i(do_compile(node.children()[1]));
@@ -1385,17 +1389,19 @@ namespace kiji {
         assembler().atpos_o(dst, container, idx);
         return dst;
       }
-      case NODE_IT_METHODCALL: {
-        kiji::Node n;
-        kiji::Node node_it;
-        node_it.set_variable("$_", 2);
-        n.set(kiji::NODE_METHODCALL, node_it, node.children()[0]);
+      case PVIP_NODE_IT_METHODCALL: {
+                                      abort(); // TODO ato de modosu:w
+                                      /*
+        PVIPNode * node_it = PVIP_node_new_string(PVIP_NODE_VARIABLE, "$_", 2);
+        PVIPNode * n = PVIP_node_new_children2(PVIP_NODE_METHODCALL, node_it, node.children()[0]);
         if (node.children().size() == 2) {
           n.push_child(node.child_at(1));
         }
-        return do_compile(n);
+        kiji::Node tmp(n);
+        return do_compile(tmp);
+        */
       }
-      case NODE_METHODCALL: {
+      case PVIP_NODE_METHODCALL: {
         assert(node.children().size() == 3 || node.children().size()==2);
         auto obj = to_o(do_compile(node.children()[0]));
         auto str = push_string(node.children()[1].pv());
@@ -1436,7 +1442,7 @@ namespace kiji {
         assembler().invoke_o(ret, meth);
         return ret;
       }
-      case NODE_CONDITIONAL: {
+      case PVIP_NODE_CONDITIONAL: {
         /*
          *   cond
          *   unless_o cond, :label_else
@@ -1467,84 +1473,84 @@ namespace kiji {
 
         return dst_reg;
       }
-      case NODE_NOT: {
+      case PVIP_NODE_NOT: {
         auto src_reg = this->to_i(do_compile(node.children()[0]));
         auto dst_reg = reg_int64();
         assembler().not_i(dst_reg, src_reg);
         return dst_reg;
       }
-      case NODE_BIN_AND: {
+      case PVIP_NODE_BIN_AND: {
         return this->binary_binop(node, MVM_OP_band_i);
       }
-      case NODE_BIN_OR: {
+      case PVIP_NODE_BIN_OR: {
         return this->binary_binop(node, MVM_OP_bor_i);
       }
-      case NODE_BIN_XOR: {
+      case PVIP_NODE_BIN_XOR: {
         return this->binary_binop(node, MVM_OP_bxor_i);
       }
-      case NODE_MUL: {
+      case PVIP_NODE_MUL: {
         return this->numeric_binop(node, MVM_OP_mul_i, MVM_OP_mul_n);
       }
-      case NODE_SUB: {
+      case PVIP_NODE_SUB: {
         return this->numeric_binop(node, MVM_OP_sub_i, MVM_OP_sub_n);
       }
-      case NODE_DIV: {
+      case PVIP_NODE_DIV: {
         return this->numeric_binop(node, MVM_OP_div_i, MVM_OP_div_n);
       }
-      case NODE_ADD: {
+      case PVIP_NODE_ADD: {
         return this->numeric_binop(node, MVM_OP_add_i, MVM_OP_add_n);
       }
-      case NODE_MOD: {
+      case PVIP_NODE_MOD: {
         return this->numeric_binop(node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
-      case NODE_POW: {
+      case PVIP_NODE_POW: {
         return this->numeric_binop(node, MVM_OP_pow_i, MVM_OP_pow_n);
       }
-      case NODE_INPLACE_ADD: {
+      case PVIP_NODE_INPLACE_ADD: {
         return this->numeric_inplace(node, MVM_OP_add_i, MVM_OP_add_n);
       }
-      case NODE_INPLACE_SUB: {
+      case PVIP_NODE_INPLACE_SUB: {
         return this->numeric_inplace(node, MVM_OP_sub_i, MVM_OP_sub_n);
       }
-      case NODE_INPLACE_MUL: {
+      case PVIP_NODE_INPLACE_MUL: {
         return this->numeric_inplace(node, MVM_OP_mul_i, MVM_OP_mul_n);
       }
-      case NODE_INPLACE_DIV: {
+      case PVIP_NODE_INPLACE_DIV: {
         return this->numeric_inplace(node, MVM_OP_div_i, MVM_OP_div_n);
       }
-      case NODE_INPLACE_POW: { // **=
+      case PVIP_NODE_INPLACE_POW: { // **=
         return this->numeric_inplace(node, MVM_OP_pow_i, MVM_OP_pow_n);
       }
-      case NODE_INPLACE_MOD: { // %=
+      case PVIP_NODE_INPLACE_MOD: { // %=
         return this->numeric_inplace(node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
-      case NODE_INPLACE_BIN_OR: { // +|=
+      case PVIP_NODE_INPLACE_BIN_OR: { // +|=
         return this->binary_inplace(node, MVM_OP_bor_i);
       }
-      case NODE_INPLACE_BIN_AND: { // +&=
+      case PVIP_NODE_INPLACE_BIN_AND: { // +&=
         return this->binary_inplace(node, MVM_OP_band_i);
       }
-      case NODE_INPLACE_BIN_XOR: { // +^=
+      case PVIP_NODE_INPLACE_BIN_XOR: { // +^=
         return this->binary_inplace(node, MVM_OP_bxor_i);
       }
-      case NODE_INPLACE_BLSHIFT: { // +<=
+      case PVIP_NODE_INPLACE_BLSHIFT: { // +<=
         return this->binary_inplace(node, MVM_OP_blshift_i);
       }
-      case NODE_INPLACE_BRSHIFT: { // +>=
+      case PVIP_NODE_INPLACE_BRSHIFT: { // +>=
         return this->binary_inplace(node, MVM_OP_brshift_i);
       }
-      case NODE_INPLACE_CONCAT_S: { // ~=
+      case PVIP_NODE_INPLACE_CONCAT_S: { // ~=
         return this->str_inplace(node, MVM_OP_concat_s, MVM_reg_str);
       }
-      case NODE_INPLACE_REPEAT_S: { // x=
+      case PVIP_NODE_INPLACE_REPEAT_S: { // x=
         return this->str_inplace(node, MVM_OP_repeat_s, MVM_reg_int64);
       }
-      case NODE_UNARY_TILDE: { // ~
+      case PVIP_NODE_UNARY_TILDE: { // ~
         return to_s(do_compile(node.children()[0]));
       }
-      case NODE_NOP:
+      case PVIP_NODE_NOP:
         return -1;
-      case NODE_ATKEY: {
+      case PVIP_NODE_ATKEY: {
         assert(node.children().size() == 2);
         auto dst       = reg_obj();
         auto container = to_o(do_compile(node.children()[0]));
@@ -1552,20 +1558,20 @@ namespace kiji {
         assembler().atkey_o(dst, container, key);
         return dst;
       }
-      case NODE_HASH: {
+      case PVIP_NODE_HASH: {
         auto hashtype = reg_obj();
         auto hash     = reg_obj();
         assembler().hllhash(hashtype);
         assembler().create(hash, hashtype);
         for (auto pair: node.children()) {
-          assert(pair.type() == NODE_PAIR);
+          assert(pair.type() == PVIP_NODE_PAIR);
           auto k = to_s(do_compile(pair.children()[0]));
           auto v = to_o(do_compile(pair.children()[1]));
           assembler().bindkey_o(hash, k, v);
         }
         return hash;
       }
-      case NODE_LOGICAL_XOR: { // '^^'
+      case PVIP_NODE_LOGICAL_XOR: { // '^^'
         //   calc_arg1
         //   calc_arg2
         //   if_o arg1, label_a1_true
@@ -1611,7 +1617,7 @@ namespace kiji {
         label_end.put();
         return dst_reg;
       }
-      case NODE_LOGICAL_OR: { // '||'
+      case PVIP_NODE_LOGICAL_OR: { // '||'
         //   calc_arg1
         //   if_o arg1, label_a1
         //   calc_arg2
@@ -1634,7 +1640,7 @@ namespace kiji {
         label_end.put();
         return dst_reg;
       }
-      case NODE_LOGICAL_AND: { // '&&'
+      case PVIP_NODE_LOGICAL_AND: { // '&&'
         //   calc_arg1
         //   unless_o arg1, label_a1
         //   calc_arg2
@@ -1657,10 +1663,10 @@ namespace kiji {
         label_end.put();
         return dst_reg;
       }
-      case NODE_UNARY_PLUS: {
+      case PVIP_NODE_UNARY_PLUS: {
         return to_n(do_compile(node.children()[0]));
       }
-      case NODE_UNARY_MINUS: {
+      case PVIP_NODE_UNARY_MINUS: {
         auto reg = do_compile(node.children()[0]);
         if (get_local_type(reg) == MVM_reg_int64) {
           assembler().neg_i(reg, reg);
@@ -1671,19 +1677,19 @@ namespace kiji {
           return reg;
         }
       }
-      case NODE_CHAIN:
+      case PVIP_NODE_CHAIN:
         if (node.children().size()==1) {
           return do_compile(node.children()[0]);
         } else {
           return this->compile_chained_comparisions(node);
         }
-      case NODE_FUNCALL: {
+      case PVIP_NODE_FUNCALL: {
         assert(node.children().size() == 2);
         const kiji::Node &ident = node.children()[0];
         const kiji::Node &args  = node.children()[1];
-        assert(args.type() == NODE_ARGS);
+        assert(args.type() == PVIP_NODE_ARGS);
         
-        if (node.children()[0].type() == NODE_IDENT) {
+        if (node.children()[0].type() == PVIP_NODE_IDENT) {
           if (ident.pv() == "say") {
             int i=0;
             for (auto a:args.children()) {
@@ -1727,7 +1733,7 @@ namespace kiji {
 
         {
           uint16_t func_reg_no;
-          if (node.children()[0].type() == NODE_IDENT) {
+          if (node.children()[0].type() == PVIP_NODE_IDENT) {
             func_reg_no = reg_obj();
             int outer = 0;
             auto lex_no = find_lexical_by_name(std::string("&") + ident.pv(), outer);
@@ -1955,7 +1961,7 @@ namespace kiji {
     }
     int numeric_inplace(const kiji::Node& node, uint16_t op_i, uint16_t op_n) {
         assert(node.children().size() == 2);
-        assert(node.children()[0].type() == NODE_VARIABLE);
+        assert(node.children()[0].type() == PVIP_NODE_VARIABLE);
 
         auto lhs = get_variable(node.children()[0].pv());
         auto rhs = do_compile(node.children()[1]);
@@ -1966,7 +1972,7 @@ namespace kiji {
     }
     int binary_inplace(const kiji::Node& node, uint16_t op) {
         assert(node.children().size() == 2);
-        assert(node.children()[0].type() == NODE_VARIABLE);
+        assert(node.children()[0].type() == PVIP_NODE_VARIABLE);
 
         auto lhs = get_variable(node.children()[0].pv());
         auto rhs = do_compile(node.children()[1]);
@@ -1977,7 +1983,7 @@ namespace kiji {
     }
     int str_inplace(const kiji::Node& node, uint16_t op, uint16_t rhs_type) {
         assert(node.children().size() == 2);
-        assert(node.children()[0].type() == NODE_VARIABLE);
+        assert(node.children()[0].type() == PVIP_NODE_VARIABLE);
 
         auto lhs = get_variable(node.children()[0].pv());
         auto rhs = do_compile(node.children()[1]);
@@ -2057,7 +2063,7 @@ namespace kiji {
     }
     void compile_statements(const kiji::Node &node, int dst_reg) {
       int reg = UNKNOWN_REG;
-      if (node.type() == NODE_STATEMENTS || node.type() == NODE_ELSE) {
+      if (node.type() == PVIP_NODE_STATEMENTS || node.type() == PVIP_NODE_ELSE) {
         for (int i=0, l=node.children().size(); i<l; i++) {
           reg = do_compile(node.children()[i]);
         }
@@ -2116,33 +2122,33 @@ namespace kiji {
         assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, to_s(lhs), to_s(rhs));
         return reg_num_dst;
     }
-    uint16_t do_compare(NODE_TYPE type, uint16_t lhs, uint16_t rhs) {
+    uint16_t do_compare(PVIP_node_type_t type, uint16_t lhs, uint16_t rhs) {
       switch (type) {
-      case NODE_STREQ:
+      case PVIP_NODE_STREQ:
         return this->str_cmp_binop(lhs, rhs, MVM_OP_eq_s);
-      case NODE_STRNE:
+      case PVIP_NODE_STRNE:
         return this->str_cmp_binop(lhs, rhs, MVM_OP_ne_s);
-      case NODE_STRGT:
+      case PVIP_NODE_STRGT:
         return this->str_cmp_binop(lhs, rhs, MVM_OP_gt_s);
-      case NODE_STRGE:
+      case PVIP_NODE_STRGE:
         return this->str_cmp_binop(lhs, rhs, MVM_OP_ge_s);
-      case NODE_STRLT:
+      case PVIP_NODE_STRLT:
         return this->str_cmp_binop(lhs, rhs, MVM_OP_lt_s);
-      case NODE_STRLE:
+      case PVIP_NODE_STRLE:
         return this->str_cmp_binop(lhs, rhs, MVM_OP_le_s);
-      case NODE_EQ:
+      case PVIP_NODE_EQ:
         return this->num_cmp_binop(lhs, rhs, MVM_OP_eq_i, MVM_OP_eq_n);
-      case NODE_NE:
+      case PVIP_NODE_NE:
         return this->num_cmp_binop(lhs, rhs, MVM_OP_ne_i, MVM_OP_ne_n);
-      case NODE_LT:
+      case PVIP_NODE_LT:
         return this->num_cmp_binop(lhs, rhs, MVM_OP_lt_i, MVM_OP_lt_n);
-      case NODE_LE:
+      case PVIP_NODE_LE:
         return this->num_cmp_binop(lhs, rhs, MVM_OP_le_i, MVM_OP_le_n);
-      case NODE_GT:
+      case PVIP_NODE_GT:
         return this->num_cmp_binop(lhs, rhs, MVM_OP_gt_i, MVM_OP_gt_n);
-      case NODE_GE:
+      case PVIP_NODE_GE:
         return this->num_cmp_binop(lhs, rhs, MVM_OP_ge_i, MVM_OP_ge_n);
-      case NODE_EQV:
+      case PVIP_NODE_EQV:
         return this->str_cmp_binop(lhs, rhs, MVM_OP_eq_s);
       default:
         abort();

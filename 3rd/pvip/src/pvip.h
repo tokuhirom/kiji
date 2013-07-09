@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     PVIP_NODE_UNDEF,
     PVIP_NODE_INT,
@@ -103,6 +107,7 @@ typedef enum {
 } PVIP_node_type_t;
 
 typedef enum {
+    PVIP_CATEGORY_UNKNOWN,
     PVIP_CATEGORY_STR,
     PVIP_CATEGORY_INT,
     PVIP_CATEGORY_NUMBER,
@@ -166,5 +171,9 @@ void PVIP_string_say(PVIPString *str);
 /* parser */
 PVIPNode * PVIP_parse_string(const char *string, int len, int debug);
 PVIPNode * PVIP_parse_fp(FILE *fp, int debug);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif /* PVIP_H_ */

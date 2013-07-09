@@ -5,6 +5,7 @@ use Test::More;
 use Data::Dumper qw(Dumper);
 use File::Temp;
 use JSON::PP;
+use Data::SExpression 0.14;
 
 test(
     '"hoge"',
@@ -121,12 +122,15 @@ sub test {
     print {$tmp} $src;
 
     my $json = `./kiji --dump-ast $tmp`;
-    unless ($json =~ /\A\{/) {
-        die "Cannot get json from '$src'";
+    unless ($json =~ /\A\(/) {
+        die "Cannot get sexp from '$src'";
     }
     note $json;
     my $got = eval {
-        JSON::PP->new->decode($json)
+        my $sexp = Data::SExpression->new({use_symbol_class => 1});
+        my $dat = $sexp->read($json);
+        $dat = mangle($dat);
+        $dat;
     };
     if ($@) {
         diag $json;
@@ -145,3 +149,20 @@ sub test {
     };
 }
 
+sub mangle {
+    my $data = shift;
+    if (ref $data eq 'ARRAY') {
+        if (@$data == 0) {
+            return ();
+        }
+        my $header = shift @$data;
+        my $value = [map { mangle($_) } @$data];
+        return +{
+            type  => 'NODE_'.uc($header->name),
+            value => $value,
+        };
+    } else {
+        $data =~ s/\A([0-9]+\.[0-9]+?)0*\z/$1/; # TODO remove this
+        return $data;
+    }
+}
