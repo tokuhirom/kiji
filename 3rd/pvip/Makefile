@@ -3,7 +3,7 @@ CFLAGS=-Wall -DYY_DEBUG=1 -g
 all: pvip
 
 pvip: libpvip.a main.c
-	gcc $(CFLAGS) -L. -lpvip -o pvip main.c
+	gcc $(CFLAGS) -o pvip main.c libpvip.a
 
 libpvip.a: gen.pvip.y.o pvip.h pvip_node.o gen.node.o gen.node.o
 	ar rsv libpvip.a gen.pvip.y.o pvip_node.o gen.node.o
