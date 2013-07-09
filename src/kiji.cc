@@ -1,5 +1,5 @@
 // vim:ts=2:sw=2:tw=0:
-#define YY_NAME(n) kiji_yy##n
+
 
 #include <stdio.h>
 #include <assert.h>
@@ -8,11 +8,15 @@
 #include <unistd.h>
 #endif
 #include "node.h"
-#include "gen.kiji.y.cc"
+namespace kiji {
+  bool parse(std::istream *is, kiji::Node &root);
+}
+struct GREG;
 extern "C" {
 #include "moarvm.h"
 }
 #include "compiler.h"
+
 
 void run_repl() {
   std::string src;
