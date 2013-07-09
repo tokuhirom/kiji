@@ -137,6 +137,7 @@ PVIPNode* PVIP_node_new_int(PVIP_node_type_t type, int64_t n);
 PVIPNode* PVIP_node_new_intf(PVIP_node_type_t type, const char *str, size_t len, int base);
 PVIPNode* PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t len);
 PVIPNode* PVIP_node_new_number(PVIP_node_type_t type, const char *str, size_t len);
+const char* PVIP_node_name(PVIP_node_type_t t);
 
 void PVIP_node_push_child(PVIPNode* node, PVIPNode* child);
 
@@ -159,6 +160,7 @@ PVIPString *PVIP_string_new();
 void PVIP_string_destroy(PVIPString *str);
 void PVIP_string_concat(PVIPString *str, const char *src, size_t len);
 void PVIP_string_concat_int(PVIPString *str, int64_t n);
+void PVIP_string_concat_number(PVIPString *str, double n);
 void PVIP_string_say(PVIPString *str);
 
 /* parser */
