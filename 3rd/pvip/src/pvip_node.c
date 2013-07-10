@@ -221,6 +221,8 @@ static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
         }
         break;
     }
+    case PVIP_CATEGORY_UNKNOWN:
+        abort();
     }
     PVIP_string_concat(buf, ")", 1);
 }
