@@ -22,7 +22,16 @@ PVIPNode * PVIP_node_new_int(PVIP_node_type_t type, int64_t n) {
 }
 
 PVIPNode * PVIP_node_new_intf(PVIP_node_type_t type, const char *str, size_t len, int base) {
-    int64_t n = strtoll(str, NULL, base);
+    char * buf = malloc(len+1);
+    char *bufp = buf;
+    for (int i=0; i<len; i++) {
+        if (str[i] != '_') {
+            *bufp++ = str[i];
+        }
+    }
+    *bufp++ = '\0';
+    int64_t n = strtoll(buf, NULL, base);
+    free(buf);
     return PVIP_node_new_int(type, n);
 }
 

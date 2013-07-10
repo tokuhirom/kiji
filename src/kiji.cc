@@ -128,8 +128,7 @@ int main(int argc, char** argv) {
 
   kiji::CompUnit cu(interp.main_thread());
   kiji::Compiler compiler(cu);
-  kiji::Node node(root_node);
-  compiler.compile(node);
+  compiler.compile(root_node);
   if (dump_bytecode) {
     cu.dump(interp.vm());
   } else {

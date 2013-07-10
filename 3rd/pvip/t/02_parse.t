@@ -406,3 +406,10 @@ my $i=3;
 --- expected
 (statements
     (unary_minus (unary_minus (int 1))))
+
+===
+--- code
+0_0_1_4
+--- expected
+(statements
+    (int 14))

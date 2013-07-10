@@ -7,6 +7,8 @@ use File::Temp;
 use JSON::PP;
 use Data::SExpression 0.14;
 
+plan skip_all => 'json outpu was disabled for now';
+
 test(
     '"hoge"',
     {

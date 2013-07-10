@@ -11,6 +11,7 @@
 #include "pvip.h"
 
 namespace kiji {
+  /*
   class Node {
   private:
     PVIPNode* node_;
@@ -59,5 +60,6 @@ namespace kiji {
       return PVIP_node_name(node_->type);
     }
   };
+  */
 };
 
