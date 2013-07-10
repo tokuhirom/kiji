@@ -18,6 +18,10 @@ int main(int argc, char **argv) {
     } else if (argc==2) {
         int debug = 0;
         FILE *fp = fopen(argv[1], "rb");
+        if (!fp) {
+            perror(argv[1]);
+            exit(0);
+        }
         PVIPString *buf = PVIP_string_new();
         PVIPNode *node = PVIP_parse_fp(fp, debug);
         assert(node);
