@@ -609,7 +609,6 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
         free(g.data.str);
       return NULL;
     }
-    /*
     if (g.data.str->len!=g.data.str->pos) {
       printf("Syntax error! Around:\n");
       int i;
@@ -622,7 +621,6 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
       printf("\n");
       exit(1);
     }
-    */
     free(g.data.str);
     PVIPNode *root = g.data.root;
     assert(g.data.root);
