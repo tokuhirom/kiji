@@ -2,8 +2,8 @@ CFLAGS=-Wall -DYY_DEBUG=1 -g
 
 all: pvip
 
-pvip: libpvip.a src/main.c
-	gcc $(CFLAGS) -o pvip src/main.c libpvip.a
+pvip: libpvip.a src/main.c src/commander.o
+	gcc $(CFLAGS) -o pvip src/commander.o src/main.c libpvip.a
 
 libpvip.a: src/gen.pvip.y.o src/pvip.h src/pvip_node.o src/gen.node.o src/pvip_string.o
 	ar rsv libpvip.a src/gen.pvip.y.o src/pvip_node.o src/gen.node.o src/pvip_string.o
