@@ -6,7 +6,6 @@ use Data::SExpression 0.41;
 use Test::Base::Less;
 use Data::Dumper;
 use File::Temp;
-use JSON::PP;
 # use Test::Difflet qw(is_deeply);
 
 for my $block (blocks) {
@@ -33,12 +32,15 @@ sub parse {
     my $tmp = File::Temp->new();
     print {$tmp} $src;
 
-    my $json = `./kiji --dump-ast $tmp`;
-    unless ($json =~ /\A\{/) {
+    my $json = `./pvip $tmp`;
+    unless ($json =~ /\A\(/) {
         die "Cannot get json from '$src': $json";
     }
     my $got = eval {
-        JSON::PP->new->decode($json)
+        my $sexp = Data::SExpression->new({use_symbol_class => 1});
+        my $dat = $sexp->read($json);
+        $dat = mangle($dat);
+        $dat;
     };
     if ($@) {
         diag $json;
@@ -68,6 +70,7 @@ sub mangle {
             value => $value,
         };
     } else {
+        $data =~ s/\A([0-9]+\.[0-9]+?)0*\z/$1/; # TODO remove this
         return $data;
     }
 }
@@ -403,3 +406,40 @@ my $i=3;
 --- expected
 (statements
     (unary_minus (unary_minus (int 1))))
+
+===
+--- code
+0_0_1_4
+--- expected
+(statements
+    (int 14))
+
+===
+--- code
+say('ok ', 11*say('ok 10'));
+--- expected
+(statements (funcall (ident "say") (args (string "ok ") (mul (int 11) (funcall (ident "say") (args (string "ok 10")))))))
+
+===
+--- code
+say "ok "
+--- expected
+(statements (funcall (ident "say") (args (string "ok "))))
+
+===
+--- code
+say 'ok ', 11*say 'ok 10';
+--- expected
+(statements (funcall (ident "say") (args (string "ok ") (mul (int 11) (funcall (ident "say") (args (string "ok 10")))))))
+
+===
+--- code
+1 or 2
+--- expected
+(statements (logical_or (int 1) (int 2)))
+
+===
+--- code
+;0 xor say 'ok 7'
+--- expected
+(statements (nop ) (logical_xor (int 0) (funcall (ident "say") (args (string "ok 7")))))

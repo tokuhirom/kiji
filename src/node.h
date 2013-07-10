@@ -8,321 +8,58 @@
 #include <assert.h>
 #include <string>
 #include <sstream>
-#include "gen.node.h"
+#include "pvip.h"
 
 namespace kiji {
-  enum node_type_t {
-    NODE_TYPE_UNDEF,
-    NODE_TYPE_INT,
-    NODE_TYPE_NUM,
-    NODE_TYPE_STR,
-    NODE_TYPE_CHILDREN
-  };
-
-  // TODO: support multibyte
-  static std::string escapeJsonString(const std::string& input) {
-    std::ostringstream ss;
-    for (auto iter = input.cbegin(); iter != input.cend(); iter++) {
-      switch (*iter) {
-        case '\\': ss << "\\\\";    break;
-        case '"':  ss << "\\\"";    break;
-        case '/':  ss << "\\/";     break;
-        case '\b': ss << "\\b";     break;
-        case '\f': ss << "\\f";     break;
-        case '\n': ss << "\\n";     break;
-        case '\r': ss << "\\r";     break;
-        case '\t': ss << "\\t";     break;
-        case '\a': ss << "\\u0007"; break;
-        default:   ss << *iter;     break;
-      }
-    }
-    return ss.str();
-  }
-
+  /*
   class Node {
   private:
-    NODE_TYPE type_;
-    union {
-        int64_t iv; // integer value
-        double nv; // number value
-        std::string *pv;
-        std::vector<kiji::Node> *children;
-    } body_;
-    static void indent(int n) {
-      for (int i=0; i<n*4; i++) {
-          printf(" ");
-      }
-    }
+    PVIPNode* node_;
   public:
-    Node() : type_(NODE_UNDEF) {
-      this->body_.pv=NULL;
+    Node() {
+      node_ = NULL;
     }
-    Node(const kiji::Node &node) {
-      this->type_ = node.type_;
-      switch (this->node_type()) {
-      case NODE_TYPE_STR:
-        this->body_.pv = new std::string(*(node.body_.pv));
-        break;
-      case NODE_TYPE_INT:
-        this->body_.pv = NULL;
-        this->body_.iv = node.body_.iv;
-        break;
-      case NODE_TYPE_NUM:
-        this->body_.pv = NULL;
-        this->body_.nv = node.body_.nv;
-        break;
-      case NODE_TYPE_CHILDREN:
-        this->body_.pv = NULL;
-        this->body_.children = new std::vector<kiji::Node>();
-        assert(this->body_.children);
-        assert(node.body_.children);
-        *(this->body_.children) = *(node.body_.children);
-        break;
-      default:
-        abort();
-      }
+    Node(PVIPNode*node) {
+      node_ = node;
     }
-    node_type_t node_type() const {
-      switch (type_) {
-      case NODE_VARIABLE:
-      case NODE_IDENT:
-      case NODE_STRING:
-        return NODE_TYPE_STR;
-      case NODE_INT:
-        return NODE_TYPE_INT;
-      case NODE_NUMBER:
-        return NODE_TYPE_NUM;
-      case NODE_UNDEF:
-        return NODE_TYPE_UNDEF;
-      default:
-        return NODE_TYPE_CHILDREN;
+    PVIP_category_t node_type() const {
+      if (node_->type) {
+        return PVIP_node_category(node_->type);
+      } else {
+        return PVIP_CATEGORY_UNKNOWN;
       }
     }
     ~Node() { }
 
-    void change_type(NODE_TYPE type) {
-      this->type_ = type;
-    }
-
-    void set_clargs() {
-      this->type_ = NODE_CLARGS;
-      this->body_.children = new std::vector<kiji::Node>();
-    }
-    void set_nop() {
-      this->type_ = NODE_NOP;
-      this->body_.children = new std::vector<kiji::Node>();
-    }
-    void set(NODE_TYPE type, const kiji::Node &child) {
-      this->type_ = type;
-      this->body_.children = new std::vector<kiji::Node>();
-      this->body_.children->push_back(child);
-    }
-    void set(NODE_TYPE type, const kiji::Node &c1, const kiji::Node &c2) {
-      this->type_ = type;
-      this->body_.children = new std::vector<kiji::Node>();
-      this->body_.children->push_back(c1);
-      this->body_.children->push_back(c2);
-    }
-    void set(NODE_TYPE type, const kiji::Node &c1, const kiji::Node &c2, const kiji::Node &c3) {
-      this->type_ = type;
-      this->body_.children = new std::vector<kiji::Node>();
-      this->body_.children->push_back(c1);
-      this->body_.children->push_back(c2);
-      this->body_.children->push_back(c3);
-    }
-    void set_children(NODE_TYPE type) {
-      this->type_ = type;
-      this->body_.children = new std::vector<kiji::Node>();
-    }
-    void set_number(const char*txt) {
-      this->type_ = NODE_NUMBER;
-      this->body_.nv = atof(txt);
-    }
-    void set_integer(int64_t n) {
-      this->type_ = NODE_INT;
-      this->body_.iv = n;
-    }
-    void set_integer(const char*txt, size_t length, int base) {
-      std::string buf;
-      for (int i=0; i<length; i++) {
-        if (txt[i] != '_') {
-          buf += txt[i];
-        }
-      }
-      int64_t n = strtoll(buf.c_str(), NULL, base);
-      set_integer(n);
-    }
-    void set_ident(const char *txt, int length) {
-      this->type_ = NODE_IDENT;
-      this->body_.pv = new std::string(txt, length);
-    }
-    void set_variable(const char *txt, int length) {
-      this->type_ = NODE_VARIABLE;
-      this->body_.pv = new std::string(txt, length);
-    }
-    void set_string(const char *txt, int length) {
-      this->type_ = NODE_STRING;
-      this->body_.pv = new std::string(txt, length);
-    }
-    void init_string() {
-      this->type_ = NODE_STRING;
-      this->body_.pv = new std::string();
-    }
-    void append_string_variable(Node&var) {
-      if (this->type_ == NODE_STRING) {
-        Node tmp(*this);
-        this->set(NODE_STRING_CONCAT, tmp);
-        this->push_child(var);
-      } else if (this->type_ == NODE_STRING_CONCAT) {
-        Node tmp(*this);
-        this->set(NODE_STRING_CONCAT, tmp, var);
-      } else {
-        this->dump_json();
-        abort();
-      }
-    }
-    void append_string(const char *txt, size_t length) {
-      if (this->type_ == NODE_STRING) {
-        assert(this->type_ == NODE_STRING);
-        this->body_.pv->append(txt, length);
-      } else if (this->type() == NODE_STRING_CONCAT) {
-        if (this->body_.children->back().type() == NODE_STRING) {
-          this->body_.children->back().body_.pv->append(txt, length);
-        } else {
-          Node s;
-          s.set_string(txt, length);
-          Node tmp(*this);
-          this->set(NODE_STRING_CONCAT, tmp, s);
-        }
-      } else {
-        abort();
-      }
-    }
-    void append_string_from_hex(const char *txt, size_t length) {
-      assert(this->type_ == NODE_STRING);
-      assert(length==2);
-      // \o53
-      char buf[3];
-      buf[0] = txt[0];
-      buf[1] = txt[1];
-      buf[2] = '\0';
-      char c = strtol(buf, NULL, 16);
-      append_string(&c, 1);
-    }
-    void append_string_from_oct(const char *txt, size_t length) {
-      assert(this->type_ == NODE_STRING);
-      assert(length==2);
-      // \o53
-      char buf[3];
-      buf[0] = txt[0];
-      buf[1] = txt[1];
-      buf[2] = '\0';
-      char c = strtol(buf, NULL, 8);
-      append_string(&c, 1);
-    }
-
-    long int iv() const {
-      assert(node_type() == NODE_TYPE_INT);
-      return this->body_.iv;
+    int64_t iv() const {
+      // assert(node_type() == NODE_TYPE_INT);
+      return this->node_->iv;
     } 
     double nv() const {
-      assert(node_type() == NODE_TYPE_NUM);
-      return this->body_.nv;
+      // assert(node_type() == NODE_TYPE_NUM);
+      return this->node_->nv;
     } 
     const std::vector<kiji::Node> & children() const {
-      assert(node_type() == NODE_TYPE_CHILDREN);
-      return *(this->body_.children);
+      // assert(node_type() == NODE_TYPE_CHILDREN);
+      auto p = new std::vector<kiji::Node>;
+      for (int i=0; i<this->node_->children.size; i++) {
+        p->emplace_back(this->node_->children.nodes[i]);
+      }
+      // FIXME MEMORY LEAK!
+      return *p;
     }
-    kiji::Node & child_at(int n) const {
-      assert(node_type() == NODE_TYPE_CHILDREN);
-      return this->body_.children->at(n);
+    const kiji::Node & child_at(int n) const {
+      // assert(node_type() == NODE_TYPE_CHILDREN);
+      return this->children().at(n);
     }
-    void push_child(kiji::Node &child) {
-      assert(node_type() == NODE_TYPE_CHILDREN);
-      this->body_.children->push_back(child);
-    }
-    NODE_TYPE type() const { return type_; }
-    bool is_undefined() const { return type_==NODE_UNDEF; }
+    PVIP_node_type_t type() const { return node_->type; }
     const std::string pv() const {
-      assert(node_type() == NODE_TYPE_STR);
-      return *(this->body_.pv);
+      return std::string(node_->pv->buf, node_->pv->len);
     }
     const char* type_name() const {
-      return nqpc_node_type2name(this->type());
-    }
-
-    bool is_chained() const {
-      switch (type_) {
-      case NODE_STREQ:
-      case NODE_STRNE:
-      case NODE_STRGT:
-      case NODE_STRGE:
-      case NODE_STRLT:
-      case NODE_STRLE:
-      case NODE_EQ:
-      case NODE_NE:
-      case NODE_LT:
-      case NODE_LE:
-      case NODE_GT:
-      case NODE_GE:
-        return true;
-      default:
-        return false;
-      }
-    }
-
-    void dump_json(unsigned int depth) const {
-      printf("{\n");
-      indent(depth+1);
-      printf("\"type\":\"%s\",\n", nqpc_node_type2name(this->type()));
-      switch (this->node_type()) {
-      case NODE_TYPE_INT:
-        indent(depth+1);
-        printf("\"value\":[%ld]\n", this->iv());
-        break;
-      case NODE_TYPE_NUM:
-        indent(depth+1);
-        printf("\"value\":[%lf]\n", this->nv());
-        break;
-      case NODE_TYPE_STR:
-        indent(depth+1);
-        printf("\"value\":[\"%s\"]\n", escapeJsonString(this->pv()).c_str());
-        break;
-      case NODE_TYPE_CHILDREN: {
-        indent(depth+1);
-        printf("\"value\":[\n");
-        int i=0;
-        for (auto &x: this->children()) {
-          indent(depth+2);
-          x.dump_json(depth+2);
-          if (i==this->children().size()-1) {
-            printf("\n");
-          } else {
-            printf(",\n");
-          }
-          i++;
-        }
-        indent(depth+1);
-        printf("]\n");
-        break;
-      }
-      case NODE_TYPE_UNDEF:
-        break;
-      default:
-        abort();
-      }
-      indent(depth);
-      printf("}");
-      if (depth == 0) {
-        printf("\n");
-      }
-    }
-
-    void dump_json() const {
-      this->dump_json(0);
+      return PVIP_node_name(node_->type);
     }
   };
-
+  */
 };
 
-#define YYSTYPE kiji::Node
