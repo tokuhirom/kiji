@@ -80,6 +80,9 @@ statement =
                 PVIPNode *a = PVIP_node_new_children(PVIP_NODE_ARGS);
                 $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
             }
+            | ';'+ {
+                $$ = PVIP_node_new_children(PVIP_NODE_NOP);
+            }
           )
 
 normal_or_postfix_stmt =
@@ -169,13 +172,13 @@ sequencer_expr = loose_or_expr
 
 loose_or_expr =
     f1:loose_and_expr (
-        - 'or' - f2:loose_and_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_OR, f1, f2); f1=$$; }
-        | - 'xor' - f2:loose_and_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_XOR, f1, f2); f1=$$; }
+        - 'or' ![a-zA-Z0-9_] - f2:loose_and_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_OR, f1, f2); f1=$$; }
+        | - 'xor' ![a-zA-Z0-9_] - f2:loose_and_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_XOR, f1, f2); f1=$$; }
     )* { $$=f1; }
 
 loose_and_expr =
     f1:list_prefix_expr (
-        - 'and' - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        - 'and' ![a-zA-Z0-9_]  - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_AND, f1, f2); f1=$$; }
     )* { $$=f1; }
 
 list_prefix_expr =
@@ -259,6 +262,9 @@ funcall =
     i:ident - a:paren_args {
         $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
     }
+    | i:ident ws+ a:bare_args {
+        $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
+    }
 
 #  L  Named unary       temp let
 named_unary_expr =
@@ -283,7 +289,7 @@ concatenation_expr =
 replication_expr =
     l:additive_expr (
         - (
-            'x' - r:additive_expr {
+            'x'  ![a-zA-Z0-9_] - r:additive_expr {
                 $$ = PVIP_node_new_children2(PVIP_NODE_REPEAT_S, l, r);
                 l=$$;
             }
@@ -609,11 +615,11 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
         free(g.data.str);
       return NULL;
     }
-    if (g.data.str->len!=g.data.str->pos) {
+    if (g.limit!=g.pos) {
       printf("Syntax error! Around:\n");
       int i;
-      for (i=0; g.data.str->len!=g.data.str->pos && i<24; i++) {
-        char ch = g.data.str->buf[g.data.str->pos++];
+      for (i=0; g.limit!=g.pos && i<24; i++) {
+        char ch = g.data.str->buf[g.pos++];
         if (ch) {
           printf("%c", ch);
         }

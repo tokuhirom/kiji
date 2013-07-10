@@ -413,3 +413,33 @@ my $i=3;
 --- expected
 (statements
     (int 14))
+
+===
+--- code
+say('ok ', 11*say('ok 10'));
+--- expected
+(statements (funcall (ident "say") (args (string "ok ") (mul (int 11) (funcall (ident "say") (args (string "ok 10")))))))
+
+===
+--- code
+say "ok "
+--- expected
+(statements (funcall (ident "say") (args (string "ok "))))
+
+===
+--- code
+say 'ok ', 11*say 'ok 10';
+--- expected
+(statements (funcall (ident "say") (args (string "ok ") (mul (int 11) (funcall (ident "say") (args (string "ok 10")))))))
+
+===
+--- code
+1 or 2
+--- expected
+(statements (logical_or (int 1) (int 2)))
+
+===
+--- code
+;0 xor say 'ok 7'
+--- expected
+(statements (nop ) (logical_xor (int 0) (funcall (ident "say") (args (string "ok 7")))))
