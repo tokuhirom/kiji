@@ -70,7 +70,6 @@ statement =
             | while_stmt
             | unless_stmt
             | module_stmt
-            | class_stmt
             | method_stmt
             | die_stmt
             | funcdef - ';'*
@@ -96,8 +95,6 @@ normal_or_postfix_stmt =
 last_stmt = 'last' { $$ = PVIP_node_new_children(PVIP_NODE_LAST); }
 
 next_stmt = 'next' { $$ = PVIP_node_new_children(PVIP_NODE_NEXT); }
-
-class_stmt = 'class' ws i:ident - b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, i, b); }
 
 method_stmt = 'method' ws i:ident p:paren_args - b:block { $$ = PVIP_node_new_children3(PVIP_NODE_METHOD, i, p, b); }
 
@@ -404,6 +401,13 @@ term =
     | hash
     | lambda
     | it_method
+    | class
+
+# TODO optimizable
+class =
+    'class' ws+ b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, PVIP_node_new_children(PVIP_NODE_NOP), b); }
+    | 'class' ws+ i:ident - b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, i, b); }
+
 
 it_method = (
         '.' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_IT_METHODCALL, i); i=$$; }
