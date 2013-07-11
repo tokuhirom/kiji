@@ -696,6 +696,11 @@ OK
 
 ===
 --- code
+say 7 +& +^1;
+--- expected
+6
+
+=======
 for 1,2,3 { .say() }
 --- expected
 1

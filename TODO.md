@@ -240,8 +240,9 @@ TODO
 
  * use
 
-## Step 7.6 2013-06-26
+## Step 7.6 2013-06-25
 
+ * unary `+^`
  * `for <a b c> { .say }`
 
 ## Step 8.
