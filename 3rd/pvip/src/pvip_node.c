@@ -24,7 +24,8 @@ PVIPNode * PVIP_node_new_int(PVIP_node_type_t type, int64_t n) {
 PVIPNode * PVIP_node_new_intf(PVIP_node_type_t type, const char *str, size_t len, int base) {
     char * buf = malloc(len+1);
     char *bufp = buf;
-    for (int i=0; i<len; i++) {
+    int i;
+    for (i=0; i<len; i++) {
         if (str[i] != '_') {
             *bufp++ = str[i];
         }
