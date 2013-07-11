@@ -562,13 +562,28 @@ say(8 || 0);
 8
 
 ===
+--- SKIP
+--- code
+say(0 ^^ 0);
+say(0 ^^ 5);
+say(4 ^^ 5);
+say(3 ^^ 2);
+say(8 ^^ 0);
+--- expected
+0
+5
+Nil
+Nil
+8
+
+===
 --- code
 0 or say(3);
 1 or say(4);
 0 and say(5);
 1 and say(6);
 --- expected
-4
+3
 6
 
 === ** is weaken than *
@@ -617,6 +632,12 @@ c
 (-> $n { say($n) })(5)
 --- expected
 5
+
+=== lambda without arguments
+--- code
+(-> { say("GO") })()
+--- expected
+GO
 
 ===
 --- code
@@ -678,3 +699,92 @@ OK
 say 7 +& +^1;
 --- expected
 6
+
+=======
+for 1,2,3 { .say() }
+--- expected
+1
+2
+3
+
+===
+--- code
+for 1,2,3 { .say }
+--- expected
+1
+2
+3
+
+=== last for 'while'
+--- code
+my $i:=0;
+while 1 {
+    $i:=$i+1;
+    say $i;
+    if $i == 3 { last }
+}
+--- expected
+1
+2
+3
+
+=== last for 'for'
+--- code
+for 1,2,3,4,5 { .say; if $_ == 4 { last } }
+--- expected
+1
+2
+3
+4
+
+=== last for 'for'
+--- code
+for 1,2,3 { .say; next if $_==2; .say }
+--- expected
+1
+1
+2
+3
+3
+
+=== last for 'for'
+--- code
+my $i:=0; while $i<4 {  $i:=$i+1; say($i); next if $i==2; say($i); }
+--- expected
+1
+1
+2
+3
+3
+4
+4
+
+===
+--- code
+my $i=5;
+say("i=$i\nGah!");
+--- expected
+i=5
+Gah!
+
+===
+--- code
+say(abs -2);
+say(abs 2);
+--- expected
+2
+2
+
+===
+--- code
+1 and say 'ok 1';
+--- expected
+ok 1
+
+===
+--- code
+0 ^^ say 'ok 6';
+0 xor say 'ok 7';
+--- expected
+ok 6
+ok 7

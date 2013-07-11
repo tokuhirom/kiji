@@ -243,12 +243,11 @@ TODO
 ## Step 7.6 2013-06-25
 
  * unary `+^`
-
+ * `for <a b c> { .say }`
 
 ## Step 8.
 
  * `for <a b c d> -> $a, $b { say($a, $b) }`
- * `for <a b c> { .say }`
  * $hash.keys()
  * +(1,2,3)
  * next, last
@@ -272,7 +271,6 @@ TODO
  * kill
  * waitpid
  * wait
- * `for <a b c> -> $n { say($n); }`
  * END block
  * exporter
  * implement builtin functions
@@ -301,7 +299,6 @@ TODO
  * variable scope in 'while' stmt
  * eval
  * try S32-str/lines.t in roast
- * `+"0x0a";`
  * heredocs?
   * needs 'assignment'
 

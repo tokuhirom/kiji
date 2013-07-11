@@ -1,4 +1,6 @@
 // vim:ts=2:sw=2:tw=0:
+
+
 #include <stdio.h>
 #include <assert.h>
 #include <fstream>
@@ -6,13 +8,15 @@
 #include <unistd.h>
 #endif
 #include "node.h"
-#include "gen.kiji.y.cc"
 extern "C" {
 #include "moarvm.h"
 }
 #include "compiler.h"
 
+
 void run_repl() {
+  // TODO disabled for now(pvip)
+  /*
   std::string src;
   while (!std::cin.eof()) {
     std::cout << "> ";
@@ -35,6 +39,7 @@ void run_repl() {
     }
     std::cout << std::endl;
   }
+  */
 }
 
 int main(int argc, char** argv) {
@@ -85,9 +90,9 @@ int main(int argc, char** argv) {
   }
 
   processed_args = opt->ind;
-  std::istream *is;
+  PVIPNode *root_node;
   if (eval) {
-    is = new std::istringstream(eval);
+    root_node = PVIP_parse_string(eval, strlen(eval), 0);
   } else if (processed_args == argc) {
 #ifdef __unix__
     if (isatty(fileno(stdin))) {
@@ -96,14 +101,14 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    is = &std::cin;
+    root_node = PVIP_parse_fp(stdin, 0);
   } else {
-    std::ifstream *ifs = new std::ifstream((char *)opt->argv[processed_args++]);
-    if (!ifs->is_open()) {
-      std::cerr << "Cannot open file: " << opt->argv[processed_args-1] << std::endl;
+    FILE *fp = fopen(opt->argv[processed_args++], "rb");
+    if (!fp) {
+      std::cerr << "Cannot open file: " << opt->argv[processed_args-1] << ": " << strerror(errno) << std::endl;
       exit(1);
     }
-    is=ifs;
+    root_node = PVIP_parse_fp(fp, 0);
   }
   // stash the rest of the raw command line args in the instance
   interp.set_clargs(argc - processed_args, (char **)(opt->argv + processed_args));
@@ -112,13 +117,12 @@ int main(int argc, char** argv) {
   instance->raw_clargs = (char **)(opt->argv + processed_args);
   */
 
-  kiji::Node root_node;
-  if (!kiji::parse(is, root_node)) {
+  if (!root_node) {
     exit(1);
   }
 
   if (dump_ast) {
-    root_node.dump_json();
+    PVIP_node_dump_sexp(root_node);
     return 0;
   }
 
