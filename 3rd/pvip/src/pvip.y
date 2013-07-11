@@ -7,6 +7,40 @@
 #define YY_NAME(n) PVIP_##n
 #define YY_XTYPE PVIPParserContext
 
+/*
+
+
+    A  Level             Examples
+    =  =====             ========
+    N  Terms             42 3.14 "eek" qq["foo"] $x :!verbose @$array
+    L  Method postfix    .meth .+ .? .* .() .[] .{} .<> .«» .:: .= .^ .:
+    N  Autoincrement     ++ --
+    R  Exponentiation    **
+    L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
+    L  Multiplicative    * / % %% +& +< +> ~& ~< ~> ?& div mod gcd lcm
+    L  Additive          + - +| +^ ~| ~^ ?| ?^
+    L  Replication       x xx
+    X  Concatenation     ~
+    X  Junctive and      & (&) ∩
+    X  Junctive or       | ^ (|) (^) ∪ (-)
+    L  Named unary       temp let
+    N  Structural infix  but does <=> leg cmp .. ..^ ^.. ^..^
+    C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
+    X  Tight and         &&
+    X  Tight or          || ^^ // min max
+    R  Conditional       ?? !! ff fff
+    R  Item assignment   = => += -= **= xx= .=
+    L  Loose unary       so not
+    X  Comma operator    , :
+    X  List infix        Z minmax X X~ X* Xeqv ...
+    R  List prefix       print push say die map substr ... [+] [*] any Z=
+    X  Loose and         and andthen
+    X  Loose or          or xor orelse
+    X  Sequencer         <== ==> <<== ==>>
+    N  Terminator        ; {...} unless extra ) ] }
+
+*/
+
 typedef struct {
     const char  *buf;
     size_t len;
@@ -383,6 +417,9 @@ method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$ = PVIP_node_new
            | ( container:term '<' - k:ident - '>' ) { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, container, k); }
            | f1:term - '[' - f2:term - ']' {
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
+            }
+           | f1:term - '.' f2:ident f3:paren_args {
+                $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
             }
            | ( container:term a:paren_args ) { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, container, a); }
            | term

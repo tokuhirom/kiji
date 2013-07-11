@@ -16,3 +16,9 @@ __END__
 my $o = class { method bar() { say(5963); } }; my $n=$o.new(); $n.bar()
 --- expected
 5963
+
+===
+--- code
+my $o = class { method bar() { say(5963); } }; $o.new().bar()
+--- expected
+5963

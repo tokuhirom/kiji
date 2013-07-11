@@ -462,4 +462,12 @@ class { method bar() { } }
 --- expected
 (statements (class (nop ) (statements (method (ident "bar") (args ) (statements )))))
 
-(statements (class (ident "Foo") (statements (int 1))))
+===
+--- code
+$o.new().bar()
+--- expected
+(statements
+    (methodcall
+        (methodcall (variable "$o") (ident "new") (args ))
+        (ident "bar")
+        (args)))
