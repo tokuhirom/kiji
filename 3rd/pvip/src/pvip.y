@@ -413,16 +413,18 @@ autoincrement_expr =
     )
 
 # FIXME: optimizable
-method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, container, k); }
-           | ( container:term '<' - k:ident - '>' ) { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, container, k); }
-           | f1:term - '[' - f2:term - ']' {
+method_postfix_expr =
+          f1:term { $$=f1; } (
+              '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); }
+            | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); }
+            | '[' - f2:term - ']' {
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
             }
-           | f1:term - '.' f2:ident f3:paren_args {
+            | '.' f2:ident f3:paren_args {
                 $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
             }
-           | ( container:term a:paren_args ) { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, container, a); }
-           | term
+            | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); }
+          )?
 
 term = 
     integer
