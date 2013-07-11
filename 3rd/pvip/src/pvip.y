@@ -412,7 +412,6 @@ autoincrement_expr =
         | '' { $$=n; }
     )
 
-# FIXME: optimizable
 method_postfix_expr =
           f1:term { $$=f1; } (
               '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); }
