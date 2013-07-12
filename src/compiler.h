@@ -18,7 +18,140 @@
 
 #define END_EACH_NODE } }
 
+#define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
+    { \
+        void *_r = referenced; \
+        MVM_WB(tc, update_root, _r); \
+        update_addr = (MVMObject*)_r; \
+    }
+
 #define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
+
+// taken from 'compose' function in 6model/bootstrap.c.
+static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
+    MVMObject *method_table, *attributes, *BOOTArray, *BOOTHash,
+              *repr_info_hash, *repr_info, *type_info, *attr_info_list, *parent_info;
+    MVMint64   num_attrs, i;
+
+    MVMString *str_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"name");
+    MVMString * str_type     = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"type");
+    MVMString * str_box_target = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"box_target");
+    MVMString* str_attribute = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"attribute");
+    
+    /* Get arguments. */
+    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
+    if (!self || !IS_CONCRETE(self) || REPR(self)->ID != MVM_REPR_ID_KnowHOWREPR)
+        MVM_exception_throw_adhoc(tc, "KnowHOW methods must be called on object instance with REPR KnowHOWREPR");
+    
+    /* Fill out STable. */
+    method_table = ((MVMKnowHOWREPR *)self)->body.methods;
+    MVM_ASSIGN_REF2(tc, STABLE(type_obj), STABLE(type_obj)->method_cache, (void*)method_table);
+    STABLE(type_obj)->mode_flags              = MVM_METHOD_CACHE_AUTHORITATIVE;
+    STABLE(type_obj)->type_check_cache_length = 1;
+    STABLE(type_obj)->type_check_cache        = (MVMObject **)malloc(sizeof(MVMObject *));
+    MVM_ASSIGN_REF2(tc, STABLE(type_obj), STABLE(type_obj)->type_check_cache[0], type_obj);
+    
+    /* Use any attribute information to produce attribute protocol
+     * data. The protocol consists of an array... */
+    BOOTArray = tc->instance->boot_types->BOOTArray;
+    BOOTHash = tc->instance->boot_types->BOOTHash;
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&BOOTArray);
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&BOOTHash);
+    repr_info = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&repr_info);
+    REPR(repr_info)->initialize(tc, STABLE(repr_info), repr_info, OBJECT_BODY(repr_info));
+    
+    /* ...which contains an array per MRO entry (just us)... */
+    type_info = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&type_info);
+    REPR(type_info)->initialize(tc, STABLE(type_info), type_info, OBJECT_BODY(type_info));
+    MVM_repr_push_o(tc, repr_info, type_info);
+        
+    /* ...which in turn contains this type... */
+    MVM_repr_push_o(tc, type_info, type_obj);
+    
+    /* ...then an array of hashes per attribute... */
+    attr_info_list = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&attr_info_list);
+    REPR(attr_info_list)->initialize(tc, STABLE(attr_info_list), attr_info_list,
+        OBJECT_BODY(attr_info_list));
+    MVM_repr_push_o(tc, type_info, attr_info_list);
+    attributes = ((MVMKnowHOWREPR *)self)->body.attributes;
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&attributes);
+    num_attrs = REPR(attributes)->elems(tc, STABLE(attributes),
+        attributes, OBJECT_BODY(attributes));
+    for (i = 0; i < num_attrs; i++) {
+        MVMObject *attr_info = REPR(BOOTHash)->allocate(tc, STABLE(BOOTHash));
+        MVMKnowHOWAttributeREPR *attribute = (MVMKnowHOWAttributeREPR *)
+            MVM_repr_at_pos_o(tc, attributes, i);
+        MVM_gc_root_temp_push(tc, (MVMCollectable **)&attr_info);
+        MVM_gc_root_temp_push(tc, (MVMCollectable **)&attribute);
+        if (REPR((MVMObject *)attribute)->ID != MVM_REPR_ID_KnowHOWAttributeREPR)
+            MVM_exception_throw_adhoc(tc, "KnowHOW attributes must use KnowHOWAttributeREPR");
+        
+        REPR(attr_info)->initialize(tc, STABLE(attr_info), attr_info,
+            OBJECT_BODY(attr_info));
+        REPR(attr_info)->ass_funcs->bind_key_boxed(tc, STABLE(attr_info),
+            attr_info, OBJECT_BODY(attr_info), (MVMObject *)str_name, (MVMObject *)attribute->body.name);
+        REPR(attr_info)->ass_funcs->bind_key_boxed(tc, STABLE(attr_info),
+            attr_info, OBJECT_BODY(attr_info), (MVMObject *)str_type, attribute->body.type);
+        if (attribute->body.box_target) {
+            /* Merely having the key serves as a "yes". */
+            REPR(attr_info)->ass_funcs->bind_key_boxed(tc, STABLE(attr_info),
+                attr_info, OBJECT_BODY(attr_info), (MVMObject *)str_box_target, attr_info);
+        }
+        
+        MVM_repr_push_o(tc, attr_info_list, attr_info);
+        MVM_gc_root_temp_pop_n(tc, 2);
+    }
+    
+    /* ...followed by a list of parents (none). */
+    parent_info = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&parent_info);
+    REPR(parent_info)->initialize(tc, STABLE(parent_info), parent_info,
+        OBJECT_BODY(parent_info));
+    MVM_repr_push_o(tc, type_info, parent_info);
+    
+    /* Finally, this all goes in a hash under the key 'attribute'. */
+    repr_info_hash = REPR(BOOTHash)->allocate(tc, STABLE(BOOTHash));
+    MVM_gc_root_temp_push(tc, (MVMCollectable **)&repr_info_hash);
+    REPR(repr_info_hash)->initialize(tc, STABLE(repr_info_hash), repr_info_hash, OBJECT_BODY(repr_info_hash));
+    REPR(repr_info_hash)->ass_funcs->bind_key_boxed(tc, STABLE(repr_info_hash),
+            repr_info_hash, OBJECT_BODY(repr_info_hash), (MVMObject *)str_attribute, repr_info);
+
+    /* Compose the representation using it. */
+    REPR(type_obj)->compose(tc, STABLE(type_obj), repr_info_hash);
+    
+    /* Clear temporary roots. */
+    MVM_gc_root_temp_pop_n(tc, 7);
+    
+    /* Return type object. */
+    return type_obj;
+}
+
+  static void Mu_new(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
+    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
+    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
+    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
+    MVM_args_proc_cleanup(tc, &arg_ctx);
+
+    MVMObject *obj = object_compose(tc, STABLE(self)->HOW, self);
+
+    MVM_args_set_result_obj(tc, obj, MVM_RETURN_CURRENT_FRAME);
+
+    MVM_gc_root_temp_pop_n(tc, 1);
+  }
+
+  static void say_hello(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
+    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
+    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
+    MVM_args_proc_cleanup(tc, &arg_ctx);
+
+    MVMString * name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"A Punk IPA, good sir");
+    MVM_string_say(tc, name);
+
+    MVM_gc_root_temp_pop_n(tc, 1);
+  }
 
 namespace kiji {
   void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
@@ -91,6 +224,7 @@ namespace kiji {
     }
 
   public:
+    MVMStaticFrame* frame() { return &frame_; }
     Frame(MVMThreadContext* tc, const std::string name) {
       memset(&frame_, 0, sizeof(MVMFrame));
       tc_ = tc;
@@ -218,23 +352,25 @@ namespace kiji {
     }
 
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int &outer) {
+    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       MVMStaticFrame *f = &frame_;
-      outer = 0;
+      *outer = 0;
       while (f) {
         MVMLexicalHashEntry *lexical_names = f->lexical_names;
         MVMLexicalHashEntry *entry;
         MVM_HASH_GET(tc_, lexical_names, name, entry);
 
         if (entry) {
-          return entry->value;
+          *lex_no= entry->value;
+          return true;
         }
         f = f->outer;
-        ++outer;
+        ++(*outer);
       }
-      printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
-      exit(0);
+      return false;
+      // printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
+      // exit(0);
     }
   };
 
@@ -246,14 +382,23 @@ namespace kiji {
     std::vector<std::shared_ptr<Frame>> frames_;
     std::list<std::shared_ptr<Frame>> used_frames_;
     std::vector<MVMCallsite*> callsites_;
+    MVMSerializationContext * sc_classes_;
+    int num_sc_classes_;
   public:
     CompUnit(MVMThreadContext* tc) :tc_(tc) {
       cu_ = (MVMCompUnit*)malloc(sizeof(MVMCompUnit));
       memset(cu_, 0, sizeof(MVMCompUnit));
+
+      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
+      sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
+
+      num_sc_classes_ = 0;
     }
     ~CompUnit() {
       free(cu_);
     }
+    MVMThreadContext *tc() {  return tc_; }
+    MVMCompUnit *cu() {  return cu_; }
     void finalize(MVMInstance* vm) {
       MVMThreadContext *tc = tc_; // remove me
       MVMInstance *vm_ = vm; // remove me
@@ -350,11 +495,22 @@ namespace kiji {
       bootstrap_File(cu_, tc);
       bootstrap_Int(cu_, tc);
 
-      cu_->num_scs = 1;
-      cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*1);
+      cu_->num_scs = 2;
+      cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
       cu_->scs[0] = sc;
-      cu_->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*1);
+      cu_->scs[1] = sc_classes_;
+      cu_->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
       cu_->scs_to_resolve[0] = NULL;
+      cu_->scs_to_resolve[1] = NULL;
+    }
+
+    void push_sc_object(MVMObject * object, int *wval1, int *wval2) {
+      num_sc_classes_++;
+
+      *wval1 = 1;
+      *wval2 = num_sc_classes_-1;
+
+      MVM_sc_set_object(tc_, sc_classes_, num_sc_classes_-1, object);
     }
 
     void initialize() {
@@ -399,8 +555,8 @@ namespace kiji {
     }
 
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int &outer) {
-      return frames_.back()->find_lexical_by_name(name_cc, outer);
+    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
+      return frames_.back()->find_lexical_by_name(name_cc, lex_no, outer);
     }
     variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
       return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
@@ -408,6 +564,13 @@ namespace kiji {
 
     void push_handler(MVMFrameHandler *handler) {
       return frames_.back()->push_handler(handler);
+    }
+    MVMStaticFrame* get_frame(int frame_no) {
+      auto iter = used_frames_.begin();
+      for (int i=0; i<frame_no; i++) {
+        iter++;
+      }
+      return (*iter)->frame();
     }
     int push_frame(const std::string & name) {
       std::shared_ptr<Frame> frame = std::make_shared<Frame>(tc_, name);
@@ -538,6 +701,7 @@ namespace kiji {
     // Interpreter &interp_;
     CompUnit & cu_;
     int frame_no_;
+    MVMObject* current_class_how_;
 
     class Label {
     private:
@@ -617,6 +781,69 @@ namespace kiji {
     int reg_int64() { return cu_.push_local_type(MVM_reg_int64); }
     int reg_num64() { return cu_.push_local_type(MVM_reg_num64); }
 
+    int compile_class(const PVIPNode* node) {
+      int wval1, wval2;
+      MVMThreadContext*tc_ = cu_.tc();
+      {
+        // Create new class.
+        MVMObject * type = MVM_6model_find_method(
+          tc_,
+          STABLE(tc_->instance->KnowHOW)->HOW,
+          MVM_string_ascii_decode_nt(tc_, tc_->instance->VMString, (char*)"new_type")
+        );
+        MVMObject * how = STABLE(type)->HOW;
+
+        // Add "new" method
+        {
+          MVMString * name = MVM_string_ascii_decode_nt(tc_, tc_->instance->VMString, (char*)"new");
+          // self, type_obj, name, method
+          MVMObject * method_cache = REPR(tc_->instance->boot_types->BOOTHash)->allocate(tc_, STABLE(tc_->instance->boot_types->BOOTHash));
+          // MVMObject * method_cache = REPR(type)->allocate(tc_, STABLE(type));
+          // MVMObject * method_table = ((MVMKnowHOWREPR *)type)->body.methods;
+          MVMObject * BOOTCCode = tc_->instance->boot_types->BOOTCCode;
+          MVMObject * method = REPR(BOOTCCode)->allocate(tc_, STABLE(BOOTCCode));
+          ((MVMCFunction *)method)->body.func = Mu_new;
+          REPR(method_cache)->ass_funcs->bind_key_boxed(
+              tc_,
+              STABLE(method_cache),
+              method_cache,
+              OBJECT_BODY(method_cache),
+              (MVMObject*)name,
+              method);
+          // REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
+              // method_table, OBJECT_BODY(method_table), (MVMObject *)name, method);
+          STABLE(type)->method_cache = method_cache;
+        }
+
+        cu_.push_sc_object(type, &wval1, &wval2);
+        current_class_how_ = how;
+      }
+
+      // compile body
+      for (int i=0; i<node->children.nodes[1]->children.size; i++) {
+        PVIPNode *n = node->children.nodes[1]->children.nodes[i];
+        (void)do_compile(n);
+      }
+
+      current_class_how_ = NULL;
+
+      auto retval = reg_obj();
+      assembler().wval(retval, wval1, wval2);
+
+      // Bind class object to lexical variable
+      auto name_node = node->children.nodes[0];
+      if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STR) {
+        auto lex = push_lexical(PVIPSTRING2STDSTRING(name_node->pv), MVM_reg_obj);
+        assembler().bindlex(
+          lex,
+          0,
+          retval
+        );
+      }
+
+      return retval;
+    }
+
     uint16_t get_variable(PVIPString * name) {
       return get_variable(std::string(name->buf, name->len));
     }
@@ -634,7 +861,10 @@ namespace kiji {
         );
         return reg_no;
       } else {
-        auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+        int lex_no;
+        if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+        }
         auto reg = reg_obj();
         auto varname = push_string(name);
         auto varname_s = reg_str();
@@ -670,7 +900,10 @@ namespace kiji {
           val_reg
         );
       } else {
-        auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+        int lex_no;
+        if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+        }
         auto reg = reg_obj();
         auto varname = push_string(name);
         auto varname_s = reg_str();
@@ -712,8 +945,8 @@ namespace kiji {
       return cu_.push_string(string, length);
     }
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int &outer) {
-      return cu_.find_lexical_by_name(name_cc, outer);
+    int find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
+      return cu_.find_lexical_by_name(name_cc, lex_no, outer);
     }
     // Push lexical variable.
     int push_lexical(PVIPString *pv, MVMuint16 type) {
@@ -1089,7 +1322,10 @@ namespace kiji {
           auto varname = push_string(lhs->children.nodes[0]->pv);
           int val    = to_o(do_compile(rhs));
           int outer = 0;
-          auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+          int lex_no = 0;
+          if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+            MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+          }
           auto package = reg_obj();
           assembler().getlex(
             package,
@@ -1115,6 +1351,105 @@ namespace kiji {
           printf("You can't bind value to %s, currently.\n", PVIP_node_name(lhs->type));
           abort();
         }
+      }
+      case PVIP_NODE_METHOD: {
+        PVIPNode * name_node = node->children.nodes[0];
+        std::string name(name_node->pv->buf, name_node->pv->len);
+
+        auto funcreg = reg_obj();
+        auto funclex = push_lexical(std::string("&") + name, MVM_reg_obj);
+        auto func_pos = assembler().bytecode_size() + 2 + 2;
+        assembler().getcode(funcreg, 0);
+        assembler().bindlex(
+            funclex,
+            0, // frame outer count
+            funcreg
+        );
+
+        // Compile function body
+        auto frame_no = push_frame(name);
+
+        // TODO process named params
+        // TODO process types
+        {
+          assembler().checkarity(
+              node->children.nodes[1]->children.size+1,
+              node->children.nodes[1]->children.size+1
+          );
+
+          {
+            // push self
+            int lex = push_lexical("__self", MVM_reg_obj);
+            int reg = reg_obj();
+            assembler().param_rp_o(reg, 0);
+            assembler().bindlex(lex, 0, reg);
+          }
+
+          for (int i=1; i<node->children.nodes[1]->children.size; ++i) {
+            auto n = node->children.nodes[1]->children.nodes[i];
+            int reg = reg_obj();
+            int lex = push_lexical(n->pv, MVM_reg_obj);
+            assembler().param_rp_o(reg, i);
+            assembler().bindlex(lex, 0, reg);
+            ++i;
+          }
+        }
+
+        bool returned = false;
+        {
+          const PVIPNode*stmts = node->children.nodes[2];
+          assert(stmts->type == PVIP_NODE_STATEMENTS);
+          for (int i=0; i<stmts->children.size ; ++i) {
+            PVIPNode * n=stmts->children.nodes[i];
+            int reg = do_compile(n);
+            if (i==stmts->children.size-1 && reg >= 0) {
+              switch (get_local_type(reg)) {
+              case MVM_reg_int64:
+                assembler().return_i(reg);
+                break;
+              case MVM_reg_str:
+                assembler().return_s(reg);
+                break;
+              case MVM_reg_obj:
+                assembler().return_o(reg);
+                break;
+              case MVM_reg_num64:
+                assembler().return_n(reg);
+                break;
+              default: abort();
+              }
+              returned = true;
+            }
+          }
+
+          // return null
+          if (!returned) {
+            int reg = reg_obj();
+            assembler().null(reg);
+            assembler().return_o(reg);
+          }
+        }
+        pop_frame();
+
+        assembler().write_uint16_t(frame_no, func_pos);
+
+        // bind method object to class how
+        MVMThreadContext*tc_ = cu_.tc();
+        if (!current_class_how_) {
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. You can't write methods outside of class definition");
+        }
+        {
+          MVMString * methname = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name.c_str(), name.size());
+          // self, type_obj, name, method
+          MVMObject * method_table = ((MVMKnowHOWREPR *)current_class_how_)->body.methods;
+          MVMObject* code_type = cu_.tc()->instance->boot_types->BOOTCode;
+          MVMCode *coderef = (MVMCode*)REPR(code_type)->allocate(tc_, STABLE(code_type));
+          coderef->body.sf = cu_.get_frame(frame_no);
+          REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
+              method_table, OBJECT_BODY(method_table), (MVMObject *)methname, (MVMObject*)coderef);
+        }
+
+        return funcreg;
       }
       case PVIP_NODE_FUNC: {
         PVIPNode * name_node = node->children.nodes[0];
@@ -1199,6 +1534,9 @@ namespace kiji {
         auto retval = reg_obj();
         assembler().wval(retval, 0,0);
         return retval;
+      }
+      case PVIP_NODE_CLASS: {
+        return compile_class(node);
       }
       case PVIP_NODE_FOR: {
         //   init_iter
@@ -1359,8 +1697,46 @@ namespace kiji {
       case PVIP_NODE_ELSE: {
         abort();
       }
-      case PVIP_NODE_IDENT:
-        break;
+      case PVIP_NODE_IDENT: {
+        int lex_no, outer;
+        // auto lex_no = find_lexical_by_name(std::string(node->pv->buf, node->pv->len), outer);
+        // class Foo { }; Foo;
+        if (find_lexical_by_name(std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
+          auto reg_no = reg_obj();
+          assembler().getlex(
+            reg_no,
+            lex_no,
+            outer // outer frame
+          );
+          return reg_no;
+        // sub fooo { }; foooo;
+        } else if (find_lexical_by_name(std::string("&") + std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
+          auto func_reg_no = reg_obj();
+          assembler().getlex(
+            func_reg_no,
+            lex_no,
+            outer // outer frame
+          );
+
+          MVMCallsite* callsite = new MVMCallsite;
+          memset(callsite, 0, sizeof(MVMCallsite));
+          callsite->arg_count = 0;
+          callsite->num_pos = 0;
+          callsite->arg_flags = new MVMCallsiteEntry[0];
+
+          auto callsite_no = push_callsite(callsite);
+          assembler().prepargs(callsite_no);
+
+          auto dest_reg = reg_obj(); // ctx
+          assembler().invoke_o(
+              dest_reg,
+              func_reg_no
+          );
+          return dest_reg;
+        } else {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", std::string(node->pv->buf, node->pv->len).c_str());
+        }
+      }
       case PVIP_NODE_STATEMENTS:
         for (int i=0; i<node->children.size; i++) {
           PVIPNode*n = node->children.nodes[i];
@@ -1759,8 +2135,10 @@ namespace kiji {
           uint16_t func_reg_no;
           if (node->children.nodes[0]->type == PVIP_NODE_IDENT) {
             func_reg_no = reg_obj();
-            int outer = 0;
-            auto lex_no = find_lexical_by_name(std::string("&") + std::string(ident->pv->buf, ident->pv->len), outer);
+            int lex_no, outer;
+            if (!find_lexical_by_name(std::string("&") + std::string(ident->pv->buf, ident->pv->len), &lex_no, &outer)) {
+              MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", (std::string("&") + std::string(ident->pv->buf, ident->pv->len)).c_str());
+            }
             assembler().getlex(
               func_reg_no,
               lex_no,
@@ -2181,6 +2559,7 @@ namespace kiji {
   public:
     Compiler(CompUnit & cu): cu_(cu), frame_no_(0) {
       cu_.initialize();
+      current_class_how_ = NULL;
     }
     void compile(PVIPNode*node) {
       assembler().checkarity(0, -1);

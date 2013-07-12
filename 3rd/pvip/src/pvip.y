@@ -7,6 +7,40 @@
 #define YY_NAME(n) PVIP_##n
 #define YY_XTYPE PVIPParserContext
 
+/*
+
+
+    A  Level             Examples
+    =  =====             ========
+    N  Terms             42 3.14 "eek" qq["foo"] $x :!verbose @$array
+    L  Method postfix    .meth .+ .? .* .() .[] .{} .<> .«» .:: .= .^ .:
+    N  Autoincrement     ++ --
+    R  Exponentiation    **
+    L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
+    L  Multiplicative    * / % %% +& +< +> ~& ~< ~> ?& div mod gcd lcm
+    L  Additive          + - +| +^ ~| ~^ ?| ?^
+    L  Replication       x xx
+    X  Concatenation     ~
+    X  Junctive and      & (&) ∩
+    X  Junctive or       | ^ (|) (^) ∪ (-)
+    L  Named unary       temp let
+    N  Structural infix  but does <=> leg cmp .. ..^ ^.. ^..^
+    C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
+    X  Tight and         &&
+    X  Tight or          || ^^ // min max
+    R  Conditional       ?? !! ff fff
+    R  Item assignment   = => += -= **= xx= .=
+    L  Loose unary       so not
+    X  Comma operator    , :
+    X  List infix        Z minmax X X~ X* Xeqv ...
+    R  List prefix       print push say die map substr ... [+] [*] any Z=
+    X  Loose and         and andthen
+    X  Loose or          or xor orelse
+    X  Sequencer         <== ==> <<== ==>>
+    N  Terminator        ; {...} unless extra ) ] }
+
+*/
+
 typedef struct {
     const char  *buf;
     size_t len;
@@ -70,16 +104,11 @@ statement =
             | while_stmt
             | unless_stmt
             | module_stmt
-            | class_stmt
             | method_stmt
             | die_stmt
             | funcdef - ';'*
             | bl:block ';'* { $$ = PVIP_node_new_children1(PVIP_NODE_BLOCK, bl); }
             | b:normal_or_postfix_stmt { $$ = b; }
-            | i:ident eat_terminator {
-                PVIPNode *a = PVIP_node_new_children(PVIP_NODE_ARGS);
-                $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
-            }
             | ';'+ {
                 $$ = PVIP_node_new_children(PVIP_NODE_NOP);
             }
@@ -96,8 +125,6 @@ normal_or_postfix_stmt =
 last_stmt = 'last' { $$ = PVIP_node_new_children(PVIP_NODE_LAST); }
 
 next_stmt = 'next' { $$ = PVIP_node_new_children(PVIP_NODE_NEXT); }
-
-class_stmt = 'class' ws i:ident - b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, i, b); }
 
 method_stmt = 'method' ws i:ident p:paren_args - b:block { $$ = PVIP_node_new_children3(PVIP_NODE_METHOD, i, p, b); }
 
@@ -262,7 +289,7 @@ funcall =
     i:ident - a:paren_args {
         $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
     }
-    | i:ident ws+ a:bare_args {
+    | !reserved i:ident ws+ a:bare_args {
         $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
     }
 
@@ -271,7 +298,7 @@ named_unary_expr =
     'abs' ws+ a:junctive_or_expr { $$ = PVIP_node_new_children1(PVIP_NODE_ABS, a); }
     | 'my' ws+ a:junctive_or_expr { $$ = PVIP_node_new_children1(PVIP_NODE_MY, a); }
     | 'our' ws+ a:junctive_or_expr { $$ = PVIP_node_new_children1(PVIP_NODE_OUR, a); }
-    | i:ident ws+ a:bare_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a); }
+    | !reserved i:ident ws+ a:bare_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a); }
     | junctive_or_expr
 
 junctive_or_expr =
@@ -381,14 +408,18 @@ autoincrement_expr =
         | '' { $$=n; }
     )
 
-# FIXME: optimizable
-method_postfix_expr = ( container:term '{' - k:term - '}' ) { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, container, k); }
-           | ( container:term '<' - k:ident - '>' ) { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, container, k); }
-           | f1:term - '[' - f2:term - ']' {
+method_postfix_expr =
+          f1:term { $$=f1; } (
+              '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); }
+            | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); }
+            | '[' - f2:term - ']' {
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
             }
-           | ( container:term a:paren_args ) { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, container, a); }
-           | term
+            | '.' f2:ident f3:paren_args {
+                $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
+            }
+            | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); }
+          )?
 
 term = 
     integer
@@ -398,12 +429,22 @@ term =
     | variable
     | '$?LINE' { $$ = PVIP_node_new_int(PVIP_NODE_INT, G->data.line_number); }
     | array
+    | class
     | funcall
     | qw
     | twargs
     | hash
     | lambda
     | it_method
+    | !reserved ident
+
+reserved = 'class'
+
+# TODO optimizable
+class =
+    'class' ws+ b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, PVIP_node_new_children(PVIP_NODE_NOP), b); }
+    | 'class' ws+ i:ident - b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, i, b); }
+
 
 it_method = (
         '.' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_IT_METHODCALL, i); i=$$; }

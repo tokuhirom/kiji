@@ -443,3 +443,37 @@ say 'ok ', 11*say 'ok 10';
 ;0 xor say 'ok 7'
 --- expected
 (statements (nop ) (logical_xor (int 0) (funcall (ident "say") (args (string "ok 7")))))
+
+===
+--- code
+class { 1 }
+--- expected
+(statements (class (nop ) (statements (int 1))))
+
+===
+--- code
+class Foo { 1 }
+--- expected
+(statements (class (ident "Foo") (statements (int 1))))
+
+===
+--- code
+class { method bar() { } }
+--- expected
+(statements (class (nop ) (statements (method (ident "bar") (args ) (statements )))))
+
+===
+--- code
+$o.new().bar()
+--- expected
+(statements
+    (methodcall
+        (methodcall (variable "$o") (ident "new") (args ))
+        (ident "bar")
+        (args)))
+
+===
+--- code
+Foo.new().bar()
+--- expected
+(statements (methodcall (methodcall (ident "Foo") (ident "new") (args )) (ident "bar") (args )))
