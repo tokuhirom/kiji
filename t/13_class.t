@@ -22,3 +22,9 @@ my $o = class { method bar() { say(5963); } }; my $n=$o.new(); $n.bar()
 my $o = class { method bar() { say(5963); } }; $o.new().bar()
 --- expected
 5963
+
+===
+--- code
+class Foo { method bar() { say(5963); } }; Foo.new().bar()
+--- expected
+5963

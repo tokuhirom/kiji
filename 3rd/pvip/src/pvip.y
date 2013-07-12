@@ -109,10 +109,6 @@ statement =
             | funcdef - ';'*
             | bl:block ';'* { $$ = PVIP_node_new_children1(PVIP_NODE_BLOCK, bl); }
             | b:normal_or_postfix_stmt { $$ = b; }
-            | i:ident eat_terminator {
-                PVIPNode *a = PVIP_node_new_children(PVIP_NODE_ARGS);
-                $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
-            }
             | ';'+ {
                 $$ = PVIP_node_new_children(PVIP_NODE_NOP);
             }
@@ -293,7 +289,7 @@ funcall =
     i:ident - a:paren_args {
         $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
     }
-    | i:ident ws+ a:bare_args {
+    | !reserved i:ident ws+ a:bare_args {
         $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
     }
 
@@ -302,7 +298,7 @@ named_unary_expr =
     'abs' ws+ a:junctive_or_expr { $$ = PVIP_node_new_children1(PVIP_NODE_ABS, a); }
     | 'my' ws+ a:junctive_or_expr { $$ = PVIP_node_new_children1(PVIP_NODE_MY, a); }
     | 'our' ws+ a:junctive_or_expr { $$ = PVIP_node_new_children1(PVIP_NODE_OUR, a); }
-    | i:ident ws+ a:bare_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a); }
+    | !reserved i:ident ws+ a:bare_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a); }
     | junctive_or_expr
 
 junctive_or_expr =
@@ -433,13 +429,16 @@ term =
     | variable
     | '$?LINE' { $$ = PVIP_node_new_int(PVIP_NODE_INT, G->data.line_number); }
     | array
+    | class
     | funcall
     | qw
     | twargs
     | hash
     | lambda
     | it_method
-    | class
+    | !reserved ident
+
+reserved = 'class'
 
 # TODO optimizable
 class =

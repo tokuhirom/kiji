@@ -471,3 +471,9 @@ $o.new().bar()
         (methodcall (variable "$o") (ident "new") (args ))
         (ident "bar")
         (args)))
+
+===
+--- code
+Foo.new().bar()
+--- expected
+(statements (methodcall (methodcall (ident "Foo") (ident "new") (args )) (ident "bar") (args )))

@@ -352,23 +352,25 @@ namespace kiji {
     }
 
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int &outer) {
+    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       MVMStaticFrame *f = &frame_;
-      outer = 0;
+      *outer = 0;
       while (f) {
         MVMLexicalHashEntry *lexical_names = f->lexical_names;
         MVMLexicalHashEntry *entry;
         MVM_HASH_GET(tc_, lexical_names, name, entry);
 
         if (entry) {
-          return entry->value;
+          *lex_no= entry->value;
+          return true;
         }
         f = f->outer;
-        ++outer;
+        ++(*outer);
       }
-      printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
-      exit(0);
+      return false;
+      // printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
+      // exit(0);
     }
   };
 
@@ -553,8 +555,8 @@ namespace kiji {
     }
 
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int &outer) {
-      return frames_.back()->find_lexical_by_name(name_cc, outer);
+    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
+      return frames_.back()->find_lexical_by_name(name_cc, lex_no, outer);
     }
     variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
       return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
@@ -827,6 +829,18 @@ namespace kiji {
 
       auto retval = reg_obj();
       assembler().wval(retval, wval1, wval2);
+
+      // Bind class object to lexical variable
+      auto name_node = node->children.nodes[0];
+      if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STR) {
+        auto lex = push_lexical(PVIPSTRING2STDSTRING(name_node->pv), MVM_reg_obj);
+        assembler().bindlex(
+          lex,
+          0,
+          retval
+        );
+      }
+
       return retval;
     }
 
@@ -847,7 +861,10 @@ namespace kiji {
         );
         return reg_no;
       } else {
-        auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+        int lex_no;
+        if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+        }
         auto reg = reg_obj();
         auto varname = push_string(name);
         auto varname_s = reg_str();
@@ -883,7 +900,10 @@ namespace kiji {
           val_reg
         );
       } else {
-        auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+        int lex_no;
+        if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+        }
         auto reg = reg_obj();
         auto varname = push_string(name);
         auto varname_s = reg_str();
@@ -925,8 +945,8 @@ namespace kiji {
       return cu_.push_string(string, length);
     }
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int &outer) {
-      return cu_.find_lexical_by_name(name_cc, outer);
+    int find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
+      return cu_.find_lexical_by_name(name_cc, lex_no, outer);
     }
     // Push lexical variable.
     int push_lexical(PVIPString *pv, MVMuint16 type) {
@@ -1302,7 +1322,10 @@ namespace kiji {
           auto varname = push_string(lhs->children.nodes[0]->pv);
           int val    = to_o(do_compile(rhs));
           int outer = 0;
-          auto lex_no = find_lexical_by_name("$?PACKAGE", outer);
+          int lex_no = 0;
+          if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+            MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+          }
           auto package = reg_obj();
           assembler().getlex(
             package,
@@ -1674,8 +1697,46 @@ namespace kiji {
       case PVIP_NODE_ELSE: {
         abort();
       }
-      case PVIP_NODE_IDENT:
-        break;
+      case PVIP_NODE_IDENT: {
+        int lex_no, outer;
+        // auto lex_no = find_lexical_by_name(std::string(node->pv->buf, node->pv->len), outer);
+        // class Foo { }; Foo;
+        if (find_lexical_by_name(std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
+          auto reg_no = reg_obj();
+          assembler().getlex(
+            reg_no,
+            lex_no,
+            outer // outer frame
+          );
+          return reg_no;
+        // sub fooo { }; foooo;
+        } else if (find_lexical_by_name(std::string("&") + std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
+          auto func_reg_no = reg_obj();
+          assembler().getlex(
+            func_reg_no,
+            lex_no,
+            outer // outer frame
+          );
+
+          MVMCallsite* callsite = new MVMCallsite;
+          memset(callsite, 0, sizeof(MVMCallsite));
+          callsite->arg_count = 0;
+          callsite->num_pos = 0;
+          callsite->arg_flags = new MVMCallsiteEntry[0];
+
+          auto callsite_no = push_callsite(callsite);
+          assembler().prepargs(callsite_no);
+
+          auto dest_reg = reg_obj(); // ctx
+          assembler().invoke_o(
+              dest_reg,
+              func_reg_no
+          );
+          return dest_reg;
+        } else {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", std::string(node->pv->buf, node->pv->len).c_str());
+        }
+      }
       case PVIP_NODE_STATEMENTS:
         for (int i=0; i<node->children.size; i++) {
           PVIPNode*n = node->children.nodes[i];
@@ -2074,8 +2135,10 @@ namespace kiji {
           uint16_t func_reg_no;
           if (node->children.nodes[0]->type == PVIP_NODE_IDENT) {
             func_reg_no = reg_obj();
-            int outer = 0;
-            auto lex_no = find_lexical_by_name(std::string("&") + std::string(ident->pv->buf, ident->pv->len), outer);
+            int lex_no, outer;
+            if (!find_lexical_by_name(std::string("&") + std::string(ident->pv->buf, ident->pv->len), &lex_no, &outer)) {
+              MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", (std::string("&") + std::string(ident->pv->buf, ident->pv->len)).c_str());
+            }
             assembler().getlex(
               func_reg_no,
               lex_no,
