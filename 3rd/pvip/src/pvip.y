@@ -76,9 +76,11 @@ static char PVIP_input(char *buf, YY_XTYPE D) {
 
 %}
 
-comp_init = e:statementlist end-of-file {
+comp_init = BOM? e:statementlist end-of-file {
     $$ = (G->data.root = e);
 }
+
+BOM='\357' '\273' '\277'
 
 statementlist =
     (
