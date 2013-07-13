@@ -9,6 +9,7 @@
 #include <sstream>
 #include <memory>
 #include "gen.assembler.h"
+#include "builtin.h"
 
 #define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
     { \
@@ -135,11 +136,6 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
   }
 
 namespace kiji {
-  void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_Hash(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_Int(MVMCompUnit* cu, MVMThreadContext*tc);
 
   enum variable_type_t {
     VARIABLE_TYPE_MY,
@@ -470,11 +466,11 @@ namespace kiji {
       });
 
       // hacking hll
-      bootstrap_Array(cu_, tc);
-      bootstrap_Str(cu_, tc);
-      bootstrap_Hash(cu_, tc);
-      bootstrap_File(cu_, tc);
-      bootstrap_Int(cu_, tc);
+      Kiji_bootstrap_Array(cu_, tc);
+      Kiji_bootstrap_Str(cu_, tc);
+      Kiji_bootstrap_Hash(cu_, tc);
+      Kiji_bootstrap_File(cu_, tc);
+      Kiji_bootstrap_Int(cu_, tc);
 
       cu_->num_scs = 2;
       cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
@@ -2599,8 +2595,3 @@ namespace kiji {
   };
 }
 
-#include "builtin/array.h"
-#include "builtin/str.h"
-#include "builtin/hash.h"
-#include "builtin/io.h"
-#include "builtin/int.h"

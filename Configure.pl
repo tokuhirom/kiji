@@ -12,13 +12,17 @@ $p->getoptions(
     'debug!' => \my $debug,
 );
 my @CXXFLAGS = qw(-g -std=c++11);
+my @CFLAGS= qw(-g);
 if ($debug) {
-    push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3)
+    push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
+    push @CFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
 } else {
-    push @CXXFLAGS, qw(-O3)
+    push @CXXFLAGS, qw(-O3);
+    push @CFLAGS, qw(-O3);
 }
 push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin' || $ENV{TRAVIS};
 my $CXXFLAGS=join(' ', @CXXFLAGS);
+my $CFLAGS=join(' ', @CFLAGS);
 
 my @LLIBS = qw(-lapr-1 -lpthread -lm);
 push @LLIBS, qw(-luuid) if $^O eq 'linux';
@@ -30,6 +34,7 @@ EXE =
 O   = .o
 
 CXXFLAGS=<<CXXFLAGS>>
+CFLAGS=<<CFLAGS>>
 
 CXX=clang++
 CINCLUDE = -I3rd/MoarVM/3rdparty/apr/include -I3rd/MoarVM/3rdparty/libatomic_ops/src -I3rd/MoarVM/3rdparty/libtommath/ -I3rd/MoarVM/3rdparty/sha1/ -I3rd/MoarVM/src -I3rd/MoarVM/3rdparty -I3rd/pvip/src/
@@ -193,8 +198,11 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
 
 all: kiji
 
-kiji: 3rd/MoarVM/moarvm src/kiji.cc src/builtin/array.h src/builtin/str.h src/builtin/hash.h src/builtin/int.h src/kiji.o 3rd/pvip/libpvip.a src/compiler.h
-	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
+kiji: 3rd/MoarVM/moarvm src/kiji.cc src/kiji.o 3rd/pvip/libpvip.a src/compiler.h src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o
+	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o
+
+.c.o: src/pvip.h
+    $(CC) $(CINCLUDE) $(CFLAGS) -c -o $@ $<
 
 test: kiji
 	prove -r t
