@@ -606,7 +606,7 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
 comment= '#' [^\n]* end-of-line
 
 # white space
-ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
+ws = '\n=begin END\n' .* | ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
     | comment
 
 - = ws*

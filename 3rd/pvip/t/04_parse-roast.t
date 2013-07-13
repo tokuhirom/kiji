@@ -82,3 +82,10 @@ __END__
 try { 3 }
 --- expected
 (statements (try (statements (int 3))))
+
+===
+--- code
+1
+=begin END
+--- expected
+(statements (int 1))
