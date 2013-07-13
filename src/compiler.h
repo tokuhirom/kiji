@@ -10,14 +10,6 @@
 #include <memory>
 #include "gen.assembler.h"
 
-#define EACH_NODE(m,node) \
-  if (node->children.size>0) { \
-    auto m=node->children.nodes[0]; \
-    for (int i=0; i<node->children.size; ++i, m=node->children.nodes[i]) { \
-
-
-#define END_EACH_NODE } }
-
 #define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
     { \
         void *_r = referenced; \
@@ -963,9 +955,10 @@ namespace kiji {
     }
     void compile_array(uint16_t array_reg, const PVIPNode* node) {
       if (node->type==PVIP_NODE_LIST) {
-        EACH_NODE(m, node) {
+        for (int i=0; i<node->children.size; i++) {
+          PVIPNode* m = node->children.nodes[i];
           compile_array(array_reg, m);
-        } END_EACH_NODE
+        }
       } else {
         auto reg = this->box(do_compile(node));
         assembler().push_o(array_reg, reg);
