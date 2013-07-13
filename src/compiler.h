@@ -612,63 +612,6 @@ namespace kiji {
     }
   };
 
-  class Interpreter {
-  private:
-    MVMInstance* vm_;
-
-  protected:
-    /*
-    MVMObject * mk_boxed_string(const char *name, size_t len) {
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, name, len);
-      MVMObject*type = cu_->hll_config->str_box_type;
-      MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
-      MVMROOT(tc, box, {
-          if (REPR(box)->initialize)
-              REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
-          REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
-              OBJECT_BODY(box), string);
-      });
-      return box;
-    }
-    */
-  public:
-    Interpreter() {
-      vm_ = MVM_vm_create_instance();
-    }
-    ~Interpreter() {
-      MVM_vm_destroy_instance(vm_);
-    }
-    void set_clargs(int n, char**args) {
-      vm_->num_clargs = n;
-      vm_->raw_clargs = args;
-    }
-    MVMThreadContext * main_thread() {
-      return vm_->main_thread;
-    }
-    MVMInstance * vm() {
-      return vm_;
-    }
-    static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
-      /* Dummy, 0-arg callsite. */
-      static MVMCallsite no_arg_callsite;
-      no_arg_callsite.arg_flags = NULL;
-      no_arg_callsite.arg_count = 0;
-      no_arg_callsite.num_pos   = 0;
-
-      /* Create initial frame, which sets up all of the interpreter state also. */
-      MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
-    }
-
-    void run(CompUnit & cu) {
-      cu.finalize(vm_);
-
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMStaticFrame *start_frame = cu.get_start_frame();
-      MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
-    }
-  };
-
   /**
    * OP map is 3rd/MoarVM/src/core/oplist
    * interp code is 3rd/MoarVM/src/core/interp.c

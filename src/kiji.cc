@@ -31,6 +31,17 @@ static void eval(command_t *self) {
     ((CmdLineState*)self->data)->eval = self->arg;
 }
 
+static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
+  /* Dummy, 0-arg callsite. */
+  static MVMCallsite no_arg_callsite;
+  no_arg_callsite.arg_flags = NULL;
+  no_arg_callsite.arg_count = 0;
+  no_arg_callsite.num_pos   = 0;
+
+  /* Create initial frame, which sets up all of the interpreter state also. */
+  MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
+}
+
 static void run_repl() {
   // TODO disabled for now(pvip)
   /*
@@ -94,17 +105,6 @@ int main(int argc, char** argv) {
     root_node = PVIP_parse_fp(fp, 0);
   }
 
-  // This include apr_initialize().
-  // You need to initialize before `apr_pool_create()`
-  kiji::Interpreter interp;
-
-  // stash the rest of the raw command line args in the instance
-  interp.set_clargs(cmd.argc-1, (char **)cmd.argv+1);
-  /*
-  instance->num_clargs = argc - processed_args;
-  instance->raw_clargs = (char **)(opt->argv + processed_args);
-  */
-
   if (!root_node) {
     exit(1);
   }
@@ -114,14 +114,26 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  kiji::CompUnit cu(interp.main_thread());
+  MVMInstance* vm = MVM_vm_create_instance();
+
+  // stash the rest of the raw command line args in the instance
+  vm->num_clargs = cmd.argc-1;
+  vm->raw_clargs = cmd.argv+1;
+
+  kiji::CompUnit cu(vm->main_thread);
   kiji::Compiler compiler(cu);
   compiler.compile(root_node);
   if (state->dump_bytecode) {
-    cu.dump(interp.vm());
+    cu.dump(vm);
   } else {
-    interp.run(cu);
+    cu.finalize(vm);
+
+    MVMThreadContext *tc = vm->main_thread;
+    MVMStaticFrame *start_frame = cu.get_start_frame();
+    MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
   }
+
+  MVM_vm_destroy_instance(vm);
 
   return 0;
 }
