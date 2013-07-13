@@ -183,10 +183,10 @@ static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
     PVIP_string_concat(buf, "(", 1);
     const char *name = PVIP_node_name(node->type);
     PVIP_string_concat(buf, name, strlen(name));
-    PVIP_string_concat(buf, " ", 1);
     switch (PVIP_node_category(node->type)) {
     case PVIP_CATEGORY_STR: {
         int i;
+        PVIP_string_concat(buf, " ", 1);
         PVIP_string_concat(buf, "\"", 1);
         for (i=0; i<node->pv->len; i++) {
             char c = node->pv->buf[i];
@@ -207,17 +207,22 @@ static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
         break;
     }
     case PVIP_CATEGORY_INT:
+        PVIP_string_concat(buf, " ", 1);
         PVIP_string_concat_int(buf, node->iv);
         break;
     case PVIP_CATEGORY_NUMBER:
+        PVIP_string_concat(buf, " ", 1);
         PVIP_string_concat_number(buf, node->nv);
         break;
     case PVIP_CATEGORY_CHILDREN: {
-        int i=0;
-        for (i=0; i<node->children.size; i++) {
-            _PVIP_node_as_sexp(node->children.nodes[i], buf, indent+1);
-            if (i!=node->children.size-1) {
-                PVIP_string_concat(buf, " ", 1);
+        if (node->children.size > 0) {
+            PVIP_string_concat(buf, " ", 1);
+            int i=0;
+            for (i=0; i<node->children.size; i++) {
+                _PVIP_node_as_sexp(node->children.nodes[i], buf, indent+1);
+                if (i!=node->children.size-1) {
+                    PVIP_string_concat(buf, " ", 1);
+                }
             }
         }
         break;
