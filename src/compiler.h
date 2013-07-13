@@ -136,6 +136,7 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
     MVM_gc_root_temp_pop_n(tc, 1);
   }
 
+
 namespace kiji {
 
   enum variable_type_t {
@@ -575,7 +576,6 @@ namespace kiji {
   enum { UNKNOWN_REG = -1 };
   class Compiler {
   private:
-    // Interpreter &interp_;
     CompUnit & cu_;
     int frame_no_;
     MVMObject* current_class_how_;
