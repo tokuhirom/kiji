@@ -156,6 +156,7 @@ namespace kiji {
   enum { UNKNOWN_REG = -1 };
   class Compiler {
   private:
+    MVMThreadContext *tc_;
     CompUnit & cu_;
     int frame_no_;
     MVMObject* current_class_how_;
@@ -240,7 +241,6 @@ namespace kiji {
 
     int compile_class(const PVIPNode* node) {
       int wval1, wval2;
-      MVMThreadContext*tc_ = cu_.tc();
       {
         // Create new class.
         MVMObject * type = MVM_6model_find_method(
@@ -2015,7 +2015,7 @@ namespace kiji {
       }
     }
   public:
-    Compiler(CompUnit & cu): cu_(cu), frame_no_(0) {
+    Compiler(CompUnit & cu, MVMThreadContext * tc): cu_(cu), frame_no_(0), tc_(tc) {
       cu_.initialize();
       current_class_how_ = NULL;
     }

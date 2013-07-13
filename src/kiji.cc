@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
   vm->raw_clargs = cmd.argv+1;
 
   kiji::CompUnit cu(vm->main_thread);
-  kiji::Compiler compiler(cu);
+  kiji::Compiler compiler(cu, vm->main_thread);
   compiler.compile(root_node);
   if (state->dump_bytecode) {
     cu.finalize(vm);
