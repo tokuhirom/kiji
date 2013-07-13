@@ -124,7 +124,13 @@ int main(int argc, char** argv) {
   kiji::Compiler compiler(cu);
   compiler.compile(root_node);
   if (state->dump_bytecode) {
-    cu.dump(vm);
+    cu.finalize(vm);
+
+    // dump it
+    char *dump = MVM_bytecode_dump(vm->main_thread, cu.cu());
+
+    printf("%s", dump);
+    free(dump);
   } else {
     cu.finalize(vm);
 

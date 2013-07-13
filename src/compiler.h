@@ -600,16 +600,6 @@ namespace kiji {
     MVMStaticFrame * get_start_frame() {
       return cu_->main_frame ? cu_->main_frame : cu_->frames[0];
     }
-
-    void dump(MVMInstance * vm) {
-      this->finalize(vm);
-
-      // dump it
-      char *dump = MVM_bytecode_dump(tc_, cu_);
-
-      printf("%s", dump);
-      free(dump);
-    }
   };
 
   /**
