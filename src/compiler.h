@@ -10,6 +10,7 @@
 #include <memory>
 #include "gen.assembler.h"
 #include "builtin.h"
+#include "pvip.h"
 
 #define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
     { \

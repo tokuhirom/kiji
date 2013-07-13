@@ -7,9 +7,8 @@
 #ifdef __unix__
 #include <unistd.h>
 #endif
-#include "node.h"
 extern "C" {
-#include "moarvm.h"
+#include <moarvm.h>
 }
 #include "compiler.h"
 
