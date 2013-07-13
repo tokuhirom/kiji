@@ -142,17 +142,6 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
     MVM_gc_root_temp_pop_n(tc, 1);
   }
 
-  static void say_hello(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
-    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
-    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
-    MVM_args_proc_cleanup(tc, &arg_ctx);
-
-    MVMString * name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"A Punk IPA, good sir");
-    MVM_string_say(tc, name);
-
-    MVM_gc_root_temp_pop_n(tc, 1);
-  }
-
 namespace kiji {
   void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
   void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);

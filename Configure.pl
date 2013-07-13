@@ -193,7 +193,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
 
 all: kiji
 
-kiji: 3rd/MoarVM/moarvm src/kiji.cc src/builtin/array.h src/builtin/str.h src/builtin/hash.h src/builtin/int.h src/kiji.o 3rd/pvip/libpvip.a
+kiji: 3rd/MoarVM/moarvm src/kiji.cc src/builtin/array.h src/builtin/str.h src/builtin/hash.h src/builtin/int.h src/kiji.o 3rd/pvip/libpvip.a src/compiler.h
 	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.cc $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
 
 test: kiji
