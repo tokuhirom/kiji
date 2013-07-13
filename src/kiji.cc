@@ -9,11 +9,29 @@
 #endif
 extern "C" {
 #include <moarvm.h>
+#include "commander.h"
 }
 #include "compiler.h"
 
+typedef struct _CmdLineState {
+    int dump_ast;
+    int dump_bytecode;
+    const char* eval;
+} CmdLineState;
 
-void run_repl() {
+static void dump_bytecode(command_t *self) {
+    ((CmdLineState*)self->data)->dump_bytecode = 1;
+}
+
+static void dump_ast(command_t *self) {
+    ((CmdLineState*)self->data)->dump_ast = 1;
+}
+
+static void eval(command_t *self) {
+    ((CmdLineState*)self->data)->eval = self->arg;
+}
+
+static void run_repl() {
   // TODO disabled for now(pvip)
   /*
   std::string src;
@@ -46,53 +64,23 @@ int main(int argc, char** argv) {
   // You need to initialize before `apr_pool_create()`
   kiji::Interpreter interp;
 
-  apr_status_t rv;
-  apr_pool_t *mp;
-  static const apr_getopt_option_t opt_option[] = {
-      /* values must be greater than 255 so it doesn't have a single-char form
-          Otherwise, use a character such as 'h' */
-      { "dump-bytecode", 256, 0, "dump bytecode" },
-      { "help", 257, 0, "show help" },
-      { "dump-ast", 258, 0, "dump ast" },
-      { NULL, 'e', 1, "eval" },
-      { NULL, 0, 0, NULL }
-  };
-  apr_getopt_t *opt;
-  int optch;
-  const char *optarg;
-  const char *eval = NULL;
-  bool dump_ast = false;
-  bool dump_bytecode = false;
-  const char *helptext = "\
-  MoarVM usage: moarvm [options] bytecode.moarvm [program args]           \n\
-    --help, display this message                                          \n\
-    --dump, dump the bytecode to stdout instead of executing              \n";
+  CmdLineState*state = (CmdLineState*)malloc(sizeof(CmdLineState));
+  memset(state, 0, sizeof(CmdLineState));
+
+  command_t cmd;
+  cmd.data = state;
+  command_init(&cmd, argv[0], "0.0.1");
+  command_option(&cmd, "-q", "--dump-bytecode", "dump bytecode", dump_bytecode);
+  command_option(&cmd, "-p", "--dump-ast", "dump Abstract Syntax Tree", dump_ast);
+  command_option(&cmd, "-e", "--eval [code]", "eval code", eval);
+  command_parse(&cmd, argc, argv);
+
   int processed_args = 0;
 
-  apr_pool_create(&mp, NULL);
-  apr_getopt_init(&opt, mp, argc, argv);
-  while ((rv = apr_getopt_long(opt, opt_option, &optch, &optarg)) == APR_SUCCESS) {
-      switch (optch) {
-      case 'e':
-        eval = strdup(optarg);
-        break;
-      case 256:
-        dump_bytecode = true;
-        break;
-      case 257:
-        printf("%s", helptext);
-        exit(1);
-      case 258:
-        dump_ast = true;
-        break;
-      }
-  }
-
-  processed_args = opt->ind;
   PVIPNode *root_node;
-  if (eval) {
-    root_node = PVIP_parse_string(eval, strlen(eval), 0);
-  } else if (processed_args == argc) {
+  if (state->eval) {
+    root_node = PVIP_parse_string(state->eval, strlen(state->eval), 0);
+  } else if (cmd.argc==0) {
 #ifdef __unix__
     if (isatty(fileno(stdin))) {
       run_repl();
@@ -102,15 +90,15 @@ int main(int argc, char** argv) {
 
     root_node = PVIP_parse_fp(stdin, 0);
   } else {
-    FILE *fp = fopen(opt->argv[processed_args++], "rb");
+    FILE *fp = fopen(cmd.argv[0], "rb");
     if (!fp) {
-      std::cerr << "Cannot open file: " << opt->argv[processed_args-1] << ": " << strerror(errno) << std::endl;
+      printf("Cannot open file %s for reading: %s", cmd.argv[0], strerror(errno));
       exit(1);
     }
     root_node = PVIP_parse_fp(fp, 0);
   }
   // stash the rest of the raw command line args in the instance
-  interp.set_clargs(argc - processed_args, (char **)(opt->argv + processed_args));
+  interp.set_clargs(cmd.argc-1, (char **)cmd.argv+1);
   /*
   instance->num_clargs = argc - processed_args;
   instance->raw_clargs = (char **)(opt->argv + processed_args);
@@ -120,7 +108,7 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  if (dump_ast) {
+  if (state->dump_ast) {
     PVIP_node_dump_sexp(root_node);
     return 0;
   }
@@ -128,7 +116,7 @@ int main(int argc, char** argv) {
   kiji::CompUnit cu(interp.main_thread());
   kiji::Compiler compiler(cu);
   compiler.compile(root_node);
-  if (dump_bytecode) {
+  if (state->dump_bytecode) {
     cu.dump(interp.vm());
   } else {
     interp.run(cu);

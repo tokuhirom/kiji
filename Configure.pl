@@ -198,8 +198,8 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
 
 all: kiji
 
-kiji: 3rd/MoarVM/moarvm src/kiji.cc src/kiji.o 3rd/pvip/libpvip.a src/compiler.h src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o
-	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.o $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o
+kiji: 3rd/MoarVM/moarvm src/kiji.cc src/kiji.o 3rd/pvip/libpvip.a src/compiler.h src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o
+	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.o $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o
 
 src/kiji.o: src/gen.assembler.h
 
