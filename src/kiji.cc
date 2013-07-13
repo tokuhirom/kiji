@@ -120,22 +120,24 @@ int main(int argc, char** argv) {
   vm->num_clargs = cmd.argc-1;
   vm->raw_clargs = cmd.argv+1;
 
-  kiji::CompUnit cu(vm->main_thread);
-  kiji::Compiler compiler(cu, vm->main_thread);
-  compiler.compile(root_node);
+  MVMCompUnit cu;
+  memset(&cu, 0, sizeof(MVMCompUnit));
+
+  kiji::Compiler compiler(&cu, vm->main_thread);
+  compiler.compile(root_node, vm);
   if (state->dump_bytecode) {
-    cu.finalize(vm);
+    compiler.finalize(vm);
 
     // dump it
-    char *dump = MVM_bytecode_dump(vm->main_thread, cu.cu());
+    char *dump = MVM_bytecode_dump(vm->main_thread, &cu);
 
     printf("%s", dump);
     free(dump);
   } else {
-    cu.finalize(vm);
+    compiler.finalize(vm);
 
     MVMThreadContext *tc = vm->main_thread;
-    MVMStaticFrame *start_frame = cu.get_start_frame();
+    MVMStaticFrame *start_frame = compiler.get_start_frame();
     MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
   }
 

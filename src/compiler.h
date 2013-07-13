@@ -22,6 +22,7 @@
     }
 
 #define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
+#define CU cu_
 
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
@@ -156,10 +157,26 @@ namespace kiji {
   enum { UNKNOWN_REG = -1 };
   class Compiler {
   private:
+    MVMCompUnit* cu_;
     MVMThreadContext *tc_;
-    CompUnit & cu_;
     int frame_no_;
+    std::vector<std::shared_ptr<Frame>> frames_;
+    std::list<std::shared_ptr<Frame>> used_frames_;
     MVMObject* current_class_how_;
+    std::vector<MVMString*> strings_;
+    std::vector<MVMCallsite*> callsites_;
+
+    MVMSerializationContext * sc_classes_;
+    int num_sc_classes_;
+
+    void push_sc_object(MVMObject * object, int *wval1, int *wval2) {
+      num_sc_classes_++;
+
+      *wval1 = 1;
+      *wval2 = num_sc_classes_-1;
+
+      MVM_sc_set_object(tc_, sc_classes_, num_sc_classes_-1, object);
+    }
 
     class Label {
     private:
@@ -230,14 +247,15 @@ namespace kiji {
       assembler().op_u16_u32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
     }
 
-    Assembler& assembler() {
-      return cu_.assembler(); // FIXME ugly
+    // reserve register
+    int push_local_type(MVMuint16 reg_type) {
+      return frames_.back()->push_local_type(reg_type);
     }
 
-    int reg_obj() { return cu_.push_local_type(MVM_reg_obj); }
-    int reg_str() { return cu_.push_local_type(MVM_reg_str); }
-    int reg_int64() { return cu_.push_local_type(MVM_reg_int64); }
-    int reg_num64() { return cu_.push_local_type(MVM_reg_num64); }
+    int reg_obj() { return push_local_type(MVM_reg_obj); }
+    int reg_str() { return push_local_type(MVM_reg_str); }
+    int reg_int64() { return push_local_type(MVM_reg_int64); }
+    int reg_num64() { return push_local_type(MVM_reg_num64); }
 
     int compile_class(const PVIPNode* node) {
       int wval1, wval2;
@@ -272,7 +290,7 @@ namespace kiji {
           STABLE(type)->method_cache = method_cache;
         }
 
-        cu_.push_sc_object(type, &wval1, &wval2);
+        this->push_sc_object(type, &wval1, &wval2);
         current_class_how_ = how;
       }
 
@@ -308,7 +326,7 @@ namespace kiji {
     uint16_t get_variable(const std::string &name) {
       int outer = 0;
       int lex_no = 0;
-      variable_type_t vartype = cu_.find_variable_by_name(name, lex_no, outer);
+      variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
         auto reg_no = reg_obj();
         assembler().getlex(
@@ -349,7 +367,7 @@ namespace kiji {
     void set_variable(const std::string &name, uint16_t val_reg) {
       int lex_no = -1;
       int outer = -1;
-      variable_type_t vartype = cu_.find_variable_by_name(name, lex_no, outer);
+      variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
         assembler().bindlex(
           lex_no,
@@ -389,46 +407,101 @@ namespace kiji {
       return reg;
     }
 
+    // Get register type at 'n'
     uint16_t get_local_type(int n) {
-      return cu_.get_local_type(n);
+      return frames_.back()->get_local_type(n);
     }
     int push_string(PVIPString* pv) {
       return push_string(pv->buf, pv->len);
     }
     int push_string(const std::string & str) {
-      return cu_.push_string(str.c_str(), str.size());
+      return push_string(str.c_str(), str.size());
     }
     int push_string(const char*string, int length) {
-      return cu_.push_string(string, length);
+      MVMString* str = MVM_string_utf8_decode(tc_, tc_->instance->VMString, string, length);
+      strings_.push_back(str);
+      return strings_.size() - 1;
+    }
+    variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
+      return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
     }
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
-      return cu_.find_lexical_by_name(name_cc, lex_no, outer);
+    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
+      return frames_.back()->find_lexical_by_name(name_cc, lex_no, outer);
     }
     // Push lexical variable.
     int push_lexical(PVIPString *pv, MVMuint16 type) {
       return push_lexical(std::string(pv->buf, pv->len), type);
     }
-    int push_lexical(const std::string &name, MVMuint16 type) {
-      return cu_.push_lexical(name, type);
+    int push_lexical(const std::string name, MVMuint16 type) {
+      return frames_.back()->push_lexical(name, type);
     }
-    void push_pkg_var(const std::string &name) {
-      cu_.push_pkg_var(name);
+    void push_pkg_var(const std::string name) {
+      frames_.back()->push_pkg_var(name);
+    }
+    // Is a and b equivalent?
+    bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
+      if (a->arg_count != b->arg_count) {
+        return false;
+      }
+      if (a->num_pos != b->num_pos) {
+        return false;
+      }
+      // Should I use memcmp?
+      if (a->arg_count !=0) {
+        for (int i=0; i<a->arg_count; ++i) {
+          if (a->arg_flags[i] != b->arg_flags[i]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    size_t push_callsite(MVMCallsite *callsite) {
+      int i=0;
+      for (auto c:callsites_) {
+        if (callsite_eq(c, callsite)) {
+          delete callsite; // free memory
+          return i;
+        }
+        ++i;
+      }
+      callsites_.push_back(callsite);
+      return callsites_.size() - 1;
+    }
+    void push_handler(MVMFrameHandler *handler) {
+      return frames_.back()->push_handler(handler);
+    }
+    Assembler & assembler() {
+      return frames_.back()->assembler();
+    }
+    MVMStaticFrame* get_frame(int frame_no) {
+      auto iter = used_frames_.begin();
+      for (int i=0; i<frame_no; i++) {
+        iter++;
+      }
+      return (*iter)->frame();
     }
     int push_frame(const std::string & name) {
       std::ostringstream oss;
       oss << name << frame_no_++;
-      return cu_.push_frame(oss.str());
+      std::shared_ptr<Frame> frame = std::make_shared<Frame>(tc_, oss.str());
+      if (frames_.size() != 0) {
+        frame->set_outer(frames_.back());
+      }
+      frames_.push_back(frame);
+      used_frames_.push_back(frames_.back());
+      return used_frames_.size()-1;
     }
     void pop_frame() {
-      cu_.pop_frame();
+      frames_.pop_back();
     }
-    size_t push_callsite(MVMCallsite *callsite) {
-      return cu_.push_callsite(callsite);
+    size_t frame_size() const {
+      return frames_.size();
     }
-    void push_handler(MVMFrameHandler *handler) {
-      return cu_.push_handler(handler);
-    }
+
+
     void compile_array(uint16_t array_reg, const PVIPNode* node) {
       if (node->type==PVIP_NODE_LIST) {
         for (int i=0; i<node->children.size; i++) {
@@ -462,7 +535,7 @@ namespace kiji {
         last_handler->action = MVM_EX_ACTION_GOTO;
         last_handler->block_reg = 0;
         last_handler->goto_offset = last_offset_;
-        compiler_->cu_.push_handler(last_handler);
+        compiler_->push_handler(last_handler);
 
         MVMFrameHandler *next_handler = new MVMFrameHandler;
         next_handler->start_offset = start_offset_;
@@ -471,7 +544,7 @@ namespace kiji {
         next_handler->action = MVM_EX_ACTION_GOTO;
         next_handler->block_reg = 0;
         next_handler->goto_offset = next_offset_;
-        compiler_->cu_.push_handler(next_handler);
+        compiler_->push_handler(next_handler);
 
         MVMFrameHandler *redo_handler = new MVMFrameHandler;
         redo_handler->start_offset = start_offset_;
@@ -480,7 +553,7 @@ namespace kiji {
         redo_handler->action = MVM_EX_ACTION_GOTO;
         redo_handler->block_reg = 0;
         redo_handler->goto_offset = redo_offset_;
-        compiler_->cu_.push_handler(redo_handler);
+        compiler_->push_handler(redo_handler);
       }
       // fixme: `put` is not the best verb in English here.
       void put_last() {
@@ -892,7 +965,6 @@ namespace kiji {
         assembler().write_uint16_t(frame_no, func_pos);
 
         // bind method object to class how
-        MVMThreadContext*tc_ = cu_.tc();
         if (!current_class_how_) {
           MVM_panic(MVM_exitcode_compunit, "Compilation error. You can't write methods outside of class definition");
         }
@@ -900,9 +972,9 @@ namespace kiji {
           MVMString * methname = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name.c_str(), name.size());
           // self, type_obj, name, method
           MVMObject * method_table = ((MVMKnowHOWREPR *)current_class_how_)->body.methods;
-          MVMObject* code_type = cu_.tc()->instance->boot_types->BOOTCode;
+          MVMObject* code_type = tc_->instance->boot_types->BOOTCode;
           MVMCode *coderef = (MVMCode*)REPR(code_type)->allocate(tc_, STABLE(code_type));
-          coderef->body.sf = cu_.get_frame(frame_no);
+          coderef->body.sf = get_frame(frame_no);
           REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
               method_table, OBJECT_BODY(method_table), (MVMObject *)methname, (MVMObject*)coderef);
         }
@@ -2015,11 +2087,62 @@ namespace kiji {
       }
     }
   public:
-    Compiler(CompUnit & cu, MVMThreadContext * tc): cu_(cu), frame_no_(0), tc_(tc) {
-      cu_.initialize();
+    Compiler(MVMCompUnit * cu, MVMThreadContext * tc): cu_(cu), frame_no_(0), tc_(tc) {
+      initialize();
+
       current_class_how_ = NULL;
+
+      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
+      sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
+
+      num_sc_classes_ = 0;
     }
-    void compile(PVIPNode*node) {
+    ~Compiler() { }
+    void initialize() {
+      // init compunit.
+      int apr_return_status;
+      apr_pool_t  *pool        = NULL;
+      /* Ensure the file exists, and get its size. */
+      if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
+        MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
+      }
+      cu_->pool       = pool;
+      this->push_frame("frame_name_0");
+    }
+    void finalize(MVMInstance* vm) {
+      MVMThreadContext *tc = tc_; // remove me
+      MVMInstance *vm_ = vm; // remove me
+
+      // finalize frames
+      cu_->num_frames  = used_frames_.size();
+      assert(frames_.size() >= 1);
+
+      cu_->frames = (MVMStaticFrame**)malloc(sizeof(MVMStaticFrame*)*used_frames_.size());
+      {
+        int i=0;
+        for (auto frame: used_frames_) {
+          cu_->frames[i] = frame->finalize();
+          cu_->frames[i]->cu = cu_;
+          cu_->frames[i]->work_size = 0;
+          ++i;
+        }
+      }
+      cu_->main_frame = cu_->frames[0];
+      assert(cu_->main_frame->cuuid);
+
+      // Creates code objects to go with each of the static frames.
+      // ref create_code_objects in src/core/bytecode.c
+      cu_->coderefs = (MVMObject**)malloc(sizeof(MVMObject *) * cu_->num_frames);
+      memset(cu_->coderefs, 0, sizeof(MVMObject *) * cu_->num_frames); // is this needed?
+
+      MVMObject* code_type = tc->instance->boot_types->BOOTCode;
+
+      for (int i = 0; i < cu_->num_frames; i++) {
+        cu_->coderefs[i] = REPR(code_type)->allocate(tc, STABLE(code_type));
+        ((MVMCode *)cu_->coderefs[i])->body.sf = cu_->frames[i];
+      }
+    }
+    void compile(PVIPNode*node, MVMInstance* vm) {
       assembler().checkarity(0, -1);
 
 
@@ -2071,6 +2194,81 @@ namespace kiji {
       int reg = reg_obj();
       assembler().null(reg);
       assembler().return_o(reg);
+
+      // setup hllconfig
+      MVMThreadContext * tc = tc_;
+      {
+        MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
+        CU->hll_config = MVM_hll_get_config_for(tc, hll_name);
+
+        MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
+        MVM_hll_set_config(tc, hll_name, config);
+      }
+
+      // hacking hll
+      Kiji_bootstrap_Array(CU, tc);
+      Kiji_bootstrap_Str(CU,   tc);
+      Kiji_bootstrap_Hash(CU,  tc);
+      Kiji_bootstrap_File(CU,  tc);
+      Kiji_bootstrap_Int(CU,   tc);
+
+      // setup callsite
+      CU->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*callsites_.size());
+      {
+        int i=0;
+        for (auto callsite: callsites_) {
+          CU->callsites[i] = callsite;
+          ++i;
+        }
+      }
+      CU->num_callsites = callsites_.size();
+      CU->max_callsite_size = 0;
+      for (auto callsite: callsites_) {
+        CU->max_callsite_size = std::max(CU->max_callsite_size, callsite->arg_count);
+      }
+
+
+      // finalize strings
+      CU->strings     = strings_.data();
+      CU->num_strings = strings_.size();
+
+      // Initialize @*ARGS
+      MVMObject *clargs = MVM_repr_alloc_init(tc, tc->instance->boot_types->BOOTArray);
+      MVM_gc_root_add_permanent(tc, (MVMCollectable **)&clargs);
+      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CORE__");
+      auto sc = (MVMSerializationContext *)MVM_sc_create(tc, handle);
+      MVMROOT(tc, sc, {
+        MVMROOT(tc, clargs, {
+          MVMint64 count;
+          for (count = 0; count < vm->num_clargs; count++) {
+            MVMString *string = MVM_string_utf8_decode(tc,
+              tc->instance->VMString,
+              vm->raw_clargs[count], strlen(vm->raw_clargs[count])
+            );
+            MVMObject*type = CU->hll_config->str_box_type;
+            MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
+            MVMROOT(tc, box, {
+                if (REPR(box)->initialize)
+                    REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
+                REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
+                    OBJECT_BODY(box), string);
+            });
+            MVM_repr_push_o(tc, clargs, box);
+          }
+          MVM_sc_set_object(tc, sc, 0, clargs);
+        });
+      });
+
+      CU->num_scs = 2;
+      CU->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
+      CU->scs[0] = sc;
+      CU->scs[1] = sc_classes_;
+      CU->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
+      CU->scs_to_resolve[0] = NULL;
+      CU->scs_to_resolve[1] = NULL;
+    }
+    MVMStaticFrame * get_start_frame() {
+      return cu_->main_frame ? cu_->main_frame : cu_->frames[0];
     }
   };
 }
