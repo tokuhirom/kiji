@@ -612,7 +612,9 @@ comment =
     | '#' [^\n]* end-of-line
 
 # white space
-ws = '\n=begin END\n' .* | ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
+ws = '\n=begin END\n' .* | ' ' | '\f' | '\v' | '\t' | '\205' | '\240'
+    | '\n=END\n' .*
+    | end-of-line
     | comment
 
 - = ws*

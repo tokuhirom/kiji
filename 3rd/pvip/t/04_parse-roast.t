@@ -93,7 +93,16 @@ try { 3 }
 ===
 --- code
 1
+=END
+--- expected
+(statements (int 1))
+
+===
+--- code
+1
 #`[
 ]
 --- expected
 (statements (int 1))
+
+
