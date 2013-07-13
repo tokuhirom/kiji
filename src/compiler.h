@@ -183,7 +183,6 @@ namespace kiji {
     MVMStaticFrame frame_; // frame itself
     std::shared_ptr<Frame> outer_;
     MVMThreadContext *tc_;
-    std::string *name_; // TODO no pointer
 
     std::vector<MVMuint16> local_types_;
     std::vector<MVMuint16> lexical_types_;
@@ -206,11 +205,9 @@ namespace kiji {
     Frame(MVMThreadContext* tc, const std::string name) {
       memset(&frame_, 0, sizeof(MVMFrame));
       tc_ = tc;
-      name_ = new std::string(name);
+      frame_.name = MVM_string_utf8_decode(tc, tc->instance->VMString, name.c_str(), name.size());
     }
-    ~Frame(){
-      delete name_;
-    }
+    ~Frame(){ }
 
     Assembler & assembler() {
       return assembler_;
@@ -230,10 +227,6 @@ namespace kiji {
 
       // cuuid
       set_cuuid();
-
-      // name
-      // std::cout << *name_<< std::endl;
-      frame_.name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_->c_str(), name_->size());
 
       // bytecode
       frame_.bytecode      = assembler_.bytecode();
