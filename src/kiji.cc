@@ -60,10 +60,6 @@ static void run_repl() {
 }
 
 int main(int argc, char** argv) {
-  // This include apr_initialize().
-  // You need to initialize before `apr_pool_create()`
-  kiji::Interpreter interp;
-
   CmdLineState*state = (CmdLineState*)malloc(sizeof(CmdLineState));
   memset(state, 0, sizeof(CmdLineState));
 
@@ -97,6 +93,11 @@ int main(int argc, char** argv) {
     }
     root_node = PVIP_parse_fp(fp, 0);
   }
+
+  // This include apr_initialize().
+  // You need to initialize before `apr_pool_create()`
+  kiji::Interpreter interp;
+
   // stash the rest of the raw command line args in the instance
   interp.set_clargs(cmd.argc-1, (char **)cmd.argv+1);
   /*
