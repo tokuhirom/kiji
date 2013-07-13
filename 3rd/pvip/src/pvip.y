@@ -603,7 +603,13 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* "'"
 
-comment= '#' [^\n]* end-of-line
+comment =
+    '#`[' [^\]]* ']'
+    | '#`(' [^)]* ')'
+    | '#`（' [^）]* '）'
+    | '#`『' [^』]* '』'
+    | '#`《' [^》]* '》'
+    | '#' [^\n]* end-of-line
 
 # white space
 ws = '\n=begin END\n' .* | ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line

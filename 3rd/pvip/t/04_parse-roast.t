@@ -89,3 +89,11 @@ try { 3 }
 =begin END
 --- expected
 (statements (int 1))
+
+===
+--- code
+1
+#`[
+]
+--- expected
+(statements (int 1))
