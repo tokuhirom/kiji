@@ -151,33 +151,6 @@ namespace kiji {
     MVM_string_say(tc, REPR(obj)->name);
   }
 
-  class ClassBuilder {
-  private:
-    MVMObject*obj_;
-    MVMThreadContext *tc_;
-    MVMObject*cache_;
-  public:
-    ClassBuilder(MVMObject*obj, MVMThreadContext*tc) : obj_(obj), tc_(tc) {
-      cache_ = REPR(tc_->instance->boot_types->BOOTHash)->allocate(tc_, STABLE(tc_->instance->boot_types->BOOTHash));
-    }
-    ~ClassBuilder() {
-      STABLE(obj_)->method_cache = cache_;
-    }
-    void add_method(const char*name_c, size_t name_len, void (*func) (MVMThreadContext *, MVMCallsite *, MVMRegister *)) {
-      MVMString *string = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_c, name_len);
-      MVMObject * BOOTCCode = tc_->instance->boot_types->BOOTCCode;
-      MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc_, STABLE(BOOTCCode));
-      ((MVMCFunction *)code_obj)->body.func = func;
-      REPR(cache_)->ass_funcs->bind_key_boxed(
-          tc_,
-          STABLE(cache_),
-          cache_,
-          OBJECT_BODY(cache_),
-          (MVMObject*)string,
-          code_obj);
-    }
-  };
-
   class Frame {
   private:
     MVMStaticFrame frame_; // frame itself
