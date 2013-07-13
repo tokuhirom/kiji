@@ -439,9 +439,10 @@ term =
     | hash
     | lambda
     | it_method
+    | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | !reserved ident
 
-reserved = 'class'
+reserved = 'class' | 'try'
 
 # TODO optimizable
 class =
