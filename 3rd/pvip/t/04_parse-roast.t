@@ -2,7 +2,8 @@ use strict;
 use warnings;
 use utf8;
 use Test::More;
-use Data::SExpression 0.41;
+use lib 't/lib';
+use Data::SExpression::Lite;
 use Test::Base::Less;
 use Data::Dumper;
 use File::Temp;
@@ -37,8 +38,8 @@ sub parse {
         die "Cannot get json from '$src': $json";
     }
     my $got = eval {
-        my $sexp = Data::SExpression->new({use_symbol_class => 1});
-        my $dat = $sexp->read($json);
+        my $sexp = Data::SExpression::Lite->new();
+        my $dat = $sexp->parse($json);
         $dat = mangle($dat);
         $dat;
     };
@@ -51,8 +52,8 @@ sub parse {
 
 sub convert_expected {
     my $expected = shift;
-    my $sexp = Data::SExpression->new({use_symbol_class => 1});
-    $expected = $sexp->read($expected);
+    my $sexp = Data::SExpression::Lite->new();
+    $expected = $sexp->parse($expected);
     $expected = mangle($expected);
     $expected;
 }
@@ -134,3 +135,10 @@ my %hash={a => 1};
 my @a_o=<x y z>
 --- expected
 (statements (bind (my (variable "@a_o")) (list (string "x") (string "y") (string "z"))))
+
+===
+--- code
+@sines.map();
+--- expected
+(statements (methodcall (variable "@sines") (ident "map") (args)))
+

@@ -2,7 +2,8 @@ use strict;
 use warnings;
 use utf8;
 use Test::More;
-use Data::SExpression 0.41;
+use lib 't/lib/';
+use Data::SExpression::Lite;
 use Test::Base::Less;
 use Data::Dumper;
 use File::Temp;
@@ -37,12 +38,13 @@ sub parse {
         die "Cannot get json from '$src': $json";
     }
     my $got = eval {
-        my $sexp = Data::SExpression->new({use_symbol_class => 1});
-        my $dat = $sexp->read($json);
+        my $sexp = Data::SExpression::Lite->new();
+        my $dat = $sexp->parse($json);
         $dat = mangle($dat);
         $dat;
     };
     if ($@) {
+        diag "ERROR:";
         diag $json;
         die $@
     }
@@ -51,8 +53,14 @@ sub parse {
 
 sub convert_expected {
     my $expected = shift;
-    my $sexp = Data::SExpression->new({use_symbol_class => 1});
-    $expected = $sexp->read($expected);
+    my $sexp = Data::SExpression::Lite->new();
+    eval {
+    $expected = $sexp->parse($expected);
+    };
+    if ($@) {
+        diag "ERROR: " . $expected;
+        die $@;
+    }
     $expected = mangle($expected);
     $expected;
 }
