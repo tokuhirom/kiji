@@ -441,6 +441,7 @@ term =
     | it_method
     | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | !reserved ident
+    | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
 
 reserved = 'class' | 'try'
 
@@ -614,7 +615,9 @@ comment =
     | '#' [^\n]* end-of-line
 
 # white space
-ws = '\n=begin END\n' .* | ' ' | '\f' | '\v' | '\t' | '\205' | '\240'
+ws = 
+    '\n=begin ' [a-z]+ '\n' ( !'=end ' [^\n]* '\n')* '=end ' [a-z]+ '\n'
+    | '\n=begin END\n' .* | ' ' | '\f' | '\v' | '\t' | '\205' | '\240'
     | '\n=END\n' .*
     | end-of-line
     | comment
