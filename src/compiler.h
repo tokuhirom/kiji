@@ -706,9 +706,10 @@ namespace kiji {
         if (!fp) {
           MVM_panic(MVM_exitcode_compunit, "Cannot open file: %s", path.c_str());
         }
-        PVIPNode* root_node = PVIP_parse_fp(fp, 0);
+        PVIPString *error;
+        PVIPNode* root_node = PVIP_parse_fp(fp, 0, &error);
         if (!root_node) {
-          MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", path.c_str());
+          MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", error->buf);
         }
 
         auto frame_no = push_frame(path);

@@ -85,8 +85,9 @@ int main(int argc, char** argv) {
   int processed_args = 0;
 
   PVIPNode *root_node;
+  PVIPString * error;
   if (state->eval) {
-    root_node = PVIP_parse_string(state->eval, strlen(state->eval), 0);
+    root_node = PVIP_parse_string(state->eval, strlen(state->eval), 0, &error);
   } else if (cmd.argc==0) {
 #ifdef __unix__
     if (isatty(fileno(stdin))) {
@@ -95,17 +96,18 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    root_node = PVIP_parse_fp(stdin, 0);
+    root_node = PVIP_parse_fp(stdin, 0, &error);
   } else {
     FILE *fp = fopen(cmd.argv[0], "rb");
     if (!fp) {
       printf("Cannot open file %s for reading: %s", cmd.argv[0], strerror(errno));
       exit(1);
     }
-    root_node = PVIP_parse_fp(fp, 0);
+    root_node = PVIP_parse_fp(fp, 0, &error);
   }
 
   if (!root_node) {
+    PVIP_string_say(error);
     exit(1);
   }
 
