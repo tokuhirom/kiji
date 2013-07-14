@@ -168,11 +168,12 @@ void PVIP_string_destroy(PVIPString *str);
 void PVIP_string_concat(PVIPString *str, const char *src, size_t len);
 void PVIP_string_concat_int(PVIPString *str, int64_t n);
 void PVIP_string_concat_number(PVIPString *str, double n);
+void PVIP_string_concat_char(PVIPString *str, char n);
 void PVIP_string_say(PVIPString *str);
 
 /* parser */
-PVIPNode * PVIP_parse_string(const char *string, int len, int debug);
-PVIPNode * PVIP_parse_fp(FILE *fp, int debug);
+PVIPNode * PVIP_parse_string(const char *string, int len, int debug, PVIPString **error);
+PVIPNode * PVIP_parse_fp(FILE *fp, int debug, PVIPString **error);
 
 #ifdef __cplusplus
 };
