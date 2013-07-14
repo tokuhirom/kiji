@@ -129,3 +129,8 @@ my %hash={a => 1};
 --- expected
 (statements (list))
 
+===
+--- code
+my @a_o=<x y z>
+--- expected
+(statements (bind (my (variable "@a_o")) (list (string "x") (string "y") (string "z"))))

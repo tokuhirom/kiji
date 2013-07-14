@@ -495,7 +495,8 @@ qw_item = < [a-zA-Z0-9_]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext
 
 # TODO optimize
 funcdef =
-    'sub' - i:ident - '(' - p:params? - ')' - b:block {
+    'my' ws - f:funcdef { $$ = PVIP_node_new_children1(PVIP_NODE_MY, f); }
+    | 'sub' - i:ident - '(' - p:params? - ')' - b:block {
         if (!p) {
             p = PVIP_node_new_children(PVIP_NODE_PARAMS);
         }
@@ -534,9 +535,9 @@ my =
 
 variable = scalar | array_var | hash_var
 
-array_var = < '@' [a-zA-Z_] [a-zA-Z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+array_var = < '@' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
-hash_var = < '%' [a-zA-Z_] [a-zA-Z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+hash_var = < '%' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 scalar = < '$' [a-zA-Z_] [a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
