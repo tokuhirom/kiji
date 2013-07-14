@@ -42,6 +42,10 @@ void PVIP_string_concat_number(PVIPString *str, double n) {
     PVIP_string_concat(str, buf, res);
 }
 
+void PVIP_string_concat_char(PVIPString *str, char c) {
+    PVIP_string_concat(str, &c, 1);
+}
+
 void PVIP_string_say(PVIPString *str) {
     fwrite(str->buf, 1, str->len, stdout);
     fwrite("\n", 1, 1, stdout);
