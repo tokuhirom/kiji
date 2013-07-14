@@ -2,6 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use File::Find::Rule;
+use Time::Piece;
 
 my @files = File::Find::Rule->file()
                               ->name( '*.t' )
@@ -19,5 +20,5 @@ for (@files) {
     }
 }
 
-print "OK: $ok, FAIL: $fail\n";
+printf "%s - OK: %s, FAIL: %s (%.2f%%)\n", localtime->strftime('%Y-%m-%d %H:%M '), $ok, $fail, 100.0*((1.0*$ok)/(1.0*($ok+$fail)));
 

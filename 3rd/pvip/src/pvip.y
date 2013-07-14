@@ -526,9 +526,11 @@ my =
     'my' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_MY, v); }
     | 'our' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_OUR, v); }
 
-variable = scalar | array_var
+variable = scalar | array_var | hash_var
 
 array_var = < '@' [a-zA-Z_] [a-zA-Z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+
+hash_var = < '%' [a-zA-Z_] [a-zA-Z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 scalar = < '$' [a-zA-Z_] [a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 

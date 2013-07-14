@@ -105,4 +105,8 @@ try { 3 }
 --- expected
 (statements (int 1))
 
-
+===
+--- code
+my %hash={a => 1};
+--- expected
+(statements (bind (my (variable "%hash")) (hash (pair (string "a") (int 1)))))
