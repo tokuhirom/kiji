@@ -122,3 +122,10 @@ my %hash={a => 1};
 @a[1] = 3;
 --- expected
 (statements (bind (atpos (variable "@a") (int 1)) (int 3)))
+
+===
+--- code
+()
+--- expected
+(statements (list))
+

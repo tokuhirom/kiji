@@ -446,6 +446,7 @@ term =
     | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | !reserved ident
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
+    | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
 
 reserved = 'class' | 'try'
 
