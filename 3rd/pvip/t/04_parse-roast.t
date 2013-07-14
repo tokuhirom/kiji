@@ -116,3 +116,9 @@ my %hash={a => 1};
 \@a
 --- expected
 (statements (ref (variable "@a")))
+
+===
+--- code
+@a[1] = 3;
+--- expected
+(statements (bind (atpos (variable "@a") (int 1)) (int 3)))

@@ -12,7 +12,6 @@
 #include "builtin.h"
 #include "pvip.h"
 #include "frame.h"
-#include "compunit.h"
 
 #define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
     { \

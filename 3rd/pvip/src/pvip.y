@@ -212,10 +212,14 @@ loose_and_expr =
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:variable - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
-    | (v:my - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
+    (v:lvalue - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
     | comma_operator_expr
 
+lvalue =
+    my
+    | v:variable { $$=v; } (
+        '[' - e:expr - ']' { $$=PVIP_node_new_children2(PVIP_NODE_ATPOS, v, e); }
+    )?
 
 comma_operator_expr = a:loose_unary_expr { $$=a; } ( - ',' - b:loose_unary_expr {
         if (a->type==PVIP_NODE_LIST) {

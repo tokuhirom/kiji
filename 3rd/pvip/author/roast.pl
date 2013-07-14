@@ -20,5 +20,5 @@ for (@files) {
     }
 }
 
-printf "%s - OK: %s, FAIL: %s (%.2f%%)\n", localtime->strftime('%Y-%m-%d %H:%M '), $ok, $fail, 100.0*((1.0*$ok)/(1.0*($ok+$fail)));
+printf "%s - OK: %s, FAIL: %s (  %.2f%%)\n", localtime->strftime('%Y-%m-%d %H:%M'), $ok, $fail, 100.0*((1.0*$ok)/(1.0*($ok+$fail)));
 
