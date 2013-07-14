@@ -76,9 +76,12 @@ static char PVIP_input(char *buf, YY_XTYPE D) {
 
 %}
 
-comp_init = e:statementlist end-of-file {
+comp_init = BOM? e:statementlist end-of-file {
     $$ = (G->data.root = e);
 }
+    | BOM? end-of-file { $$ = (G->data.root = PVIP_node_new_children(PVIP_NODE_NOP)); }
+
+BOM='\357' '\273' '\277'
 
 statementlist =
     (
@@ -209,10 +212,14 @@ loose_and_expr =
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:variable - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
-    | (v:my - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
+    (v:lvalue - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
     | comma_operator_expr
 
+lvalue =
+    my
+    | v:variable { $$=v; } (
+        '[' - e:expr - ']' { $$=PVIP_node_new_children2(PVIP_NODE_ATPOS, v, e); }
+    )?
 
 comma_operator_expr = a:loose_unary_expr { $$=a; } ( - ',' - b:loose_unary_expr {
         if (a->type==PVIP_NODE_LIST) {
@@ -436,9 +443,12 @@ term =
     | hash
     | lambda
     | it_method
+    | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | !reserved ident
+    | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
+    | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
 
-reserved = 'class'
+reserved = 'class' | 'try'
 
 # TODO optimizable
 class =
@@ -485,7 +495,8 @@ qw_item = < [a-zA-Z0-9_]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext
 
 # TODO optimize
 funcdef =
-    'sub' - i:ident - '(' - p:params? - ')' - b:block {
+    'my' ws - f:funcdef { $$ = PVIP_node_new_children1(PVIP_NODE_MY, f); }
+    | 'sub' - i:ident - '(' - p:params? - ')' - b:block {
         if (!p) {
             p = PVIP_node_new_children(PVIP_NODE_PARAMS);
         }
@@ -503,9 +514,10 @@ lambda =
         }
         $$ = PVIP_node_new_children2(PVIP_NODE_LAMBDA, p, b);
     }
+    | b:block { $$ = PVIP_node_new_children1(PVIP_NODE_LAMBDA, b); }
 
 params =
-    v:term { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }
+    !'{' v:term { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }
     ( - ',' - v1:term { PVIP_node_push_child(v, v1); $$=v; } )*
     { $$=v; }
 
@@ -522,9 +534,11 @@ my =
     'my' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_MY, v); }
     | 'our' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_OUR, v); }
 
-variable = scalar | array_var
+variable = scalar | array_var | hash_var
 
-array_var = < '@' [a-zA-Z_] [a-zA-Z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+array_var = < '@' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+
+hash_var = < '%' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 scalar = < '$' [a-zA-Z_] [a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
@@ -599,10 +613,20 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* "'"
 
-comment= '#' [^\n]* end-of-line
+comment =
+    '#`[' [^\]]* ']'
+    | '#`(' [^)]* ')'
+    | '#`（' [^）]* '）'
+    | '#`『' [^』]* '』'
+    | '#`《' [^》]* '》'
+    | '#' [^\n]* end-of-line
 
 # white space
-ws = ' ' | '\f' | '\v' | '\t' | '\205' | '\240' | end-of-line
+ws = 
+    '\n=begin ' [a-z]+ '\n' ( !'=end ' [^\n]* '\n')* '=end ' [a-z]+ '\n'
+    | '\n=begin END\n' .* | ' ' | '\f' | '\v' | '\t' | '\205' | '\240'
+    | '\n=END\n' .*
+    | end-of-line
     | comment
 
 - = ws*
@@ -614,7 +638,9 @@ end-of-file = !'\0'
 
 %%
 
-PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
+PVIPNode * PVIP_parse_string(const char *string, int len, int debug, PVIPString **error) {
+    PVIPNode *root = NULL;
+
     GREG g;
     YY_NAME(init)(&g);
 
@@ -630,46 +656,58 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
     g.data.str->pos     = 0;
 
     if (!YY_NAME(parse)(&g)) {
-      fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
-      if (g.text[0]) {
-        fprintf(stderr, "** near %s\n", g.text);
-      }
-      if (g.pos < g.limit || g.data.str->len==g.data.str->pos) {
-        g.buf[g.limit]= '\0';
-        fprintf(stderr, " before text \"");
-        while (g.pos < g.limit) {
-          if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
-          fputc(g.buf[g.pos++], stderr);
+      if (error) {
+        *error = PVIP_string_new();
+        PVIP_string_concat(*error, "** Syntax error at line ", strlen("** Syntax error at line "));
+        PVIP_string_concat_int(*error, g.data.line_number);
+        PVIP_string_concat(*error, "\n", 1);
+        if (g.text[0]) {
+            PVIP_string_concat(*error, "** near ", strlen("** near "));
+            PVIP_string_concat(*error, g.text, strlen(g.text));
         }
-        if (g.pos == g.limit) {
-            while (g.data.str->len!=g.data.str->pos) {
-                char ch = g.data.str->buf[g.data.str->pos++];
-                if (!ch || '\n' == ch || '\r' == ch) {
-                    break;
-                }
-                fputc(ch, stderr);
+        if (g.pos < g.limit || g.data.str->len==g.data.str->pos) {
+            g.buf[g.limit]= '\0';
+            PVIP_string_concat(*error, " before text \"", strlen(" before text \""));
+            while (g.pos < g.limit) {
+                if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
+                PVIP_string_concat_char(*error, g.buf[g.pos++]);
             }
+            if (g.pos == g.limit) {
+                while (g.data.str->len!=g.data.str->pos) {
+                    char ch = g.data.str->buf[g.data.str->pos++];
+                    if (!ch || '\n' == ch || '\r' == ch) {
+                        break;
+                    }
+                    PVIP_string_concat_char(*error, ch);
+                }
+            }
+            PVIP_string_concat_char(*error, '\"');
         }
-        fputc('\"', stderr);
-      }
-      fprintf(stderr, "\n\n");
+        PVIP_string_concat(*error, "\n\n", 2);
         free(g.data.str);
-      return NULL;
+      }
+      goto finished;
     }
     if (g.limit!=g.pos) {
-      printf("Syntax error! Around:\n");
-      int i;
-      for (i=0; g.limit!=g.pos && i<24; i++) {
-        char ch = g.data.str->buf[g.pos++];
-        if (ch) {
-          printf("%c", ch);
+        if (error) {
+            *error = PVIP_string_new();
+            PVIP_string_concat(*error, "Syntax error! Around:\n", strlen("Syntax error! Around:\n"));
+            int i;
+            for (i=0; g.limit!=g.pos && i<24; i++) {
+                char ch = g.data.str->buf[g.pos++];
+                if (ch) {
+                    PVIP_string_concat_char(*error, ch);
+                }
+            }
+            PVIP_string_concat_char(*error, '\n');
         }
-      }
-      printf("\n");
-      exit(1);
+        goto finished;
     }
+    root = g.data.root;
+
+finished:
+
     free(g.data.str);
-    PVIPNode *root = g.data.root;
     assert(g.data.root);
     YY_NAME(deinit)(&g);
     return root;
@@ -679,7 +717,7 @@ PVIPNode * PVIP_parse_string(const char *string, int len, int debug) {
 XXX Output error message to stderr is ugly.
 XXX We need to add APIs for getting error message.
  */
-PVIPNode * PVIP_parse_fp(FILE *fp, int debug) {
+PVIPNode * PVIP_parse_fp(FILE *fp, int debug, PVIPString **error) {
     GREG g;
     YY_NAME(init)(&g);
 
@@ -692,38 +730,47 @@ PVIPNode * PVIP_parse_fp(FILE *fp, int debug) {
     g.data.fp = fp;
 
     if (!YY_NAME(parse)(&g)) {
-      fprintf(stderr, "** Syntax error at line %d\n", g.data.line_number);
-      if (g.text[0]) {
-        fprintf(stderr, "** near %s\n", g.text);
-      }
-      if (g.pos < g.limit || !feof(fp)) {
-        g.buf[g.limit]= '\0';
-        fprintf(stderr, " before text \"");
-        while (g.pos < g.limit) {
-          if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
-          fputc(g.buf[g.pos++], stderr);
+      if (error) {
+        *error = PVIP_string_new();
+        PVIP_string_concat(*error, "** Syntax error at line ", strlen("** Syntax error at line "));
+        PVIP_string_concat_int(*error, g.data.line_number);
+        PVIP_string_concat(*error, "\n", 1);
+        if (g.text[0]) {
+          PVIP_string_concat(*error, "** near ", strlen("** near "));
+          PVIP_string_concat(*error, g.text, strlen(g.text));
         }
-        if (g.pos == g.limit) {
-          int c;
-          while (EOF != (c= fgetc(fp)) && '\n' != c && '\r' != c)
-          fputc(c, stderr);
+        if (g.pos < g.limit || !feof(fp)) {
+          g.buf[g.limit]= '\0';
+          PVIP_string_concat(*error, " before text \"", strlen(" before text \""));
+          while (g.pos < g.limit) {
+            if ('\n' == g.buf[g.pos] || '\r' == g.buf[g.pos]) break;
+            PVIP_string_concat_char(*error, g.buf[g.pos++]);
+          }
+          if (g.pos == g.limit) {
+            int c;
+            while (EOF != (c= fgetc(fp)) && '\n' != c && '\r' != c)
+            PVIP_string_concat_char(*error, c);
+          }
+          PVIP_string_concat_char(*error, '\"');
         }
-        fputc('\"', stderr);
+        PVIP_string_concat(*error, "\n\n", 2);
       }
-      fprintf(stderr, "\n\n");
       return NULL;
     }
     if (!feof(fp)) {
-      printf("Syntax error! Around:\n");
-      int i;
-      for (i=0; !feof(fp) && i<24; i++) {
-        char ch = fgetc(fp);
-        if (ch != EOF) {
-          printf("%c", ch);
+      if (error) {
+        *error = PVIP_string_new();
+        PVIP_string_concat(*error, "Syntax error! Around:\n", strlen("Syntax error! Around:\n"));
+        int i;
+        for (i=0; !feof(fp) && i<24; i++) {
+          char ch = fgetc(fp);
+          if (ch != EOF) {
+            PVIP_string_concat_char(*error, ch);
+          }
         }
+        PVIP_string_concat_char(*error, '\n');
       }
-      printf("\n");
-      exit(1);
+      return NULL;
     }
     free(g.data.str);
     PVIPNode *root = g.data.root;

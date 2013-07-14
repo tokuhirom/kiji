@@ -31,8 +31,14 @@ int main(int argc, char **argv) {
 
     if (state->eval) {
         const char *src = state->eval;
-        PVIPNode *node = PVIP_parse_string(src, strlen(src), state->debug);
-        assert(node);
+        PVIPString *error;
+        PVIPNode *node = PVIP_parse_string(src, strlen(src), state->debug, &error);
+        if (!node) {
+            PVIP_string_say(error);
+            PVIP_string_destroy(error);
+            printf("ABORT\n");
+            exit(1);
+        }
 
         PVIP_node_dump_sexp(node);
 
@@ -41,15 +47,28 @@ int main(int argc, char **argv) {
         FILE *fp = fopen(cmd.argv[0], "rb");
         if (!fp) {
             perror(cmd.argv[0]);
-            exit(0);
+            exit(1);
         }
-        PVIPNode *node = PVIP_parse_fp(fp, state->debug);
+        PVIPString *error;
+        PVIPNode *node = PVIP_parse_fp(fp, state->debug, &error);
+        if (!node) {
+            PVIP_string_say(error);
+            PVIP_string_destroy(error);
+            printf("ABORT\n");
+            exit(1);
+        }
         PVIP_node_dump_sexp(node);
         PVIP_node_destroy(node);
         fclose(fp);
     } else if (cmd.argc==0) {
-        PVIPNode *node = PVIP_parse_fp(stdin, state->debug);
-        assert(node);
+        PVIPString *error;
+        PVIPNode *node = PVIP_parse_fp(stdin, state->debug, &error);
+        if (!node) {
+            PVIP_string_say(error);
+            PVIP_string_destroy(error);
+            printf("ABORT\n");
+            exit(1);
+        }
         PVIP_node_dump_sexp(node);
         PVIP_node_destroy(node);
     } else {

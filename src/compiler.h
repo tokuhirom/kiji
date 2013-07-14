@@ -9,14 +9,9 @@
 #include <sstream>
 #include <memory>
 #include "gen.assembler.h"
-
-#define EACH_NODE(m,node) \
-  if (node->children.size>0) { \
-    auto m=node->children.nodes[0]; \
-    for (int i=0; i<node->children.size; ++i, m=node->children.nodes[i]) { \
-
-
-#define END_EACH_NODE } }
+#include "builtin.h"
+#include "pvip.h"
+#include "frame.h"
 
 #define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
     { \
@@ -26,6 +21,7 @@
     }
 
 #define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
+#define CU cu_
 
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
@@ -142,28 +138,8 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
     MVM_gc_root_temp_pop_n(tc, 1);
   }
 
-  static void say_hello(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
-    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
-    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
-    MVM_args_proc_cleanup(tc, &arg_ctx);
-
-    MVMString * name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"A Punk IPA, good sir");
-    MVM_string_say(tc, name);
-
-    MVM_gc_root_temp_pop_n(tc, 1);
-  }
 
 namespace kiji {
-  void bootstrap_Array(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_Str(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_Hash(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_File(MVMCompUnit* cu, MVMThreadContext*tc);
-  void bootstrap_Int(MVMCompUnit* cu, MVMThreadContext*tc);
-
-  enum variable_type_t {
-    VARIABLE_TYPE_MY,
-    VARIABLE_TYPE_OUR
-  };
 
   void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     if (obj==NULL) {
@@ -173,336 +149,24 @@ namespace kiji {
     MVM_string_say(tc, REPR(obj)->name);
   }
 
-  class ClassBuilder {
+  /**
+   * OP map is 3rd/MoarVM/src/core/oplist
+   * interp code is 3rd/MoarVM/src/core/interp.c
+   */
+  enum { UNKNOWN_REG = -1 };
+  class Compiler {
   private:
-    MVMObject*obj_;
+    MVMCompUnit* cu_;
     MVMThreadContext *tc_;
-    MVMObject*cache_;
-  public:
-    ClassBuilder(MVMObject*obj, MVMThreadContext*tc) : obj_(obj), tc_(tc) {
-      cache_ = REPR(tc_->instance->boot_types->BOOTHash)->allocate(tc_, STABLE(tc_->instance->boot_types->BOOTHash));
-    }
-    ~ClassBuilder() {
-      STABLE(obj_)->method_cache = cache_;
-    }
-    void add_method(const char*name_c, size_t name_len, void (*func) (MVMThreadContext *, MVMCallsite *, MVMRegister *)) {
-      MVMString *string = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_c, name_len);
-      MVMObject * BOOTCCode = tc_->instance->boot_types->BOOTCCode;
-      MVMObject* code_obj = REPR(BOOTCCode)->allocate(tc_, STABLE(BOOTCCode));
-      ((MVMCFunction *)code_obj)->body.func = func;
-      REPR(cache_)->ass_funcs->bind_key_boxed(
-          tc_,
-          STABLE(cache_),
-          cache_,
-          OBJECT_BODY(cache_),
-          (MVMObject*)string,
-          code_obj);
-    }
-  };
-
-  class Frame {
-  private:
-    MVMStaticFrame frame_; // frame itself
-    std::shared_ptr<Frame> outer_;
-    MVMThreadContext *tc_;
-    std::string *name_; // TODO no pointer
-
-    std::vector<MVMuint16> local_types_;
-    std::vector<MVMuint16> lexical_types_;
-    std::vector<std::string> package_variables_;
-
-    std::vector<MVMFrameHandler*> handlers_;
-
-    Assembler assembler_;
-
-    void set_cuuid() {
-      static int cuuid_counter = 0;
-      std::ostringstream oss;
-      oss << "frame_cuuid_" << cuuid_counter++;
-      std::string cuuid = oss.str();
-      frame_.cuuid = MVM_string_utf8_decode(tc_, tc_->instance->VMString, cuuid.c_str(), cuuid.size());
-    }
-
-  public:
-    MVMStaticFrame* frame() { return &frame_; }
-    Frame(MVMThreadContext* tc, const std::string name) {
-      memset(&frame_, 0, sizeof(MVMFrame));
-      tc_ = tc;
-      name_ = new std::string(name);
-    }
-    ~Frame(){
-      delete name_;
-    }
-
-    Assembler & assembler() {
-      return assembler_;
-    }
-
-    MVMStaticFrame* finalize() {
-      frame_.local_types = local_types_.data();
-      frame_.num_locals  = local_types_.size();
-
-      frame_.num_lexicals  = lexical_types_.size();
-      frame_.lexical_types = lexical_types_.data();
-
-      // see src/core/bytecode.c
-      frame_.env_size = frame_.num_lexicals * sizeof(MVMRegister);
-      frame_.static_env = (MVMRegister*)malloc(frame_.env_size);
-      memset(frame_.static_env, 0, frame_.env_size);
-
-      // cuuid
-      set_cuuid();
-
-      // name
-      // std::cout << *name_<< std::endl;
-      frame_.name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_->c_str(), name_->size());
-
-      // bytecode
-      frame_.bytecode      = assembler_.bytecode();
-      frame_.bytecode_size = assembler_.bytecode_size();
-
-      // frame handlers
-      frame_.num_handlers = handlers_.size();
-      frame_.handlers = new MVMFrameHandler[handlers_.size()];
-      int i=0;
-      for (auto f: handlers_) {
-        frame_.handlers[i] = *f;
-        ++i;
-      }
-
-      return &frame_;
-    }
-
-    void push_handler(MVMFrameHandler* handler) {
-      handlers_.push_back(handler);
-    }
-
-    // reserve register
-    int push_local_type(MVMuint16 reg_type) {
-      local_types_.push_back(reg_type);
-      if (local_types_.size() >= 65535) {
-        printf("[panic] Too much registers\n");
-        abort();
-      }
-      return local_types_.size()-1;
-    }
-    // Get register type at 'n'
-    uint16_t get_local_type(int n) {
-      assert(n>=0);
-      assert(n<local_types_.size());
-      return local_types_[n];
-    }
-
-    // Push lexical variable.
-    int push_lexical(const std::string&name_cc, MVMuint16 type) {
-      lexical_types_.push_back(type);
-
-      int idx = lexical_types_.size()-1;
-
-      MVMLexicalHashEntry *entry = (MVMLexicalHashEntry*)calloc(sizeof(MVMLexicalHashEntry), 1);
-      entry->value = idx;
-
-      MVMThreadContext *tc = tc_; // workaround for MVM's bad macro
-      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      MVM_string_flatten(tc_, name);
-      // lexical_names is Hash.
-      MVM_HASH_BIND(tc_, frame_.lexical_names, name, entry);
-
-      return idx;
-    }
-
-    // TODO Throw exception at this code: `our $n; my $n`
-    void push_pkg_var(const std::string &name_cc) {
-      package_variables_.push_back(name_cc);
-    }
-
-    void set_outer(const std::shared_ptr<Frame>&frame) {
-      frame_.outer = &(frame->frame_);
-      outer_ = frame;
-    }
-
-    variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
-      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      Frame* f = this;
-      outer = 0;
-      while (f) {
-        // check lexical variables
-        MVMLexicalHashEntry *lexical_names = f->frame_.lexical_names;
-        MVMLexicalHashEntry *entry;
-        MVM_HASH_GET(tc_, lexical_names, name, entry);
-
-        if (entry) {
-          lex_no = entry->value;
-          return VARIABLE_TYPE_MY;
-        }
-
-        // check package variables
-        for (auto n: f->package_variables_) {
-          if (n==name_cc) {
-            return VARIABLE_TYPE_OUR;
-          }
-        }
-
-        f = &(*(f->outer_));
-        ++outer;
-      }
-      // TODO I should use MVM_panic instead.
-      printf("Unknown lexical variable in find_variable_by_name: %s\n", name_cc.c_str());
-      exit(0);
-    }
-
-    // lexical variable number by name
-    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
-      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      MVMStaticFrame *f = &frame_;
-      *outer = 0;
-      while (f) {
-        MVMLexicalHashEntry *lexical_names = f->lexical_names;
-        MVMLexicalHashEntry *entry;
-        MVM_HASH_GET(tc_, lexical_names, name, entry);
-
-        if (entry) {
-          *lex_no= entry->value;
-          return true;
-        }
-        f = f->outer;
-        ++(*outer);
-      }
-      return false;
-      // printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
-      // exit(0);
-    }
-  };
-
-  class CompUnit {
-  private:
-    MVMThreadContext *tc_;
-    MVMCompUnit*cu_;
-    std::vector<MVMString*> strings_;
+    int frame_no_;
     std::vector<std::shared_ptr<Frame>> frames_;
     std::list<std::shared_ptr<Frame>> used_frames_;
+    MVMObject* current_class_how_;
+    std::vector<MVMString*> strings_;
     std::vector<MVMCallsite*> callsites_;
+
     MVMSerializationContext * sc_classes_;
     int num_sc_classes_;
-  public:
-    CompUnit(MVMThreadContext* tc) :tc_(tc) {
-      cu_ = (MVMCompUnit*)malloc(sizeof(MVMCompUnit));
-      memset(cu_, 0, sizeof(MVMCompUnit));
-
-      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
-      sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
-
-      num_sc_classes_ = 0;
-    }
-    ~CompUnit() {
-      free(cu_);
-    }
-    MVMThreadContext *tc() {  return tc_; }
-    MVMCompUnit *cu() {  return cu_; }
-    void finalize(MVMInstance* vm) {
-      MVMThreadContext *tc = tc_; // remove me
-      MVMInstance *vm_ = vm; // remove me
-
-      // finalize strings
-      cu_->strings     = strings_.data();
-      cu_->num_strings = strings_.size();
-
-      // finalize frames
-      cu_->num_frames  = used_frames_.size();
-      assert(frames_.size() >= 1);
-
-      cu_->frames = (MVMStaticFrame**)malloc(sizeof(MVMStaticFrame*)*used_frames_.size());
-      {
-        int i=0;
-        for (auto frame: used_frames_) {
-          cu_->frames[i] = frame->finalize();
-          cu_->frames[i]->cu = cu_;
-          cu_->frames[i]->work_size = 0;
-          ++i;
-        }
-      }
-      cu_->main_frame = cu_->frames[0];
-      assert(cu_->main_frame->cuuid);
-
-      // Creates code objects to go with each of the static frames.
-      // ref create_code_objects in src/core/bytecode.c
-      cu_->coderefs = (MVMObject**)malloc(sizeof(MVMObject *) * cu_->num_frames);
-      memset(cu_->coderefs, 0, sizeof(MVMObject *) * cu_->num_frames); // is this needed?
-
-      MVMObject* code_type = tc->instance->boot_types->BOOTCode;
-
-      for (int i = 0; i < cu_->num_frames; i++) {
-        cu_->coderefs[i] = REPR(code_type)->allocate(tc, STABLE(code_type));
-        ((MVMCode *)cu_->coderefs[i])->body.sf = cu_->frames[i];
-      }
-
-      // setup hllconfig
-      {
-        MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
-        cu_->hll_config = MVM_hll_get_config_for(tc, hll_name);
-
-        MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
-        // MVMObject *key = (MVMObject *)MVM_string_utf8_decode((tc), (tc)->instance->VMString, "list", strlen("list");
-        // MVM_HASH_BIND(tc, frames[i]->lexical_names, key, entry);
-        MVM_hll_set_config(tc, hll_name, config);
-      }
-
-      // setup callsite
-      cu_->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*callsites_.size());
-      {
-        int i=0;
-        for (auto callsite: callsites_) {
-          cu_->callsites[i] = callsite;
-          ++i;
-        }
-      }
-      cu_->num_callsites = callsites_.size();
-      cu_->max_callsite_size = 0;
-      for (auto callsite: callsites_) {
-        cu_->max_callsite_size = std::max(cu_->max_callsite_size, callsite->arg_count);
-      }
-
-      // Initialize @*ARGS
-      MVMObject *clargs = MVM_repr_alloc_init(tc, tc->instance->boot_types->BOOTArray);
-      MVM_gc_root_add_permanent(tc, (MVMCollectable **)&clargs);
-      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CORE__");
-      auto sc = (MVMSerializationContext *)MVM_sc_create(tc, handle);
-      MVMROOT(tc, sc, {
-        MVMROOT(tc, clargs, {
-          MVMint64 count;
-          for (count = 0; count < vm_->num_clargs; count++) {
-            MVMString *string = MVM_string_utf8_decode(tc,
-              tc->instance->VMString,
-              vm_->raw_clargs[count], strlen(vm_->raw_clargs[count]));
-            MVMObject*type = cu_->hll_config->str_box_type;
-            MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
-            MVMROOT(tc, box, {
-                if (REPR(box)->initialize)
-                    REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
-                REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
-                    OBJECT_BODY(box), string);
-            });
-            MVM_repr_push_o(tc, clargs, box);
-          }
-          MVM_sc_set_object(tc, sc, 0, clargs);
-        });
-      });
-
-      // hacking hll
-      bootstrap_Array(cu_, tc);
-      bootstrap_Str(cu_, tc);
-      bootstrap_Hash(cu_, tc);
-      bootstrap_File(cu_, tc);
-      bootstrap_Int(cu_, tc);
-
-      cu_->num_scs = 2;
-      cu_->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
-      cu_->scs[0] = sc;
-      cu_->scs[1] = sc_classes_;
-      cu_->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
-      cu_->scs_to_resolve[0] = NULL;
-      cu_->scs_to_resolve[1] = NULL;
-    }
 
     void push_sc_object(MVMObject * object, int *wval1, int *wval2) {
       num_sc_classes_++;
@@ -512,196 +176,6 @@ namespace kiji {
 
       MVM_sc_set_object(tc_, sc_classes_, num_sc_classes_-1, object);
     }
-
-    void initialize() {
-      // init compunit.
-      int apr_return_status;
-      apr_pool_t  *pool        = NULL;
-      /* Ensure the file exists, and get its size. */
-      if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
-        MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
-      }
-      cu_->pool       = pool;
-      this->push_frame("frame_name_0");
-    }
-    // TODO maybe not useful.
-    int push_string(const std::string &str) {
-      return this->push_string(str.c_str(), str.size());
-    }
-    Assembler & assembler() {
-      return frames_.back()->assembler();
-    }
-
-    int push_string(const char*string, int length) {
-      MVMString* str = MVM_string_utf8_decode(tc_, tc_->instance->VMString, string, length);
-      strings_.push_back(str);
-      return strings_.size() - 1;
-    }
-
-    // reserve register
-    int push_local_type(MVMuint16 reg_type) {
-      return frames_.back()->push_local_type(reg_type);
-    }
-    // Get register type at 'n'
-    uint16_t get_local_type(int n) {
-      return frames_.back()->get_local_type(n);
-    }
-    // Push lexical variable.
-    int push_lexical(const std::string name, MVMuint16 type) {
-      return frames_.back()->push_lexical(name, type);
-    }
-    void push_pkg_var(const std::string name) {
-      frames_.back()->push_pkg_var(name);
-    }
-
-    // lexical variable number by name
-    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
-      return frames_.back()->find_lexical_by_name(name_cc, lex_no, outer);
-    }
-    variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
-      return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
-    }
-
-    void push_handler(MVMFrameHandler *handler) {
-      return frames_.back()->push_handler(handler);
-    }
-    MVMStaticFrame* get_frame(int frame_no) {
-      auto iter = used_frames_.begin();
-      for (int i=0; i<frame_no; i++) {
-        iter++;
-      }
-      return (*iter)->frame();
-    }
-    int push_frame(const std::string & name) {
-      std::shared_ptr<Frame> frame = std::make_shared<Frame>(tc_, name);
-      if (frames_.size() != 0) {
-        frame->set_outer(frames_.back());
-      }
-      frames_.push_back(frame);
-      used_frames_.push_back(frames_.back());
-      return used_frames_.size()-1;
-    }
-    void pop_frame() {
-      frames_.pop_back();
-    }
-    size_t frame_size() const {
-      return frames_.size();
-    }
-
-    // Is a and b equivalent?
-    bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
-      if (a->arg_count != b->arg_count) {
-        return false;
-      }
-      if (a->num_pos != b->num_pos) {
-        return false;
-      }
-      // Should I use memcmp?
-      if (a->arg_count !=0) {
-        for (int i=0; i<a->arg_count; ++i) {
-          if (a->arg_flags[i] != b->arg_flags[i]) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
-
-    size_t push_callsite(MVMCallsite *callsite) {
-      int i=0;
-      for (auto c:callsites_) {
-        if (callsite_eq(c, callsite)) {
-          delete callsite; // free memory
-          return i;
-        }
-        ++i;
-      }
-      callsites_.push_back(callsite);
-      return callsites_.size() - 1;
-    }
-    MVMStaticFrame * get_start_frame() {
-      return cu_->main_frame ? cu_->main_frame : cu_->frames[0];
-    }
-
-    void dump(MVMInstance * vm) {
-      this->finalize(vm);
-
-      // dump it
-      char *dump = MVM_bytecode_dump(tc_, cu_);
-
-      printf("%s", dump);
-      free(dump);
-    }
-  };
-
-  class Interpreter {
-  private:
-    MVMInstance* vm_;
-
-  protected:
-    /*
-    MVMObject * mk_boxed_string(const char *name, size_t len) {
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMString *string = MVM_string_utf8_decode(tc, tc->instance->VMString, name, len);
-      MVMObject*type = cu_->hll_config->str_box_type;
-      MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
-      MVMROOT(tc, box, {
-          if (REPR(box)->initialize)
-              REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
-          REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
-              OBJECT_BODY(box), string);
-      });
-      return box;
-    }
-    */
-  public:
-    Interpreter() {
-      vm_ = MVM_vm_create_instance();
-    }
-    ~Interpreter() {
-      MVM_vm_destroy_instance(vm_);
-    }
-    void set_clargs(int n, char**args) {
-      vm_->num_clargs = n;
-      vm_->raw_clargs = args;
-    }
-    MVMThreadContext * main_thread() {
-      return vm_->main_thread;
-    }
-    MVMInstance * vm() {
-      return vm_;
-    }
-    static void toplevel_initial_invoke(MVMThreadContext *tc, void *data) {
-      /* Dummy, 0-arg callsite. */
-      static MVMCallsite no_arg_callsite;
-      no_arg_callsite.arg_flags = NULL;
-      no_arg_callsite.arg_count = 0;
-      no_arg_callsite.num_pos   = 0;
-
-      /* Create initial frame, which sets up all of the interpreter state also. */
-      MVM_frame_invoke(tc, (MVMStaticFrame *)data, &no_arg_callsite, NULL, NULL, NULL);
-    }
-
-    void run(CompUnit & cu) {
-      cu.finalize(vm_);
-
-      MVMThreadContext *tc = vm_->main_thread;
-      MVMStaticFrame *start_frame = cu.get_start_frame();
-      MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
-    }
-  };
-
-  /**
-   * OP map is 3rd/MoarVM/src/core/oplist
-   * interp code is 3rd/MoarVM/src/core/interp.c
-   */
-  enum { UNKNOWN_REG = -1 };
-  class Compiler {
-  private:
-    // Interpreter &interp_;
-    CompUnit & cu_;
-    int frame_no_;
-    MVMObject* current_class_how_;
 
     class Label {
     private:
@@ -772,18 +246,18 @@ namespace kiji {
       assembler().op_u16_u32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
     }
 
-    Assembler& assembler() {
-      return cu_.assembler(); // FIXME ugly
+    // reserve register
+    int push_local_type(MVMuint16 reg_type) {
+      return frames_.back()->push_local_type(reg_type);
     }
 
-    int reg_obj() { return cu_.push_local_type(MVM_reg_obj); }
-    int reg_str() { return cu_.push_local_type(MVM_reg_str); }
-    int reg_int64() { return cu_.push_local_type(MVM_reg_int64); }
-    int reg_num64() { return cu_.push_local_type(MVM_reg_num64); }
+    int reg_obj() { return push_local_type(MVM_reg_obj); }
+    int reg_str() { return push_local_type(MVM_reg_str); }
+    int reg_int64() { return push_local_type(MVM_reg_int64); }
+    int reg_num64() { return push_local_type(MVM_reg_num64); }
 
     int compile_class(const PVIPNode* node) {
       int wval1, wval2;
-      MVMThreadContext*tc_ = cu_.tc();
       {
         // Create new class.
         MVMObject * type = MVM_6model_find_method(
@@ -815,7 +289,7 @@ namespace kiji {
           STABLE(type)->method_cache = method_cache;
         }
 
-        cu_.push_sc_object(type, &wval1, &wval2);
+        this->push_sc_object(type, &wval1, &wval2);
         current_class_how_ = how;
       }
 
@@ -851,7 +325,7 @@ namespace kiji {
     uint16_t get_variable(const std::string &name) {
       int outer = 0;
       int lex_no = 0;
-      variable_type_t vartype = cu_.find_variable_by_name(name, lex_no, outer);
+      variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
         auto reg_no = reg_obj();
         assembler().getlex(
@@ -892,7 +366,7 @@ namespace kiji {
     void set_variable(const std::string &name, uint16_t val_reg) {
       int lex_no = -1;
       int outer = -1;
-      variable_type_t vartype = cu_.find_variable_by_name(name, lex_no, outer);
+      variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
         assembler().bindlex(
           lex_no,
@@ -932,51 +406,107 @@ namespace kiji {
       return reg;
     }
 
+    // Get register type at 'n'
     uint16_t get_local_type(int n) {
-      return cu_.get_local_type(n);
+      return frames_.back()->get_local_type(n);
     }
     int push_string(PVIPString* pv) {
       return push_string(pv->buf, pv->len);
     }
     int push_string(const std::string & str) {
-      return cu_.push_string(str.c_str(), str.size());
+      return push_string(str.c_str(), str.size());
     }
     int push_string(const char*string, int length) {
-      return cu_.push_string(string, length);
+      MVMString* str = MVM_string_utf8_decode(tc_, tc_->instance->VMString, string, length);
+      strings_.push_back(str);
+      return strings_.size() - 1;
+    }
+    variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
+      return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
     }
     // lexical variable number by name
-    int find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
-      return cu_.find_lexical_by_name(name_cc, lex_no, outer);
+    bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
+      return frames_.back()->find_lexical_by_name(name_cc, lex_no, outer);
     }
     // Push lexical variable.
     int push_lexical(PVIPString *pv, MVMuint16 type) {
       return push_lexical(std::string(pv->buf, pv->len), type);
     }
-    int push_lexical(const std::string &name, MVMuint16 type) {
-      return cu_.push_lexical(name, type);
+    int push_lexical(const std::string name, MVMuint16 type) {
+      return frames_.back()->push_lexical(name, type);
     }
-    void push_pkg_var(const std::string &name) {
-      cu_.push_pkg_var(name);
+    void push_pkg_var(const std::string name) {
+      frames_.back()->push_pkg_var(name);
+    }
+    // Is a and b equivalent?
+    bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
+      if (a->arg_count != b->arg_count) {
+        return false;
+      }
+      if (a->num_pos != b->num_pos) {
+        return false;
+      }
+      // Should I use memcmp?
+      if (a->arg_count !=0) {
+        for (int i=0; i<a->arg_count; ++i) {
+          if (a->arg_flags[i] != b->arg_flags[i]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    size_t push_callsite(MVMCallsite *callsite) {
+      int i=0;
+      for (auto c:callsites_) {
+        if (callsite_eq(c, callsite)) {
+          delete callsite; // free memory
+          return i;
+        }
+        ++i;
+      }
+      callsites_.push_back(callsite);
+      return callsites_.size() - 1;
+    }
+    void push_handler(MVMFrameHandler *handler) {
+      return frames_.back()->push_handler(handler);
+    }
+    Assembler & assembler() {
+      return frames_.back()->assembler();
+    }
+    MVMStaticFrame* get_frame(int frame_no) {
+      auto iter = used_frames_.begin();
+      for (int i=0; i<frame_no; i++) {
+        iter++;
+      }
+      return (*iter)->frame();
     }
     int push_frame(const std::string & name) {
       std::ostringstream oss;
       oss << name << frame_no_++;
-      return cu_.push_frame(oss.str());
+      std::shared_ptr<Frame> frame = std::make_shared<Frame>(tc_, oss.str());
+      if (frames_.size() != 0) {
+        frame->set_outer(frames_.back());
+      }
+      frames_.push_back(frame);
+      used_frames_.push_back(frames_.back());
+      return used_frames_.size()-1;
     }
     void pop_frame() {
-      cu_.pop_frame();
+      frames_.pop_back();
     }
-    size_t push_callsite(MVMCallsite *callsite) {
-      return cu_.push_callsite(callsite);
+    size_t frame_size() const {
+      return frames_.size();
     }
-    void push_handler(MVMFrameHandler *handler) {
-      return cu_.push_handler(handler);
-    }
+
+
     void compile_array(uint16_t array_reg, const PVIPNode* node) {
       if (node->type==PVIP_NODE_LIST) {
-        EACH_NODE(m, node) {
+        for (int i=0; i<node->children.size; i++) {
+          PVIPNode* m = node->children.nodes[i];
           compile_array(array_reg, m);
-        } END_EACH_NODE
+        }
       } else {
         auto reg = this->box(do_compile(node));
         assembler().push_o(array_reg, reg);
@@ -1004,7 +534,7 @@ namespace kiji {
         last_handler->action = MVM_EX_ACTION_GOTO;
         last_handler->block_reg = 0;
         last_handler->goto_offset = last_offset_;
-        compiler_->cu_.push_handler(last_handler);
+        compiler_->push_handler(last_handler);
 
         MVMFrameHandler *next_handler = new MVMFrameHandler;
         next_handler->start_offset = start_offset_;
@@ -1013,7 +543,7 @@ namespace kiji {
         next_handler->action = MVM_EX_ACTION_GOTO;
         next_handler->block_reg = 0;
         next_handler->goto_offset = next_offset_;
-        compiler_->cu_.push_handler(next_handler);
+        compiler_->push_handler(next_handler);
 
         MVMFrameHandler *redo_handler = new MVMFrameHandler;
         redo_handler->start_offset = start_offset_;
@@ -1022,7 +552,7 @@ namespace kiji {
         redo_handler->action = MVM_EX_ACTION_GOTO;
         redo_handler->block_reg = 0;
         redo_handler->goto_offset = redo_offset_;
-        compiler_->cu_.push_handler(redo_handler);
+        compiler_->push_handler(redo_handler);
       }
       // fixme: `put` is not the best verb in English here.
       void put_last() {
@@ -1176,9 +706,10 @@ namespace kiji {
         if (!fp) {
           MVM_panic(MVM_exitcode_compunit, "Cannot open file: %s", path.c_str());
         }
-        PVIPNode* root_node = PVIP_parse_fp(fp, 0);
+        PVIPString *error;
+        PVIPNode* root_node = PVIP_parse_fp(fp, 0, &error);
         if (!root_node) {
-          MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", path.c_str());
+          MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", error->buf);
         }
 
         auto frame_no = push_frame(path);
@@ -1434,7 +965,6 @@ namespace kiji {
         assembler().write_uint16_t(frame_no, func_pos);
 
         // bind method object to class how
-        MVMThreadContext*tc_ = cu_.tc();
         if (!current_class_how_) {
           MVM_panic(MVM_exitcode_compunit, "Compilation error. You can't write methods outside of class definition");
         }
@@ -1442,9 +972,9 @@ namespace kiji {
           MVMString * methname = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name.c_str(), name.size());
           // self, type_obj, name, method
           MVMObject * method_table = ((MVMKnowHOWREPR *)current_class_how_)->body.methods;
-          MVMObject* code_type = cu_.tc()->instance->boot_types->BOOTCode;
+          MVMObject* code_type = tc_->instance->boot_types->BOOTCode;
           MVMCode *coderef = (MVMCode*)REPR(code_type)->allocate(tc_, STABLE(code_type));
-          coderef->body.sf = cu_.get_frame(frame_no);
+          coderef->body.sf = get_frame(frame_no);
           REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
               method_table, OBJECT_BODY(method_table), (MVMObject *)methname, (MVMObject*)coderef);
         }
@@ -2557,11 +2087,62 @@ namespace kiji {
       }
     }
   public:
-    Compiler(CompUnit & cu): cu_(cu), frame_no_(0) {
-      cu_.initialize();
+    Compiler(MVMCompUnit * cu, MVMThreadContext * tc): cu_(cu), frame_no_(0), tc_(tc) {
+      initialize();
+
       current_class_how_ = NULL;
+
+      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
+      sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
+
+      num_sc_classes_ = 0;
     }
-    void compile(PVIPNode*node) {
+    ~Compiler() { }
+    void initialize() {
+      // init compunit.
+      int apr_return_status;
+      apr_pool_t  *pool        = NULL;
+      /* Ensure the file exists, and get its size. */
+      if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
+        MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
+      }
+      cu_->pool       = pool;
+      this->push_frame("frame_name_0");
+    }
+    void finalize(MVMInstance* vm) {
+      MVMThreadContext *tc = tc_; // remove me
+      MVMInstance *vm_ = vm; // remove me
+
+      // finalize frames
+      cu_->num_frames  = used_frames_.size();
+      assert(frames_.size() >= 1);
+
+      cu_->frames = (MVMStaticFrame**)malloc(sizeof(MVMStaticFrame*)*used_frames_.size());
+      {
+        int i=0;
+        for (auto frame: used_frames_) {
+          cu_->frames[i] = frame->finalize();
+          cu_->frames[i]->cu = cu_;
+          cu_->frames[i]->work_size = 0;
+          ++i;
+        }
+      }
+      cu_->main_frame = cu_->frames[0];
+      assert(cu_->main_frame->cuuid);
+
+      // Creates code objects to go with each of the static frames.
+      // ref create_code_objects in src/core/bytecode.c
+      cu_->coderefs = (MVMObject**)malloc(sizeof(MVMObject *) * cu_->num_frames);
+      memset(cu_->coderefs, 0, sizeof(MVMObject *) * cu_->num_frames); // is this needed?
+
+      MVMObject* code_type = tc->instance->boot_types->BOOTCode;
+
+      for (int i = 0; i < cu_->num_frames; i++) {
+        cu_->coderefs[i] = REPR(code_type)->allocate(tc, STABLE(code_type));
+        ((MVMCode *)cu_->coderefs[i])->body.sf = cu_->frames[i];
+      }
+    }
+    void compile(PVIPNode*node, MVMInstance* vm) {
       assembler().checkarity(0, -1);
 
 
@@ -2613,12 +2194,82 @@ namespace kiji {
       int reg = reg_obj();
       assembler().null(reg);
       assembler().return_o(reg);
+
+      // setup hllconfig
+      MVMThreadContext * tc = tc_;
+      {
+        MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
+        CU->hll_config = MVM_hll_get_config_for(tc, hll_name);
+
+        MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
+        MVM_hll_set_config(tc, hll_name, config);
+      }
+
+      // hacking hll
+      Kiji_bootstrap_Array(CU, tc);
+      Kiji_bootstrap_Str(CU,   tc);
+      Kiji_bootstrap_Hash(CU,  tc);
+      Kiji_bootstrap_File(CU,  tc);
+      Kiji_bootstrap_Int(CU,   tc);
+
+      // setup callsite
+      CU->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*callsites_.size());
+      {
+        int i=0;
+        for (auto callsite: callsites_) {
+          CU->callsites[i] = callsite;
+          ++i;
+        }
+      }
+      CU->num_callsites = callsites_.size();
+      CU->max_callsite_size = 0;
+      for (auto callsite: callsites_) {
+        CU->max_callsite_size = std::max(CU->max_callsite_size, callsite->arg_count);
+      }
+
+
+      // finalize strings
+      CU->strings     = strings_.data();
+      CU->num_strings = strings_.size();
+
+      // Initialize @*ARGS
+      MVMObject *clargs = MVM_repr_alloc_init(tc, tc->instance->boot_types->BOOTArray);
+      MVM_gc_root_add_permanent(tc, (MVMCollectable **)&clargs);
+      auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CORE__");
+      auto sc = (MVMSerializationContext *)MVM_sc_create(tc, handle);
+      MVMROOT(tc, sc, {
+        MVMROOT(tc, clargs, {
+          MVMint64 count;
+          for (count = 0; count < vm->num_clargs; count++) {
+            MVMString *string = MVM_string_utf8_decode(tc,
+              tc->instance->VMString,
+              vm->raw_clargs[count], strlen(vm->raw_clargs[count])
+            );
+            MVMObject*type = CU->hll_config->str_box_type;
+            MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
+            MVMROOT(tc, box, {
+                if (REPR(box)->initialize)
+                    REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
+                REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
+                    OBJECT_BODY(box), string);
+            });
+            MVM_repr_push_o(tc, clargs, box);
+          }
+          MVM_sc_set_object(tc, sc, 0, clargs);
+        });
+      });
+
+      CU->num_scs = 2;
+      CU->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
+      CU->scs[0] = sc;
+      CU->scs[1] = sc_classes_;
+      CU->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
+      CU->scs_to_resolve[0] = NULL;
+      CU->scs_to_resolve[1] = NULL;
+    }
+    MVMStaticFrame * get_start_frame() {
+      return cu_->main_frame ? cu_->main_frame : cu_->frames[0];
     }
   };
 }
 
-#include "builtin/array.h"
-#include "builtin/str.h"
-#include "builtin/hash.h"
-#include "builtin/io.h"
-#include "builtin/int.h"
