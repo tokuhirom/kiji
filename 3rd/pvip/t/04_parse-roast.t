@@ -142,3 +142,14 @@ my @a_o=<x y z>
 --- expected
 (statements (methodcall (variable "@sines") (ident "map") (args)))
 
+===
+--- code
+@sines.map({ 3 })
+--- expected
+(statements (methodcall (variable "@sines") (ident "map") (args (lambda (statements (int 3))))))
+
+===
+--- code
+-> { 3 }
+--- expected
+(statements (lambda (params) (statements (int 3))))
