@@ -508,7 +508,7 @@ funcdef =
     }
 
 lambda =
-    '->' - p:params? - b:block {
+    '->' - ( !'{' p:params )? - b:block {
         if (!p) {
             p = PVIP_node_new_children(PVIP_NODE_PARAMS);
         }
@@ -517,7 +517,7 @@ lambda =
     | b:block { $$ = PVIP_node_new_children1(PVIP_NODE_LAMBDA, b); }
 
 params =
-    !'{' v:term { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }
+    v:term { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }
     ( - ',' - v1:term { PVIP_node_push_child(v, v1); $$=v; } )*
     { $$=v; }
 
