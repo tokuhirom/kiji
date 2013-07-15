@@ -286,11 +286,20 @@ chaining_infix_expr = f1:methodcall_expr { $$ = PVIP_node_new_children1(PVIP_NOD
 
 methodcall_expr =
     a1:named_unary_expr (
-        '.' a2:ident { $$ = PVIP_node_new_children2(PVIP_NODE_METHODCALL, a1, a2); a1=$$; }
         (
-            a3:paren_args { PVIP_node_push_child(a1, a3) }
-        )?
-    )? { $$=a1; }
+            '.' a2:ident
+            (
+                a3:paren_args
+            )?
+        ) {
+            if (a3) {
+                $$=PVIP_node_new_children3(PVIP_NODE_METHODCALL, a1, a2, a3);
+            } else {
+                $$=PVIP_node_new_children2(PVIP_NODE_METHODCALL, a1, a2);
+            }
+            a1=$$;
+        }
+    )* { $$=a1; }
 
 funcall =
     i:ident - a:paren_args {
@@ -417,16 +426,18 @@ autoincrement_expr =
 
 method_postfix_expr =
           f1:term { $$=f1; } (
-              '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); }
-            | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); }
+              '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
+            | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
             | '[' - f2:term - ']' {
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
+                f1=$$;
             }
             | '.' f2:ident f3:paren_args {
                 $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
+                f1=$$;
             }
-            | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); }
-          )?
+            | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); f1=$$; }
+          )*
 
 term = 
     integer

@@ -95,3 +95,9 @@ class Foo { }
 class NotComplex is Cool { }
 --- expected
 (statements (class (ident "NotComplex") (statements)))
+
+===
+--- code
+3.WHAT.gist
+--- expected
+(statements (methodcall (methodcall (int 3) (ident "WHAT")) (ident "gist")))
