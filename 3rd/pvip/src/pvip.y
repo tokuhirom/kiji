@@ -600,6 +600,17 @@ integer =
     | '0o' <[0-7]+> {
     $$ = PVIP_node_new_intf(PVIP_NODE_INT, yytext, yyleng, 8);
 }
+    | ':10<' <[0-9]+> '>' {
+        $$ = PVIP_node_new_intf(PVIP_NODE_INT, yytext, yyleng, 10);
+    }
+    | ':' i:integer_int '<' <[0-9a-fA-F]+> '>' {
+        int base = i->iv;
+        $$ = PVIP_node_new_intf(PVIP_NODE_INT, yytext, yyleng, base);
+        PVIP_node_destroy(i);
+    }
+
+integer_int =
+    <[0-9]+> { $$ = PVIP_node_new_intf(PVIP_NODE_INT, yytext, yyleng, 10); }
 
 string = dq_string | sq_string
 
