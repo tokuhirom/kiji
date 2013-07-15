@@ -10,6 +10,8 @@ extern "C" {
 
 typedef enum {
     PVIP_NODE_UNDEF,
+    PVIP_NODE_RANGE,
+    PVIP_NODE_REDUCE,
     PVIP_NODE_INT,
     PVIP_NODE_NUMBER,
     PVIP_NODE_STATEMENTS,

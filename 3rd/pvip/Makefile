@@ -14,6 +14,9 @@ test: pvip
 .c.o: src/pvip.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+src/main.o: src/pvip.h
+src/pvip_node.o: src/pvip.h
+
 src/gen.node.c: build/node.pl src/pvip.h
 	perl build/node.pl
 

@@ -212,8 +212,12 @@ loose_and_expr =
     )* { $$=f1; }
 
 list_prefix_expr =
-    (v:lvalue - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
+    '[' a:reduce_operator ']' - b:comma_operator_expr { $$ = PVIP_node_new_children2(PVIP_NODE_REDUCE, a, b); }
+    | (v:lvalue - ':'? '=' - e:comma_operator_expr) { $$ = PVIP_node_new_children2(PVIP_NODE_BIND, v, e); }
     | comma_operator_expr
+
+reduce_operator =
+    < [*+] >  { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
 
 lvalue =
     my
@@ -285,7 +289,7 @@ chaining_infix_expr = f1:methodcall_expr { $$ = PVIP_node_new_children1(PVIP_NOD
     )* { if (f1->children.size==1) { $$=f1->children.nodes[0]; } else { $$=f1; } }
 
 methodcall_expr =
-    a1:named_unary_expr (
+    a1:structural_infix_expr (
         (
             '.' a2:ident
             (
@@ -300,6 +304,11 @@ methodcall_expr =
             a1=$$;
         }
     )* { $$=a1; }
+
+structural_infix_expr =
+    a1:named_unary_expr (
+        '..' a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, a2); a1=$$; }
+    )? { $$=a1; }
 
 funcall =
     i:ident - a:paren_args {

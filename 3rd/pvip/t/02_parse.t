@@ -485,3 +485,9 @@ $o.new().bar()
 Foo.new().bar()
 --- expected
 (statements (methodcall (methodcall (ident "Foo") (ident "new") (args )) (ident "bar") (args )))
+
+===
+--- code
+[+] 1..3
+--- expected
+(statements (reduce (string "+") (range (int 1) (int 3))))
