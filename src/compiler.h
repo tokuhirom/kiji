@@ -294,8 +294,8 @@ namespace kiji {
       }
 
       // compile body
-      for (int i=0; i<node->children.nodes[1]->children.size; i++) {
-        PVIPNode *n = node->children.nodes[1]->children.nodes[i];
+      for (int i=0; i<node->children.nodes[2]->children.size; i++) {
+        PVIPNode *n = node->children.nodes[2]->children.nodes[i];
         (void)do_compile(n);
       }
 

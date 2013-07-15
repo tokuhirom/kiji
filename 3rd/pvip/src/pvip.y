@@ -452,9 +452,18 @@ reserved = 'class' | 'try'
 
 # TODO optimizable
 class =
-    'class' ws+ b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, PVIP_node_new_children(PVIP_NODE_NOP), b); }
-    | 'class' ws+ i:ident - b:block { $$ = PVIP_node_new_children2(PVIP_NODE_CLASS, i, b); }
-
+    'class' (
+        ws+ i:ident
+    )? (
+        ws+ 'is' ws+ c:ident
+    )? - b:block {
+        $$ = PVIP_node_new_children3(
+            PVIP_NODE_CLASS,
+            i ? i : PVIP_node_new_children(PVIP_NODE_NOP),
+            c ? c : PVIP_node_new_children(PVIP_NODE_NOP),
+            b
+        );
+    }
 
 it_method = (
         '.' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_IT_METHODCALL, i); i=$$; }
