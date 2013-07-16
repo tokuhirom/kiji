@@ -111,7 +111,7 @@ PVIPNode* PVIP_node_new_number(PVIP_node_type_t type, const char *str, size_t le
     PVIPNode *node = malloc(sizeof(PVIPNode));
     assert(type == PVIP_NODE_NUMBER);
     node->type = type;
-    node->nv = atof(str);
+    node->nv = strtod(str, NULL);
     return node;
 }
 
