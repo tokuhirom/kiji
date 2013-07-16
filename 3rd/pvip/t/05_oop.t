@@ -32,3 +32,8 @@ multi method foo() { }
 --- expected
 (statements (multi (method (ident "foo") (args) (statements))))
 
+===
+--- code
+@foo.push: 3
+--- expected
+(statements (methodcall (variable "@foo") (ident "push") (args (int 3))))

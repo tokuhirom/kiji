@@ -471,10 +471,17 @@ method_postfix_expr =
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
                 f1=$$;
             }
-            | '.' f2:ident f3:paren_args {
-                $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
-                f1=$$;
-            }
+            | '.' f2:ident (
+                ':' - f3:bare_args {
+                    /* @*INC.push: '/etc' */
+                    $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
+                    f1=$$;
+                }
+                | f3:paren_args {
+                    $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
+                    f1=$$;
+                }
+            )
             | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); f1=$$; }
           )*
 
