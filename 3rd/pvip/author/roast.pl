@@ -4,6 +4,8 @@ use utf8;
 use File::Find::Rule;
 use Time::Piece;
 use Time::HiRes qw(gettimeofday tv_interval);
+use LWP::UserAgent;
+use HTTP::Date;
 
 my @files = sort File::Find::Rule->file()
                               ->name( '*.t' )
@@ -23,5 +25,16 @@ for (@files) {
 }
 my $elapsed = tv_interval($t0);
 
-printf "%s - OK: %s, FAIL: %s (  %.2f%%) in %s sec\n", localtime->strftime('%Y-%m-%d %H:%M'), $ok, $fail, 100.0*((1.0*$ok)/(1.0*($ok+$fail))), $elapsed;
+my $percentage = 100.0*((1.0*$ok)/(1.0*($ok+$fail)));
+printf "%s - OK: %s, FAIL: %s (  %.2f%%) in %s sec\n", localtime->strftime('%Y-%m-%d %H:%M'), $ok, $fail, $percentage, $elapsed;
 
+my $datetime = time2str(time);
+
+my $hf_base = "http://hf.64p.org/api/perl6/pvip";
+
+my $ua = LWP::UserAgent->new();
+my $res = $ua->post("$hf_base/ok", [number => $ok, datetime => $datetime]);
+warn $res->as_string unless $res->is_success;
+$ua->post("$hf_base/fail", [number => $fail, datetime => $datetime]);
+# $ua->post("$hf_base/percentage", [number => $percentage, datetime => $datetime]);
+$ua->post("$hf_base/elapsed", [number => int($elapsed*1000), datetime => $datetime]);
