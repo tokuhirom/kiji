@@ -197,7 +197,7 @@ if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             }
         )? { $$=if_cond; }
 
-paren_args = '(' - a:expr - ')' {
+paren_args = '(' - a:expr - ','? - ')' {
         if (a->type == PVIP_NODE_LIST) {
             $$ = a;
             PVIP_node_change_type($$, PVIP_NODE_ARGS);
