@@ -18,3 +18,9 @@ my ($k, $v) = (1,2);
 $var-name
 --- expected
 (statements (variable "$var-name"))
+
+===
+--- code
+$$var
+--- expected
+(statements (scalar_deref (variable "$var")))

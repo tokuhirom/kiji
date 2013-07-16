@@ -595,8 +595,10 @@ array_var = < '@' [a-zA-Z_] [-a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NO
 
 hash_var = < '%' [a-zA-Z_] [-a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
-scalar = < '$' [a-zA-Z_] [-a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
-        | < '$!' > { $$=PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+scalar =
+    '$' s:scalar { $$ = PVIP_node_new_children1(PVIP_NODE_SCALAR_DEREF, s); }
+    | < '$' [a-zA-Z_] [-a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+    | < '$!' > { $$=PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 #  <?MARKED('endstmt')>
 #  <?terminator>
