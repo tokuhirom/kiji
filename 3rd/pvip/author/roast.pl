@@ -26,7 +26,7 @@ for (@files) {
 my $elapsed = tv_interval($t0);
 
 my $percentage = 100.0*((1.0*$ok)/(1.0*($ok+$fail)));
-printf "%s - OK: %s, FAIL: %s (  %.2f%%) in %s sec\n", localtime->strftime('%Y-%m-%d %H:%M'), $ok, $fail, $percentage, $elapsed;
+printf "%s - OK: %s, FAIL: %s ( %.2f%%) in %s sec\n", localtime->strftime('%Y-%m-%d %H:%M'), $ok, $fail, $percentage, $elapsed;
 
 my $datetime = time2str(time);
 

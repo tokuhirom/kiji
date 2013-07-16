@@ -111,6 +111,7 @@ typedef enum {
     PVIP_NODE_MULTI,
     PVIP_NODE_LANG,
     PVIP_NODE_UNARY_BOOLEAN, /* ? */
+    PVIP_NODE_UNARY_UPTO, /* ^ */
 } PVIP_node_type_t;
 
 typedef enum {

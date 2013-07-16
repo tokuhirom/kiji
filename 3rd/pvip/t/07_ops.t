@@ -7,3 +7,9 @@ __END__
 ?$x
 --- expected
 (statements (unary_boolean (variable "$x")))
+
+===
+--- code
+^$n
+--- expected
+(statements (unary_upto (variable "$n")))
