@@ -38,3 +38,15 @@ q{a'}
 --- expected
 (statements (string "a'"))
 
+===
+--- code
+q|a'|
+--- expected
+(statements (string "a'"))
+
+===
+--- code
+$!
+--- expected
+(statements (variable "$!"))
+

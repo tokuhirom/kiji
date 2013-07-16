@@ -577,7 +577,13 @@ array =
 
 my = 
     'my' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_MY, v); }
+    | 'my' ws+ '(' - v:bare_variables - ')' { $$ = PVIP_node_new_children1(PVIP_NODE_MY, v); }
     | 'our' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_OUR, v); }
+
+bare_variables =
+    v1:variable { v1=PVIP_node_new_children1(PVIP_NODE_LIST, v1); } (
+        - ',' - v2:variable { PVIP_node_push_child(v1, v2); }
+    )* { $$=v1; }
 
 variable = scalar | array_var | hash_var
 
@@ -586,6 +592,7 @@ array_var = < '@' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NOD
 hash_var = < '%' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 scalar = < '$' [a-zA-Z_] [a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+        | < '$!' > { $$=PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 #  <?MARKED('endstmt')>
 #  <?terminator>
@@ -676,6 +683,22 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* '/'
+    | 'q!' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^!\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '!'
+    | 'q|' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^|\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '|'
     | 'q{' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
         | < [^}\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
