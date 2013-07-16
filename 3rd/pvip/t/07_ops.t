@@ -39,7 +39,8 @@ sub parse {
     }
     my $got = eval {
         my $sexp = Data::SExpression::Lite->new();
-        my $dat = [$sexp->parse($json)];
+        my $dat = $sexp->parse($json);
+        $dat = mangle($dat);
         $dat;
     };
     if ($@) {
@@ -52,7 +53,8 @@ sub parse {
 sub convert_expected {
     my $expected = shift;
     my $sexp = Data::SExpression::Lite->new();
-    $expected = [$sexp->parse($expected)];
+    $expected = $sexp->parse($expected);
+    $expected = mangle($expected);
     $expected;
 }
 
@@ -65,7 +67,7 @@ sub mangle {
         my $header = shift @$data;
         my $value = [map { mangle($_) } @$data];
         return +{
-            type  => 'NODE_'.uc($header),
+            type  => 'NODE_'.uc($header->name),
             value => $value,
         };
     } else {
@@ -78,37 +80,6 @@ __END__
 
 ===
 --- code
-:10<0>
+?$x
 --- expected
-(statements (int 0))
-
-===
---- code
-:10<1>
---- expected
-(statements (int 1))
-
-===
---- code
-:16<deadbeef>
---- expected
-(statements (int 3735928559))
-
-===
---- code
-:lang<perl5>
---- expected
-(statements (lang "perl5"))
-
-===
---- code
-q/a'/
---- expected
-(statements (string "a'"))
-
-===
---- code
-q{a'}
---- expected
-(statements (string "a'"))
-
+(statements (unary_boolean (variable "$x")))

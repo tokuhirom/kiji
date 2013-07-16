@@ -422,6 +422,7 @@ symbolic_unary =
     | '!' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_NOT, f1); }
     | '+^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_BITWISE_NEGATION, f1); }
     | '~' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_TILDE, f1); }
+    | '?' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_BOOLEAN, f1); }
     | exponentiation_expr
 
 exponentiation_expr = 
@@ -448,7 +449,7 @@ method_postfix_expr =
           f1:term { $$=f1; } (
               '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
             | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
-            | '[' - f2:term - ']' {
+            | '.'? '[' - f2:term - ']' {
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
                 f1=$$;
             }
@@ -675,6 +676,14 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* '/'
+    | 'q{' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^}\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '}'
 
 comment =
     '#`[' [^\]]* ']'
@@ -823,7 +832,9 @@ PVIPNode * PVIP_parse_fp(FILE *fp, int debug, PVIPString **error) {
     if (!feof(fp)) {
       if (error) {
         *error = PVIP_string_new();
-        PVIP_string_concat(*error, "Syntax error! Around:\n", strlen("Syntax error! Around:\n"));
+        PVIP_string_concat(*error, "Syntax error! At line ", strlen("Syntax error! At line "));
+        PVIP_string_concat_int(*error, g.data.line_number);
+        PVIP_string_concat(*error, ":\n", strlen(":\n"));
         int i;
         for (i=0; !feof(fp) && i<24; i++) {
           char ch = fgetc(fp);
