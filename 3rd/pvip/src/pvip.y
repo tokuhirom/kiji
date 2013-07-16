@@ -51,6 +51,10 @@ static int node_all_children_are(PVIPNode * node, PVIP_node_type_t type) {
     return 1;
 }
 
+PVIPNode* maybe(PVIPNode *node) {
+    return node ? node : PVIP_node_new_children(PVIP_NODE_NOP);
+}
+
 typedef struct {
     const char  *buf;
     size_t len;
@@ -467,6 +471,10 @@ method_postfix_expr =
           f1:term { $$=f1; } (
               '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
             | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
+            | '.^' f2:ident { f3 = NULL; } f3:paren_args? {
+                $$ = PVIP_node_new_children3(PVIP_NODE_META_METHOD_CALL, f1, f2, maybe(f3));
+                f1=$$;
+            }
             | '.'? '[' - f2:term - ']' {
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
                 f1=$$;

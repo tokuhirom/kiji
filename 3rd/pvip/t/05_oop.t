@@ -37,3 +37,15 @@ multi method foo() { }
 @foo.push: 3
 --- expected
 (statements (methodcall (variable "@foo") (ident "push") (args (int 3))))
+
+===
+--- code
+$foo.^methods
+--- expected
+(statements (meta_method_call (variable "$foo") (ident "methods") (nop)))
+
+===
+--- code
+$foo.^methods(3)
+--- expected
+(statements (meta_method_call (variable "$foo") (ident "methods") (args (int 3))))
