@@ -31,3 +31,4 @@ class NotComplex is Cool { }
 multi method foo() { }
 --- expected
 (statements (multi (method (ident "foo") (args) (statements))))
+
