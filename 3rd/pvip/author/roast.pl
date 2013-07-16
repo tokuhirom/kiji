@@ -4,7 +4,7 @@ use utf8;
 use File::Find::Rule;
 use Time::Piece;
 
-my @files = File::Find::Rule->file()
+my @files = sort File::Find::Rule->file()
                               ->name( '*.t' )
                               ->in( glob('~/dev/roast/') );
 
