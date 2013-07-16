@@ -108,6 +108,7 @@ typedef enum {
     PVIP_NODE_UNARY_TILDE,
     PVIP_NODE_TRY,
     PVIP_NODE_REF,
+    PVIP_NODE_MULTI
 } PVIP_node_type_t;
 
 typedef enum {

@@ -491,3 +491,9 @@ Foo.new().bar()
 [+] 1..3
 --- expected
 (statements (reduce (string "+") (range (int 1) (int 3))))
+
+===
+--- code
+[min] 1..3
+--- expected
+(statements (reduce (string "min") (range (int 1) (int 3))))

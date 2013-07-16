@@ -101,3 +101,9 @@ class NotComplex is Cool { }
 3.WHAT.gist
 --- expected
 (statements (methodcall (methodcall (int 3) (ident "WHAT")) (ident "gist")))
+
+===
+--- code
+multi method foo() { }
+--- expected
+(statements (multi (method (ident "foo") (args) (statements))))

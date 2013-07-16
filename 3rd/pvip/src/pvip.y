@@ -107,7 +107,7 @@ statement =
             | while_stmt
             | unless_stmt
             | module_stmt
-            | method_stmt
+            | multi_method_stmt
             | die_stmt
             | funcdef - ';'*
             | bl:block ';'* { $$ = PVIP_node_new_children1(PVIP_NODE_BLOCK, bl); }
@@ -129,7 +129,12 @@ last_stmt = 'last' { $$ = PVIP_node_new_children(PVIP_NODE_LAST); }
 
 next_stmt = 'next' { $$ = PVIP_node_new_children(PVIP_NODE_NEXT); }
 
-method_stmt = 'method' ws i:ident p:paren_args - b:block { $$ = PVIP_node_new_children3(PVIP_NODE_METHOD, i, p, b); }
+multi_method_stmt =
+    'multi' ws - m:method_stmt { $$ = PVIP_node_new_children1(PVIP_NODE_MULTI, m); }
+    | method_stmt
+
+method_stmt =
+    'method' ws - i:ident - p:paren_args - b:block { $$ = PVIP_node_new_children3(PVIP_NODE_METHOD, i, p, b); }
 
 normal_stmt = return_stmt | last_stmt | next_stmt | expr
 
@@ -217,7 +222,13 @@ list_prefix_expr =
     | comma_operator_expr
 
 reduce_operator =
-    < [*+] >  { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    < '*' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    | < '+' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    | < '-' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    | < '<=' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    | < '>=' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    | < 'min' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    | < 'max' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
 
 lvalue =
     my
