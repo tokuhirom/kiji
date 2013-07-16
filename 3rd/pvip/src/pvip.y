@@ -587,11 +587,11 @@ bare_variables =
 
 variable = scalar | array_var | hash_var
 
-array_var = < '@' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+array_var = < '@' [a-zA-Z_] [-a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
-hash_var = < '%' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+hash_var = < '%' [a-zA-Z_] [-a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
-scalar = < '$' [a-zA-Z_] [a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+scalar = < '$' [a-zA-Z_] [-a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
         | < '$!' > { $$=PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 #  <?MARKED('endstmt')>
