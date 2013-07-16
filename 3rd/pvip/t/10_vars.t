@@ -30,3 +30,9 @@ $var-1
 $$var
 --- expected
 (statements (scalar_deref (variable "$var")))
+
+===
+--- code
+@*INC
+--- expected
+(statements (tw_inc))

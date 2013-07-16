@@ -116,6 +116,7 @@ typedef enum {
     PVIP_NODE_STDERR, /* $*ERR */
     PVIP_NODE_INFINITY, /* * in `1..*` */
     PVIP_NODE_SCALAR_DEREF, /* $$var */
+    PVIP_NODE_TW_INC, /* @*INC */
 } PVIP_node_type_t;
 
 typedef enum {

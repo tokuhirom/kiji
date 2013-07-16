@@ -502,6 +502,7 @@ twvars =
     '$*OUT' { $$ = PVIP_node_new_children(PVIP_NODE_STDOUT); }
     | '$*ERR' { $$ = PVIP_node_new_children(PVIP_NODE_STDERR); }
     | '@*ARGS' { $$ = PVIP_node_new_children(PVIP_NODE_CLARGS); }
+    | '@*INC' { $$ = PVIP_node_new_children(PVIP_NODE_TW_INC); }
 
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
