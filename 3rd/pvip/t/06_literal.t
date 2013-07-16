@@ -96,3 +96,15 @@ __END__
 --- expected
 (statements (int 3735928559))
 
+===
+--- code
+:lang<perl5>
+--- expected
+(statements (lang "perl5"))
+
+===
+--- code
+q/a'/
+--- expected
+(statements (string "a'"))
+

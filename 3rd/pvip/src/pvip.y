@@ -667,6 +667,14 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* "'"
+    | 'q/' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^/\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '/'
 
 comment =
     '#`[' [^\]]* ']'
