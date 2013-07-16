@@ -39,6 +39,11 @@ void PVIP_string_concat_int(PVIPString *str, int64_t n) {
 void PVIP_string_concat_number(PVIPString *str, double n) {
     char buf[1024];
     int res = snprintf(buf, 1023, "%f", n);
+    for (; res>1; --res) { /* remove trailing zeros */
+        if (buf[res-1]!='0') {
+            break;
+        }
+    }
     PVIP_string_concat(str, buf, res);
 }
 
