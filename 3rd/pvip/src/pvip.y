@@ -300,7 +300,7 @@ chaining_infix_expr = f1:methodcall_expr { $$ = PVIP_node_new_children1(PVIP_NOD
     )* { if (f1->children.size==1) { $$=f1->children.nodes[0]; } else { $$=f1; } }
 
 methodcall_expr =
-    a1:structural_infix_expr (
+    a1:structural_infix_expr { a3=NULL; } (
         (
             '.' a2:ident
             (
