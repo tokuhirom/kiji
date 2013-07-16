@@ -21,6 +21,12 @@ $var-name
 
 ===
 --- code
+$var-1
+--- expected
+(statements (sub (variable "$var") (int 1)))
+
+===
+--- code
 $$var
 --- expected
 (statements (scalar_deref (variable "$var")))

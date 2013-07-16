@@ -56,3 +56,21 @@ $!
 --- expected
 (statements (range (int 1) (infinity)))
 
+===
+--- code
+{ 'baz' => 3 }
+--- expected
+(statements (hash (pair (string "baz") (int 3))))
+
+===
+--- code
+{ 'baz' => 3, }
+--- expected
+(statements (hash (pair (string "baz") (int 3))))
+
+===
+--- code
+{ "bar" => 3, "boz" => 4  }
+--- expected
+(statements (hash (list (pair (string "bar") (int 3)) (pair (string "boz") (int 4)))))
+

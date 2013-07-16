@@ -7,6 +7,8 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use LWP::UserAgent;
 use HTTP::Date;
 
+system('cd ~/dev/roast/ && git reset HEAD --hard');
+
 my @files = sort File::Find::Rule->file()
                               ->name( '*.t' )
                               ->in( glob('~/dev/roast/') );

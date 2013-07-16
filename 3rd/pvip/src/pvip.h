@@ -172,6 +172,7 @@ PVIP_category_t PVIP_node_category(PVIP_node_type_t type);
 void PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf);
 void PVIP_node_dump_sexp(PVIPNode * node);
 
+
 /* string */
 PVIPString *PVIP_string_new();
 void PVIP_string_destroy(PVIPString *str);

@@ -41,6 +41,16 @@
 
 */
 
+static int node_all_children_are(PVIPNode * node, PVIP_node_type_t type) {
+    int i;
+    for (i=0; i<node->children.size; ++i) {
+        if (node->children.nodes[i]->type != type) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 typedef struct {
     const char  *buf;
     size_t len;
@@ -110,7 +120,13 @@ statement =
             | multi_method_stmt
             | die_stmt
             | funcdef - ';'*
-            | bl:block ';'* { $$ = PVIP_node_new_children1(PVIP_NODE_BLOCK, bl); }
+            | bl:block ';'* {
+                if (bl->type == PVIP_NODE_HASH) {
+                    $$=bl;
+                } else {
+                    $$=PVIP_node_new_children1(PVIP_NODE_BLOCK, bl);
+                }
+            }
             | b:normal_or_postfix_stmt { $$ = b; }
             | ';'+ {
                 $$ = PVIP_node_new_children(PVIP_NODE_NOP);
@@ -362,7 +378,15 @@ replication_expr =
 
 additive_expr =
     l:multiplicative_expr (
-          - '+' - r1:multiplicative_expr {
+          - '+|' - r:exponentiation_expr {
+            $$ = PVIP_node_new_children2(PVIP_NODE_BIN_OR, l, r);
+            l = $$;
+        }
+        | - '+^' - r:exponentiation_expr {
+            $$ = PVIP_node_new_children2(PVIP_NODE_BIN_XOR, l, r);
+            l = $$;
+        }
+        | - '+' - r1:multiplicative_expr {
             $$ = PVIP_node_new_children2(PVIP_NODE_ADD, l, r1);
             l = $$;
           }
@@ -374,14 +398,6 @@ additive_expr =
             $$ = PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, l, r2);
             l = $$;
           }
-        | - '+|' - r:exponentiation_expr {
-            $$ = PVIP_node_new_children2(PVIP_NODE_BIN_OR, l, r);
-            l = $$;
-        }
-        | - '+^' - r:exponentiation_expr {
-            $$ = PVIP_node_new_children2(PVIP_NODE_BIN_XOR, l, r);
-            l = $$;
-        }
     )* {
         $$ = l;
     }
@@ -418,7 +434,7 @@ multiplicative_expr =
 
 #  L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
 symbolic_unary =
-    '+' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_PLUS, f1); }
+    '+' !'^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_PLUS, f1); }
     | '-' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_MINUS, f1); }
     | '!' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_NOT, f1); }
     | '+^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_BITWISE_NEGATION, f1); }
@@ -521,6 +537,7 @@ ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
 
 hash = '{' -
     p1:pair { $$ = PVIP_node_new_children1(PVIP_NODE_HASH, p1); p1=$$; } ( -  ',' - p2:pair { PVIP_node_push_child(p1, p2); $$=p1; } )*
+    ','?
     - '}' { $$=p1; }
 
 pair = k:hash_key - '=>' - v:loose_unary_expr { $$ = PVIP_node_new_children2(PVIP_NODE_PAIR, k, v); }
@@ -571,7 +588,17 @@ params =
     { $$=v; }
 
 block = 
-    ('{' - s:statementlist - '}') { $$=s; }
+    ('{' - s:statementlist - '}') {
+        if (s->children.nodes[0]->type == PVIP_NODE_PAIR) {
+            PVIP_node_change_type(s, PVIP_NODE_HASH);
+            $$=s;
+        } else if (s->children.nodes[0]->type == PVIP_NODE_LIST && node_all_children_are(s->children.nodes[0], PVIP_NODE_PAIR)) {
+            PVIP_node_change_type(s, PVIP_NODE_HASH);
+            $$=s;
+        } else {
+            $$=s;
+        }
+    }
     | ('{' - '}' ) { $$ = PVIP_node_new_children(PVIP_NODE_STATEMENTS); }
 
 # XXX optimizable
@@ -591,14 +618,16 @@ bare_variables =
 
 variable = scalar | array_var | hash_var | twvars
 
-array_var = < '@' [a-zA-Z_] [-a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+array_var = < '@' varname > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
-hash_var = < '%' [a-zA-Z_] [-a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+hash_var = < '%' varname > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
 scalar =
     '$' s:scalar { $$ = PVIP_node_new_children1(PVIP_NODE_SCALAR_DEREF, s); }
-    | < '$' [a-zA-Z_] [-a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+    | < '$' varname > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
     | < '$!' > { $$=PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+
+varname = [a-zA-Z_] ( [a-zA-Z0-9_]+ | '-' [a-zA-Z_] [a-zA-Z0-9_]* )*
 
 #  <?MARKED('endstmt')>
 #  <?terminator>
