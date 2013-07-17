@@ -170,7 +170,21 @@ return_stmt = 'return' ws e:expr { $$ = PVIP_node_new_children1(PVIP_NODE_RETURN
 
 module_stmt = 'module' ws pkg:pkg_name eat_terminator { $$ = PVIP_node_new_children1(PVIP_NODE_MODULE, pkg); }
 
-use_stmt = 'use ' pkg:pkg_name eat_terminator { $$ = PVIP_node_new_children1(PVIP_NODE_USE, pkg); }
+# use Perl:ver<6.*>;
+use_stmt =
+    'use '
+    - pkg:pkg_name { $$ = PVIP_node_new_children1(PVIP_NODE_USE, pkg); } 
+    (
+        ':ver<' < [^>]+ > {
+            PVIP_node_push_child($$,
+                PVIP_node_new_children2(PVIP_NODE_PAIR,
+                    PVIP_node_new_string(PVIP_NODE_STRING, "ver", 3),
+                    PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng)
+                )
+            );
+        } '>'
+    )?
+    eat_terminator
 
 pkg_name = < [a-zA-Z] [a-zA-Z0-9]* ( '::' [a-zA-Z0-9]+ )* > {
     $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
