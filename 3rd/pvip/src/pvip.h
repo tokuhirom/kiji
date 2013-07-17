@@ -120,11 +120,12 @@ typedef enum {
     PVIP_NODE_META_METHOD_CALL, /* $foo.^methods */
     PVIP_NODE_REGEXP,
     PVIP_NODE_SMART_MATCH, /* ~~ */
+    PVIP_NODE_PERL5_REGEXP, /* m:P5/./ */
 } PVIP_node_type_t;
 
 typedef enum {
     PVIP_CATEGORY_UNKNOWN,
-    PVIP_CATEGORY_STR,
+    PVIP_CATEGORY_STRING,
     PVIP_CATEGORY_INT,
     PVIP_CATEGORY_NUMBER,
     PVIP_CATEGORY_CHILDREN

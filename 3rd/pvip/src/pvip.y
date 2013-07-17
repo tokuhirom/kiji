@@ -399,7 +399,7 @@ additive_expr =
             $$ = PVIP_node_new_children2(PVIP_NODE_SUB, l, r2);
             l = $$;
           }
-        | - '~' - r2:multiplicative_expr {
+        | - '~'  !'~' - r2:multiplicative_expr {
             $$ = PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, l, r2);
             l = $$;
           }
@@ -509,6 +509,8 @@ term =
     | lambda
     | it_method
     | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
+    | perl5_regexp
+    | 'm:P5/./' { $$ = PVIP_node_new_children(PVIP_NODE_NOP); }
     | !reserved ident
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
     | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
@@ -719,12 +721,20 @@ dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0
         | esc esc { s=PVIP_node_append_string(s, "\\", 1); }
     )* '"' { $$=s; }
 
+perl5_regexp_start = 'm:P5/' { $$ = PVIP_node_new_string(PVIP_NODE_PERL5_REGEXP, "", 0); }
+
+perl5_regexp =
+    r:perl5_regexp_start (
+        <[^/]+> { r=PVIP_node_append_string(r, yytext, yyleng); }
+       | esc '/' { r=PVIP_node_append_string(r, "/", 1); }
+    )+ '/' { $$=r; }
+
 regexp_start = '/' { $$ = PVIP_node_new_string(PVIP_NODE_REGEXP, "", 0); }
 
 regexp =
     r:regexp_start (
         <[^/]+> { r=PVIP_node_append_string(r, yytext, yyleng); }
-       esc '/' { r=PVIP_node_append_string(r, "/", 1); }
+       | esc '/' { r=PVIP_node_append_string(r, "/", 1); }
     )+ '/' { $$=r; }
 
 

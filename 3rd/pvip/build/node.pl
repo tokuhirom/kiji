@@ -14,7 +14,7 @@ open my $h, '<', 'src/pvip.h';
     say $fh qq!const char* PVIP_node_name(PVIP_node_type_t t) {!;
     say $fh qq!  switch (t) {!;
     while (<$h>) {
-        if (/(PVIP_NODE_[A-Z_]+)/) {
+        if (/(PVIP_NODE_[A-Z0-9_]+)/) {
             my $k = "$1";
             my $v = "$1";
             $v =~ s/^PVIP_NODE_//;
