@@ -123,6 +123,7 @@ statement =
             | module_stmt
             | multi_method_stmt
             | die_stmt
+            | has_stmt
             | funcdef - ';'*
             | bl:block ';'* {
                 if (bl->type == PVIP_NODE_HASH) {
@@ -148,6 +149,13 @@ normal_or_postfix_stmt =
 last_stmt = 'last' { $$ = PVIP_node_new_children(PVIP_NODE_LAST); }
 
 next_stmt = 'next' { $$ = PVIP_node_new_children(PVIP_NODE_NEXT); }
+
+has_stmt =
+    'has' { $$ = PVIP_node_new_children(PVIP_NODE_HAS); }
+    ws+ '$' (
+          '.' <[a-z]+> { PVIP_node_push_child($$, PVIP_node_new_string(PVIP_NODE_PRIVATE_ATTRIBUTE, yytext, yyleng)); }
+        | '!' <[a-z]+> { PVIP_node_push_child($$, PVIP_node_new_string(PVIP_NODE_PUBLIC_ATTRIBUTE, yytext, yyleng)); }
+    ) eat_terminator
 
 multi_method_stmt =
     'multi' ws - m:method_stmt { $$ = PVIP_node_new_children1(PVIP_NODE_MULTI, m); }
@@ -528,7 +536,7 @@ twvars =
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
 
-reserved = 'class' | 'try'
+reserved = 'class' | 'try' | 'has'
 
 # TODO optimizable
 class =

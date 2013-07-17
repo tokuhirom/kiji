@@ -49,3 +49,16 @@ $foo.^methods
 $foo.^methods(3)
 --- expected
 (statements (meta_method_call (variable "$foo") (ident "methods") (args (int 3))))
+
+===
+--- code
+class A { has $.b }
+--- expected
+(statements (class (ident "A") (nop) (statements (has (private_attribute "b")))))
+
+===
+--- code
+class A { has $!b }
+--- expected
+(statements (class (ident "A") (nop) (statements (has (public_attribute "b")))))
+
