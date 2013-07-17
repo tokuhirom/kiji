@@ -80,3 +80,8 @@ $!
 --- expected
 (statements (array (int 1)))
 
+===
+--- code
+1e1
+--- expected
+(statements (number 10.))
