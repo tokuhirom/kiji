@@ -36,3 +36,9 @@ $$var
 @*INC
 --- expected
 (statements (tw_inc))
+
+===
+--- code
+$*VM
+--- expected
+(statements (tw_vm))
