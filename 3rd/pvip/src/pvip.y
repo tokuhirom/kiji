@@ -512,6 +512,7 @@ term =
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
     | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
     | language
+    | regexp
 
 twvars = 
     '$*OUT' { $$ = PVIP_node_new_children(PVIP_NODE_STDOUT); }
@@ -716,6 +717,15 @@ dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0
         )* ']'
         | esc esc { s=PVIP_node_append_string(s, "\\", 1); }
     )* '"' { $$=s; }
+
+regexp_start = '/' { $$ = PVIP_node_new_string(PVIP_NODE_REGEXP, "", 0); }
+
+regexp =
+    r:regexp_start (
+        <[^/]+> { r=PVIP_node_append_string(r, yytext, yyleng); }
+       esc '/' { r=PVIP_node_append_string(r, "/", 1); }
+    )+ '/' { $$=r; }
+
 
 esc = '\\'
 
