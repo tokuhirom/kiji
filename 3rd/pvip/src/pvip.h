@@ -126,6 +126,7 @@ typedef enum {
     PVIP_NODE_HAS,
     PVIP_NODE_PRIVATE_ATTRIBUTE, /* $.var */
     PVIP_NODE_PUBLIC_ATTRIBUTE,  /* $!var */
+    PVIP_NODE_FUNCREF,           /* &var */
 } PVIP_node_type_t;
 
 typedef enum {

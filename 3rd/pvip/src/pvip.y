@@ -525,6 +525,9 @@ term =
     | language
     | ':' < [a-z]+ > { $$ = PVIP_node_new_children2(PVIP_NODE_PAIR, PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng), PVIP_node_new_children(PVIP_NODE_TRUE)); }
     | regexp
+    | funcref
+
+funcref = '&' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_FUNCREF, i); }
 
 twvars = 
     '$*OUT' { $$ = PVIP_node_new_children(PVIP_NODE_STDOUT); }
@@ -653,7 +656,7 @@ bare_variables =
         - ',' - v2:variable { PVIP_node_push_child(v1, v2); }
     )* { $$=v1; }
 
-variable = scalar | array_var | hash_var | twvars
+variable = scalar | array_var | hash_var | twvars | funcref
 
 array_var = < '@' varname > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
