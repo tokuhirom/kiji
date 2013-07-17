@@ -119,6 +119,7 @@ typedef enum {
     PVIP_NODE_TW_INC, /* @*INC */
     PVIP_NODE_META_METHOD_CALL, /* $foo.^methods */
     PVIP_NODE_REGEXP,
+    PVIP_NODE_SMART_MATCH, /* ~~ */
 } PVIP_node_type_t;
 
 typedef enum {

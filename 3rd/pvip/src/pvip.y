@@ -304,19 +304,20 @@ tight_and = f1:chaining_infix_expr (
 
 #  C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
 chaining_infix_expr = f1:methodcall_expr { $$ = PVIP_node_new_children1(PVIP_NODE_CHAIN, f1); f1=$$; } (
-          - '=='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ, f2);    PVIP_node_push_child(f1, tmp); }
-        | - '!='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_NE,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '<'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LT,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '<='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LE,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '>'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GT,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '>='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GE,    f2); PVIP_node_push_child(f1, tmp); }
-        | - 'eqv' - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQV,   f2); PVIP_node_push_child(f1, tmp); }
-        | - 'eq'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STREQ, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'ne'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRNE, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'gt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGT, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'ge'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGE, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'lt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLT, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'le'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLE, f2); PVIP_node_push_child(f1, tmp); }
+          - '=='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '!='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_NE,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '<'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LT,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '<='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LE,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '>'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GT,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '>='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GE,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '~~'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_SMART_MATCH, f2); PVIP_node_push_child(f1, tmp); }
+        | - 'eqv' - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQV,         f2); PVIP_node_push_child(f1, tmp); }
+        | - 'eq'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STREQ,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'ne'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRNE,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'gt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGT,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'ge'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGE,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'lt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLT,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'le'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLE,       f2); PVIP_node_push_child(f1, tmp); }
     )* { if (f1->children.size==1) { $$=f1->children.nodes[0]; } else { $$=f1; } }
 
 methodcall_expr =
