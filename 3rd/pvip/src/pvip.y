@@ -515,6 +515,7 @@ term =
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
     | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
     | language
+    | ':' < [a-z]+ > { $$ = PVIP_node_new_children2(PVIP_NODE_PAIR, PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng), PVIP_node_new_children(PVIP_NODE_TRUE)); }
     | regexp
 
 twvars = 
@@ -623,7 +624,14 @@ block =
 
 # XXX optimizable
 array =
-    '[' e:expr ']' { $$=e; PVIP_node_change_type($$, PVIP_NODE_ARRAY); }
+    '[' e:expr ']' {
+        if (PVIP_node_category(e->type) == PVIP_CATEGORY_CHILDREN) {
+            PVIP_node_change_type(e, PVIP_NODE_ARRAY);
+            $$=e;
+        } else {
+            $$=PVIP_node_new_children1(PVIP_NODE_ARRAY, e);
+        }
+    }
     | '[' - ']' { $$ = PVIP_node_new_children(PVIP_NODE_ARRAY); }
 
 my = 

@@ -74,3 +74,9 @@ $!
 --- expected
 (statements (hash (list (pair (string "bar") (int 3)) (pair (string "boz") (int 4)))))
 
+===
+--- code
+[1]
+--- expected
+(statements (array (int 1)))
+

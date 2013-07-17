@@ -121,6 +121,7 @@ typedef enum {
     PVIP_NODE_REGEXP,
     PVIP_NODE_SMART_MATCH, /* ~~ */
     PVIP_NODE_PERL5_REGEXP, /* m:P5/./ */
+    PVIP_NODE_TRUE,
 } PVIP_node_type_t;
 
 typedef enum {
