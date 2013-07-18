@@ -127,6 +127,14 @@ typedef enum {
     PVIP_NODE_PRIVATE_ATTRIBUTE, /* $.var */
     PVIP_NODE_PUBLIC_ATTRIBUTE,  /* $!var */
     PVIP_NODE_FUNCREF,           /* &var */
+    PVIP_NODE_PATH, /* qp{}, IO::Path literal */
+    PVIP_NODE_CLASS_NAME,
+    PVIP_NODE_TW_PACKAGE, /* $?PACKAGE */
+    PVIP_NODE_TW_CLASS, /* $?CLASS */
+    PVIP_NODE_TW_MODULE, /* $?MODULE */
+    PVIP_NODE_SLANGS, /* $~MAIN */
+    PVIP_NODE_LOGICAL_ANDTHEN, /* andthen operator */
+    PVIP_NODE_VALUE_IDENTITY, /* '===' operator in S03-operators/value_equivalence.t */
 } PVIP_node_type_t;
 
 typedef enum {

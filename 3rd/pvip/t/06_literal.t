@@ -85,3 +85,9 @@ $!
 1e1
 --- expected
 (statements (number 10.))
+
+===
+--- code
+IO::Path
+--- expected
+(statements (class_name "IO::Path"))

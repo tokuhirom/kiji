@@ -42,3 +42,27 @@ $$var
 $*VM
 --- expected
 (statements (tw_vm))
+
+===
+--- code
+$?PACKAGE
+--- expected
+(statements (tw_package))
+
+===
+--- code
+$?CLASS
+--- expected
+(statements (tw_class))
+
+===
+--- code
+$?MODULE
+--- expected
+(statements (tw_module))
+
+===
+--- code
+$~MAIN
+--- expected
+(statements (slangs "$~MAIN"))

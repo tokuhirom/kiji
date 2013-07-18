@@ -255,7 +255,8 @@ loose_or_expr =
 
 loose_and_expr =
     f1:list_prefix_expr (
-        - 'and' ![a-zA-Z0-9_]  - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        - 'and' ![a-zA-Z0-9_]      - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        | - 'andthen' ![a-zA-Z0-9_]  - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_ANDTHEN, f1, f2); f1=$$; }
     )* { $$=f1; }
 
 list_prefix_expr =
@@ -326,7 +327,8 @@ tight_and = f1:chaining_infix_expr (
 
 #  C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
 chaining_infix_expr = f1:methodcall_expr { $$ = PVIP_node_new_children1(PVIP_NODE_CHAIN, f1); f1=$$; } (
-          - '=='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ,          f2); PVIP_node_push_child(f1, tmp); }
+          - '==='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_VALUE_IDENTITY,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '=='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ,          f2); PVIP_node_push_child(f1, tmp); }
         | - '!='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_NE,          f2); PVIP_node_push_child(f1, tmp); }
         | - '<'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LT,          f2); PVIP_node_push_child(f1, tmp); }
         | - '<='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LE,          f2); PVIP_node_push_child(f1, tmp); }
@@ -518,6 +520,7 @@ method_postfix_expr =
 
 term = 
     integer
+    | path
     | dec_number
     | string
     | '(' - e:expr  - ')' { $$ = e; }
@@ -533,6 +536,7 @@ term =
     | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | perl5_regexp
     | 'm:P5/./' { $$ = PVIP_node_new_children(PVIP_NODE_NOP); }
+    | class_name
     | !reserved ident
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
     | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
@@ -540,6 +544,16 @@ term =
     | ':' < [a-z]+ > { $$ = PVIP_node_new_children2(PVIP_NODE_PAIR, PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng), PVIP_node_new_children(PVIP_NODE_TRUE)); }
     | regexp
     | funcref
+    | < '$~' [A-Za-z] [A-Za-z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_SLANGS, yytext, yyleng); }
+
+class_name =
+    i:ident { PVIP_node_change_type(i, PVIP_NODE_CLASS_NAME); $$ = i; } ( '::' i2:ident { PVIP_node_append_string(i, "::", 2); PVIP_node_append_string(i, i2->pv->buf, i2->pv->len); } )+ { $$=i; }
+
+path =
+    'qp{' { $$ = PVIP_node_new_string(PVIP_NODE_PATH, "", 0); } (
+        < [^}] + > { PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "}" { PVIP_node_append_string($$, "/", 1); }
+    )+ '}'
 
 funcref = '&' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_FUNCREF, i); }
 
@@ -549,6 +563,9 @@ twvars =
     | '@*ARGS' { $$ = PVIP_node_new_children(PVIP_NODE_CLARGS); }
     | '@*INC' { $$ = PVIP_node_new_children(PVIP_NODE_TW_INC); }
     | '$*VM' { $$ = PVIP_node_new_children(PVIP_NODE_TW_VM); }
+    | '$?PACKAGE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_PACKAGE); }
+    | '$?CLASS' { $$ = PVIP_node_new_children(PVIP_NODE_TW_CLASS); }
+    | '$?MODULE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_MODULE); }
 
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
