@@ -699,7 +699,8 @@ hash_var = < '%' varname > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytex
 scalar =
     '$' s:scalar { $$ = PVIP_node_new_children1(PVIP_NODE_SCALAR_DEREF, s); }
     | < '$' varname > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
-    | < '$!' > { $$=PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+    | '$!' { $$=PVIP_node_new_children(PVIP_NODE_SPECIAL_VARIABLE_EXCEPTIONS); }
+    | '$/' { $$=PVIP_node_new_children(PVIP_NODE_SPECIAL_VARIABLE_REGEXP_MATCH); }
 
 varname = [a-zA-Z_] ( [a-zA-Z0-9_]+ | '-' [a-zA-Z_] [a-zA-Z0-9_]* )*
 
@@ -762,6 +763,7 @@ dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0
         | esc 'n' { s=PVIP_node_append_string(s, "\n", 1); }
         | esc '"' { s=PVIP_node_append_string(s, "\"", 1); }
         | esc '$' { s=PVIP_node_append_string(s, "\"", 1); }
+        | esc '0' { s=PVIP_node_append_string(s, "\0", 1); }
         | ( esc 'x' (
                   '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) >
             | '[' '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) > ']' )

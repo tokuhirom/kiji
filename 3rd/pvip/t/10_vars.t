@@ -66,3 +66,15 @@ $?MODULE
 $~MAIN
 --- expected
 (statements (slangs "$~MAIN"))
+
+===
+--- code
+$!
+--- expected
+(statements (special_variable_exceptions))
+
+===
+--- code
+$/
+--- expected
+(statements (special_variable_regexp_match))

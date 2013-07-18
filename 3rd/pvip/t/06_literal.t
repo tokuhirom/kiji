@@ -46,12 +46,6 @@ q|a'|
 
 ===
 --- code
-$!
---- expected
-(statements (variable "$!"))
-
-===
---- code
 1..*
 --- expected
 (statements (range (int 1) (infinity)))
