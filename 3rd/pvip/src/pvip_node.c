@@ -220,6 +220,7 @@ static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
             case '\r': PVIP_string_concat(buf, "\\r",     2); break;
             case '\t': PVIP_string_concat(buf, "\\t",     2); break;
             case '\a': PVIP_string_concat(buf, "\\u0007", 6); break;
+            case '\0': PVIP_string_concat(buf, "\\0",     2); break;
             default:   PVIP_string_concat(buf, &c,        1); break;
             }
         }
