@@ -90,4 +90,4 @@ $!
 --- code
 IO::Path
 --- expected
-(statements (class_name "IO::Path"))
+(statements (ident "IO::Path"))

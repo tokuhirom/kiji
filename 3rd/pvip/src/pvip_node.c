@@ -125,12 +125,17 @@ PVIPNode* PVIP_node_new_children(PVIP_node_type_t type) {
     return node;
 }
 PVIPNode* PVIP_node_new_children1(PVIP_node_type_t type, PVIPNode* n1) {
+    assert(n1);
+
     PVIPNode* node = PVIP_node_new_children(type);
     PVIP_node_push_child(node, n1);
     return node;
 }
 
 PVIPNode* PVIP_node_new_children2(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2) {
+    assert(n1);
+    assert(n2);
+
     PVIPNode* node = PVIP_node_new_children(type);
     PVIP_node_push_child(node, n1);
     PVIP_node_push_child(node, n2);
@@ -138,6 +143,10 @@ PVIPNode* PVIP_node_new_children2(PVIP_node_type_t type, PVIPNode* n1, PVIPNode 
 }
 
 PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2, PVIPNode *n3) {
+    assert(n1);
+    assert(n2);
+    assert(n3);
+
     PVIPNode* node = PVIP_node_new_children(type);
     PVIP_node_push_child(node, n1);
     PVIP_node_push_child(node, n2);
@@ -146,6 +155,8 @@ PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode 
 }
 
 void PVIP_node_push_child(PVIPNode* node, PVIPNode* child) {
+    assert(child);
+
     node->children.nodes = (PVIPNode**)realloc(node->children.nodes, sizeof(PVIPNode*)*(node->children.size+1));
     assert(node->children.nodes);
     node->children.nodes[node->children.size] = child;
@@ -163,7 +174,6 @@ PVIP_category_t PVIP_node_category(PVIP_node_type_t type) {
     case PVIP_NODE_PUBLIC_ATTRIBUTE:
     case PVIP_NODE_PRIVATE_ATTRIBUTE:
     case PVIP_NODE_PATH:
-    case PVIP_NODE_CLASS_NAME:
     case PVIP_NODE_SLANGS:
         return PVIP_CATEGORY_STRING;
     case PVIP_NODE_INT:
@@ -188,6 +198,8 @@ void PVIP_node_destroy(PVIPNode *node) {
     free(node);
 }
 static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
+    assert(node);
+
     PVIP_string_concat(buf, "(", 1);
     const char *name = PVIP_node_name(node->type);
     PVIP_string_concat(buf, name, strlen(name));

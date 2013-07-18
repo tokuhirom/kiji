@@ -12,13 +12,13 @@ class { }
 --- code
 class Foo { }
 --- expected
-(statements (class (class_name "Foo") (statements)))
+(statements (class (ident "Foo") (statements)))
 
 ===
 --- code
 class NotComplex is Cool { }
 --- expected
-(statements (class (class_name "NotComplex") (statements)))
+(statements (class (ident "NotComplex") (statements)))
 
 ===
 --- code
@@ -54,17 +54,17 @@ $foo.^methods(3)
 --- code
 class A { has $.b }
 --- expected
-(statements (class (class_name "A") (nop) (statements (has (private_attribute "b")))))
+(statements (class (ident "A") (nop) (statements (has (private_attribute "b")))))
 
 ===
 --- code
 class A { has $!b }
 --- expected
-(statements (class (class_name "A") (nop) (statements (has (public_attribute "b")))))
+(statements (class (ident "A") (nop) (statements (has (public_attribute "b")))))
 
 ===
 --- code
 class Foo::Bar { }
 --- expected
-(statements (class (class_name "Foo::Bar") (nop) (statements)))
+(statements (class (ident "Foo::Bar") (nop) (statements)))
 

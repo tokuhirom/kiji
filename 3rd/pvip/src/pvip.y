@@ -536,7 +536,6 @@ term =
     | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | perl5_regexp
     | 'm:P5/./' { $$ = PVIP_node_new_children(PVIP_NODE_NOP); }
-    | class_name
     | !reserved ident
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
     | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
@@ -545,9 +544,6 @@ term =
     | regexp
     | funcref
     | < '$~' [A-Za-z] [A-Za-z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_SLANGS, yytext, yyleng); }
-
-class_name =
-    < [A-Z] [A-Za-z0-9]* ( '::' [A-Z] [A-Za-z0-9]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_CLASS_NAME, yytext, yyleng); }
 
 path =
     'qp{' { $$ = PVIP_node_new_string(PVIP_NODE_PATH, "", 0); } (
@@ -570,14 +566,14 @@ twvars =
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
 
-reserved = 'class' | 'try' | 'has'
+reserved = 'class' | 'try' | 'has' | 'sub '
 
 # TODO optimizable
 class =
     'class' (
-        ws+ i:class_name
+        ws+ i:ident
     )? (
-        ws+ 'is' ws+ c:class_name
+        ws+ 'is' ws+ c:ident
     )? - b:block {
         $$ = PVIP_node_new_children3(
             PVIP_NODE_CLASS,
@@ -594,9 +590,11 @@ it_method = (
         )?
     ) { $$=i; }
 
-ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
-    $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
-}
+ident =
+    < [A-Za-z] [A-Za-z0-9_]* ( '::' [A-Za-z] [A-Za-z0-9_]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng); }
+    | < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
+        $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
+    }
 
 
 hash = '{' -
@@ -626,13 +624,13 @@ qw_item = < [a-zA-Z0-9_]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext
 # TODO optimize
 funcdef =
     'my' ws - f:funcdef { $$ = PVIP_node_new_children1(PVIP_NODE_MY, f); }
-    | 'sub' - i:ident - '(' - p:params? - ')' - b:block {
+    | 'sub' ws+ i:ident - '(' - p:params? - ')' - b:block {
         if (!p) {
             p = PVIP_node_new_children(PVIP_NODE_PARAMS);
         }
         $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, i, p, b);
     }
-    | 'sub' - i:ident - b:block {
+    | 'sub' ws+ i:ident - b:block {
         PVIPNode* pp = PVIP_node_new_children(PVIP_NODE_PARAMS);
         $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, i, pp, b);
     }
@@ -645,6 +643,10 @@ lambda =
         $$ = PVIP_node_new_children2(PVIP_NODE_LAMBDA, p, b);
     }
     | b:block { $$ = PVIP_node_new_children1(PVIP_NODE_LAMBDA, b); }
+    | 'sub' ws+ b:block {
+        PVIPNode* pp = PVIP_node_new_children(PVIP_NODE_PARAMS);
+        $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, PVIP_node_new_children(PVIP_NODE_NOP), pp, b);
+    }
 
 params =
     v:term { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }

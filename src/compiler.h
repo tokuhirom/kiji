@@ -1227,19 +1227,6 @@ namespace kiji {
       case PVIP_NODE_ELSE: {
         abort();
       }
-      case PVIP_NODE_CLASS_NAME: {
-        int lex_no, outer;
-        if (!find_lexical_by_name(std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
-          MVM_panic(MVM_exitcode_compunit, "Unknown class: %s", node->pv->buf);
-        }
-        auto reg_no = reg_obj();
-        assembler().getlex(
-          reg_no,
-          lex_no,
-          outer // outer frame
-        );
-        return reg_no;
-      }
       case PVIP_NODE_IDENT: {
         int lex_no, outer;
         // auto lex_no = find_lexical_by_name(std::string(node->pv->buf, node->pv->len), outer);

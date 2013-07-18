@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use utf8;
 use 5.010000;
+use Carp ();
 
 sub new {
     my $class = shift;
@@ -12,6 +13,12 @@ sub new {
 
 sub parse {
     my ($self, $sexp) = @_;
+    unless (defined $sexp) {
+        Carp::confess("sexp should be defined.");
+    }
+    if (length($sexp) == 0) {
+        Carp::confess("Do not pass the empty string.");
+    }
     $self->_parse(\$sexp);
 }
 
@@ -19,7 +26,7 @@ sub _parse {
     my ($self, $sexp) = @_;
     $self->lex($sexp) eq '(' or die "No opening paren";
     my @tokens;
-    while (length($$sexp) =~ /\S/) {
+    while ($$sexp =~ /\S/) {
         my $token = $self->lex($sexp);
         if ($token eq ')') {
             return @tokens;
@@ -48,6 +55,8 @@ sub lex {
         return $1;
     } elsif ($$sexp =~ s/^([^)]+)//) {
         return $1;
+    } elsif ($$sexp eq '') {
+        die "Unexpected EOF";
     } else {
         die "Unknown token: $$sexp";
     }
