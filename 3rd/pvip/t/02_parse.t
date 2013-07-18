@@ -379,7 +379,7 @@ class { 1 }
 --- code
 class Foo { 1 }
 --- expected
-(statements (class (ident "Foo") (statements (int 1))))
+(statements (class (class_name "Foo") (statements (int 1))))
 
 ===
 --- code
@@ -401,7 +401,7 @@ $o.new().bar()
 --- code
 Foo.new().bar()
 --- expected
-(statements (methodcall (methodcall (ident "Foo") (ident "new") (args )) (ident "bar") (args )))
+(statements (methodcall (methodcall (class_name "Foo") (ident "new") (args )) (ident "bar") (args )))
 
 ===
 --- code

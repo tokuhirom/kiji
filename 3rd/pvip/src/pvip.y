@@ -547,7 +547,7 @@ term =
     | < '$~' [A-Za-z] [A-Za-z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_SLANGS, yytext, yyleng); }
 
 class_name =
-    i:ident { PVIP_node_change_type(i, PVIP_NODE_CLASS_NAME); $$ = i; } ( '::' i2:ident { PVIP_node_append_string(i, "::", 2); PVIP_node_append_string(i, i2->pv->buf, i2->pv->len); } )+ { $$=i; }
+    < [A-Z] [A-Za-z0-9]* ( '::' [A-Z] [A-Za-z0-9]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_CLASS_NAME, yytext, yyleng); }
 
 path =
     'qp{' { $$ = PVIP_node_new_string(PVIP_NODE_PATH, "", 0); } (
@@ -575,9 +575,9 @@ reserved = 'class' | 'try' | 'has'
 # TODO optimizable
 class =
     'class' (
-        ws+ i:ident
+        ws+ i:class_name
     )? (
-        ws+ 'is' ws+ c:ident
+        ws+ 'is' ws+ c:class_name
     )? - b:block {
         $$ = PVIP_node_new_children3(
             PVIP_NODE_CLASS,
@@ -833,6 +833,14 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* '}'
+    | 'q[' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^\]\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "]" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* ']'
 
 comment =
     '#`[' [^\]]* ']'
