@@ -1,4 +1,4 @@
-package t::Util;
+package t::ParserTest;
 use strict;
 use warnings;
 use utf8;
@@ -13,6 +13,9 @@ use File::Temp;
 END {
     for my $block (Data::Section::TestBase->new(package => scalar(caller(1)))->blocks) {
         subtest 'T: ' . $block->code => sub {
+            if (length($block->expected) == 0) {
+                die "Expected should be non-empty string."
+            }
             my $got = parse_perl6($block->code);
             my $expected = parse_sexp($block->expected);
             is_deeply($got, $expected, 'Test: ' . $block->code) or do {

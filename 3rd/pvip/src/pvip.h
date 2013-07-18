@@ -134,6 +134,7 @@ typedef enum {
     PVIP_NODE_SLANGS, /* $~MAIN */
     PVIP_NODE_LOGICAL_ANDTHEN, /* andthen operator */
     PVIP_NODE_VALUE_IDENTITY, /* '===' operator in S03-operators/value_equivalence.t */
+    PVIP_NODE_CMP, /* 'cmp' operator */
 } PVIP_node_type_t;
 
 typedef enum {

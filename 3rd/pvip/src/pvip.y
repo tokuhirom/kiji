@@ -365,6 +365,7 @@ structural_infix_expr =
     a1:named_unary_expr (
         '..' - '*' { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, PVIP_node_new_children(PVIP_NODE_INFINITY)); a1=$$; }
         | '..' a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, a2); a1=$$; }
+        | - 'cmp' ![a-z] - a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_CMP, a1, a2); a1=$$; }
     )? { $$=a1; }
 
 funcall =
@@ -566,7 +567,7 @@ twvars =
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
 
-reserved = 'class' | 'try' | 'has' | 'sub '
+reserved = 'class' | 'try' | 'has' | 'sub ' | 'cmp' ![a-z0-9]
 
 # TODO optimizable
 class =

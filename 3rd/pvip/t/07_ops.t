@@ -37,3 +37,9 @@ __END__
 1===3
 --- expected
 (statements (chain (int 1) (value_identity (int 3))))
+
+===
+--- code
+1 cmp 3
+--- expected
+(statements (cmp (int 1) (int 3)))
