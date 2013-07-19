@@ -10,7 +10,6 @@ typedef struct _KijiFrame {
   MVMStaticFrame frame_; // frame itself
   struct _KijiFrame* outer_;
 
-  std::vector<MVMuint16> local_types_;
   std::vector<MVMuint16> lexical_types_;
   std::vector<MVMString*> package_variables_;
 
@@ -39,9 +38,6 @@ typedef struct _KijiFrame {
   }
 
   MVMStaticFrame* finalize(MVMThreadContext * tc) {
-      frame_.local_types = local_types_.data();
-      frame_.num_locals  = local_types_.size();
-
       frame_.num_lexicals  = lexical_types_.size();
       frame_.lexical_types = lexical_types_.data();
 
@@ -75,18 +71,20 @@ typedef struct _KijiFrame {
 
   // reserve register
   int push_local_type(MVMuint16 reg_type) {
-      local_types_.push_back(reg_type);
-      if (local_types_.size() >= 65535) {
-      printf("[panic] Too much registers\n");
-      abort();
+      frame_.num_locals++;
+      frame_.local_types = (MVMuint16*)realloc(frame_.local_types, sizeof(MVMuint16)*frame_.num_locals);
+      frame_.local_types[frame_.num_locals-1] = reg_type;
+      if (frame_.num_locals >= 65535) {
+        printf("[panic] Too much registers\n");
+        abort();
       }
-      return local_types_.size()-1;
+      return frame_.num_locals-1;
   }
   // Get register type at 'n'
   uint16_t get_local_type(int n) {
       assert(n>=0);
-      assert(n<local_types_.size());
-      return local_types_[n];
+      assert(n<frame_.num_locals);
+      return frame_.local_types[n];
   }
 
   // Push lexical variable.
