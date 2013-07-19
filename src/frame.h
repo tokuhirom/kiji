@@ -1,5 +1,20 @@
 // vim:ts=2:sw=2:tw=0:
 
+/*
+=for apidoc Am|void|Renewc|void* ptr|int nitems|type|cast
+The XSUB-writer's interface to the C C<realloc> function, with
+cast.
+*/
+
+// TODO use MVM_panic
+#define Renew(v,n,t) \
+  v = (t*)realloc(v, sizeof(t)*n); \
+  assert(v);
+
+#define Renewc(v,n,t,c) \
+  v = (c*)realloc(v, sizeof(t)*n); \
+  assert(v);
+
 enum Kiji_variable_type_t {
   VARIABLE_TYPE_MY,
   VARIABLE_TYPE_OUR
@@ -72,7 +87,7 @@ typedef struct _KijiFrame {
   // reserve register
   int push_local_type(MVMuint16 reg_type) {
       frame_.num_locals++;
-      frame_.local_types = (MVMuint16*)realloc(frame_.local_types, sizeof(MVMuint16)*frame_.num_locals);
+      Renew(frame_.local_types, frame_.num_locals, MVMuint16);
       frame_.local_types[frame_.num_locals-1] = reg_type;
       if (frame_.num_locals >= 65535) {
         printf("[panic] Too much registers\n");
