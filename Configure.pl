@@ -14,8 +14,10 @@ $p->getoptions(
 my @CXXFLAGS = qw(-g -std=c++11);
 my @CFLAGS= qw(-g);
 if ($debug) {
-    push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
-    push @CFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
+    # push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
+    # push @CFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
+    push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG );
+    push @CFLAGS, qw(-D_GLIBCXX_DEBUG );
 } else {
     push @CXXFLAGS, qw(-O3);
     push @CFLAGS, qw(-O3);
@@ -231,6 +233,7 @@ test: kiji
 clean:
 	rm -rf kiji src/gen.* 3rd/greg/greg 3rd/greg/*.o vgcore.* core Makefile 3rd/pvip/libpvip.a
     cd 3rd/pvip/ && make clean
+    cd 3rd/MoarVM/ && make clean
 
 src/gen.stdafx.pch: src/stdafx.h
 	clang++ $(CXXFLAGS) -cc1 -emit-pch -x c++-header ./src/stdafx.h -o src/gen.stdafx.pch

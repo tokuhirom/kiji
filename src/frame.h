@@ -25,7 +25,6 @@ typedef struct _KijiFrame {
   MVMStaticFrame frame_; // frame itself
   struct _KijiFrame* outer_;
 
-  std::vector<MVMuint16> lexical_types_;
   std::vector<MVMString*> package_variables_;
 
   std::vector<MVMFrameHandler*> handlers_;
@@ -53,8 +52,7 @@ typedef struct _KijiFrame {
   }
 
   MVMStaticFrame* finalize(MVMThreadContext * tc) {
-      frame_.num_lexicals  = lexical_types_.size();
-      frame_.lexical_types = lexical_types_.data();
+    // printf("frame_.num_lexicals : %u\n", frame_.num_lexicals);
 
       // see src/core/bytecode.c
       frame_.env_size = frame_.num_lexicals * sizeof(MVMRegister);
@@ -104,9 +102,11 @@ typedef struct _KijiFrame {
 
   // Push lexical variable.
   int push_lexical(MVMThreadContext *tc, const std::string&name_cc, MVMuint16 type) {
-      lexical_types_.push_back(type);
+      frame_.num_lexicals++;
+      Renew(frame_.lexical_types, frame_.num_lexicals, MVMuint16);
+      frame_.lexical_types[frame_.num_lexicals-1] = type;
 
-      int idx = lexical_types_.size()-1;
+      int idx = frame_.num_lexicals-1;
 
       MVMLexicalHashEntry *entry = (MVMLexicalHashEntry*)calloc(sizeof(MVMLexicalHashEntry), 1);
       entry->value = idx;
