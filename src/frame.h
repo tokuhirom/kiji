@@ -25,9 +25,9 @@ public:
   MVMString **package_variables;
   MVMuint32 num_package_variables;
   MVMStaticFrame frame; // frame itself
-private:
-  struct _KijiFrame* outer_;
+  struct _KijiFrame* outer;
 
+private:
   std::vector<MVMFrameHandler*> handlers_;
 
   kiji::Assembler assembler_;
@@ -126,7 +126,7 @@ private:
 
   void set_outer(struct _KijiFrame*framef) {
       frame.outer = &(framef->frame);
-      outer_ = &(*framef);
+      this->outer = &(*framef);
   }
 
   Kiji_variable_type_t find_variable_by_name(MVMThreadContext* tc, MVMString * name, int &lex_no, int &outer) {
@@ -151,7 +151,7 @@ private:
         }
       }
 
-      f = &(*(f->outer_));
+      f = &(*(f->outer));
       ++outer;
       }
       // TODO I should use MVM_panic instead.
