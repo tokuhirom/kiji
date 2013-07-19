@@ -41,6 +41,20 @@
 
 */
 
+static int node_all_children_are(PVIPNode * node, PVIP_node_type_t type) {
+    int i;
+    for (i=0; i<node->children.size; ++i) {
+        if (node->children.nodes[i]->type != type) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+PVIPNode* maybe(PVIPNode *node) {
+    return node ? node : PVIP_node_new_children(PVIP_NODE_NOP);
+}
+
 typedef struct {
     const char  *buf;
     size_t len;
@@ -109,8 +123,15 @@ statement =
             | module_stmt
             | multi_method_stmt
             | die_stmt
+            | has_stmt
             | funcdef - ';'*
-            | bl:block ';'* { $$ = PVIP_node_new_children1(PVIP_NODE_BLOCK, bl); }
+            | bl:block ';'* {
+                if (bl->type == PVIP_NODE_HASH) {
+                    $$=bl;
+                } else {
+                    $$=PVIP_node_new_children1(PVIP_NODE_BLOCK, bl);
+                }
+            }
             | b:normal_or_postfix_stmt { $$ = b; }
             | ';'+ {
                 $$ = PVIP_node_new_children(PVIP_NODE_NOP);
@@ -129,6 +150,13 @@ last_stmt = 'last' { $$ = PVIP_node_new_children(PVIP_NODE_LAST); }
 
 next_stmt = 'next' { $$ = PVIP_node_new_children(PVIP_NODE_NEXT); }
 
+has_stmt =
+    'has' { $$ = PVIP_node_new_children(PVIP_NODE_HAS); }
+    ws+ '$' (
+          '.' <[a-z]+> { PVIP_node_push_child($$, PVIP_node_new_string(PVIP_NODE_PRIVATE_ATTRIBUTE, yytext, yyleng)); }
+        | '!' <[a-z]+> { PVIP_node_push_child($$, PVIP_node_new_string(PVIP_NODE_PUBLIC_ATTRIBUTE, yytext, yyleng)); }
+    ) eat_terminator
+
 multi_method_stmt =
     'multi' ws - m:method_stmt { $$ = PVIP_node_new_children1(PVIP_NODE_MULTI, m); }
     | method_stmt
@@ -142,7 +170,21 @@ return_stmt = 'return' ws e:expr { $$ = PVIP_node_new_children1(PVIP_NODE_RETURN
 
 module_stmt = 'module' ws pkg:pkg_name eat_terminator { $$ = PVIP_node_new_children1(PVIP_NODE_MODULE, pkg); }
 
-use_stmt = 'use ' pkg:pkg_name eat_terminator { $$ = PVIP_node_new_children1(PVIP_NODE_USE, pkg); }
+# use Perl:ver<6.*>;
+use_stmt =
+    'use '
+    - pkg:pkg_name { $$ = PVIP_node_new_children1(PVIP_NODE_USE, pkg); } 
+    (
+        ':ver<' < [^>]+ > {
+            PVIP_node_push_child($$,
+                PVIP_node_new_children2(PVIP_NODE_PAIR,
+                    PVIP_node_new_string(PVIP_NODE_STRING, "ver", 3),
+                    PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng)
+                )
+            );
+        } '>'
+    )?
+    eat_terminator
 
 pkg_name = < [a-zA-Z] [a-zA-Z0-9]* ( '::' [a-zA-Z0-9]+ )* > {
     $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
@@ -181,7 +223,7 @@ if_stmt = 'if' - if_cond:expr - '{' - if_body:statementlist - '}' {
             }
         )? { $$=if_cond; }
 
-paren_args = '(' - a:expr - ')' {
+paren_args = '(' - a:expr - ','? - ')' {
         if (a->type == PVIP_NODE_LIST) {
             $$ = a;
             PVIP_node_change_type($$, PVIP_NODE_ARGS);
@@ -213,7 +255,8 @@ loose_or_expr =
 
 loose_and_expr =
     f1:list_prefix_expr (
-        - 'and' ![a-zA-Z0-9_]  - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        - 'and' ![a-zA-Z0-9_]      - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_AND, f1, f2); f1=$$; }
+        | - 'andthen' ![a-zA-Z0-9_]  - f2:list_prefix_expr { $$ = PVIP_node_new_children2(PVIP_NODE_LOGICAL_ANDTHEN, f1, f2); f1=$$; }
     )* { $$=f1; }
 
 list_prefix_expr =
@@ -284,19 +327,21 @@ tight_and = f1:chaining_infix_expr (
 
 #  C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
 chaining_infix_expr = f1:methodcall_expr { $$ = PVIP_node_new_children1(PVIP_NODE_CHAIN, f1); f1=$$; } (
-          - '=='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ, f2);    PVIP_node_push_child(f1, tmp); }
-        | - '!='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_NE,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '<'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LT,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '<='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LE,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '>'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GT,    f2); PVIP_node_push_child(f1, tmp); }
-        | - '>='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GE,    f2); PVIP_node_push_child(f1, tmp); }
-        | - 'eqv' - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQV,   f2); PVIP_node_push_child(f1, tmp); }
-        | - 'eq'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STREQ, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'ne'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRNE, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'gt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGT, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'ge'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGE, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'lt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLT, f2); PVIP_node_push_child(f1, tmp); }
-        | - 'le'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLE, f2); PVIP_node_push_child(f1, tmp); }
+          - '==='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_VALUE_IDENTITY,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '=='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '!='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_NE,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '<'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LT,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '<='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LE,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '>'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GT,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '>='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_GE,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '~~'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_SMART_MATCH, f2); PVIP_node_push_child(f1, tmp); }
+        | - 'eqv' - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQV,         f2); PVIP_node_push_child(f1, tmp); }
+        | - 'eq'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STREQ,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'ne'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRNE,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'gt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGT,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'ge'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRGE,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'lt'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLT,       f2); PVIP_node_push_child(f1, tmp); }
+        | - 'le'  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_STRLE,       f2); PVIP_node_push_child(f1, tmp); }
     )* { if (f1->children.size==1) { $$=f1->children.nodes[0]; } else { $$=f1; } }
 
 methodcall_expr =
@@ -318,7 +363,9 @@ methodcall_expr =
 
 structural_infix_expr =
     a1:named_unary_expr (
-        '..' a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, a2); a1=$$; }
+        '..' - '*' { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, PVIP_node_new_children(PVIP_NODE_INFINITY)); a1=$$; }
+        | '..' a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, a2); a1=$$; }
+        | - 'cmp' ![a-z] - a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_CMP, a1, a2); a1=$$; }
     )? { $$=a1; }
 
 funcall =
@@ -361,19 +408,7 @@ replication_expr =
 
 additive_expr =
     l:multiplicative_expr (
-          - '+' - r1:multiplicative_expr {
-            $$ = PVIP_node_new_children2(PVIP_NODE_ADD, l, r1);
-            l = $$;
-          }
-        | - '-' - r2:multiplicative_expr {
-            $$ = PVIP_node_new_children2(PVIP_NODE_SUB, l, r2);
-            l = $$;
-          }
-        | - '~' - r2:multiplicative_expr {
-            $$ = PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, l, r2);
-            l = $$;
-          }
-        | - '+|' - r:exponentiation_expr {
+          - '+|' - r:exponentiation_expr {
             $$ = PVIP_node_new_children2(PVIP_NODE_BIN_OR, l, r);
             l = $$;
         }
@@ -381,6 +416,18 @@ additive_expr =
             $$ = PVIP_node_new_children2(PVIP_NODE_BIN_XOR, l, r);
             l = $$;
         }
+        | - '+' - r1:multiplicative_expr {
+            $$ = PVIP_node_new_children2(PVIP_NODE_ADD, l, r1);
+            l = $$;
+          }
+        | - '-' - r2:multiplicative_expr {
+            $$ = PVIP_node_new_children2(PVIP_NODE_SUB, l, r2);
+            l = $$;
+          }
+        | - '~'  !'~' - r2:multiplicative_expr {
+            $$ = PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, l, r2);
+            l = $$;
+          }
     )* {
         $$ = l;
     }
@@ -417,11 +464,13 @@ multiplicative_expr =
 
 #  L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
 symbolic_unary =
-    '+' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_PLUS, f1); }
+    '+' !'^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_PLUS, f1); }
     | '-' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_MINUS, f1); }
     | '!' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_NOT, f1); }
     | '+^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_BITWISE_NEGATION, f1); }
     | '~' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_TILDE, f1); }
+    | '?' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_BOOLEAN, f1); }
+    | '^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_UPTO, f1); }
     | exponentiation_expr
 
 exponentiation_expr = 
@@ -448,19 +497,31 @@ method_postfix_expr =
           f1:term { $$=f1; } (
               '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
             | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
-            | '[' - f2:term - ']' {
+            | '.^' f2:ident { f3 = NULL; } f3:paren_args? {
+                $$ = PVIP_node_new_children3(PVIP_NODE_META_METHOD_CALL, f1, f2, maybe(f3));
+                f1=$$;
+            }
+            | '.'? '[' - f2:term - ']' {
                 $$ = PVIP_node_new_children2(PVIP_NODE_ATPOS, f1, f2);
                 f1=$$;
             }
-            | '.' f2:ident f3:paren_args {
-                $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
-                f1=$$;
-            }
+            | '.' f2:ident (
+                ':' - f3:bare_args {
+                    /* @*INC.push: '/etc' */
+                    $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
+                    f1=$$;
+                }
+                | f3:paren_args {
+                    $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
+                    f1=$$;
+                }
+            )
             | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); f1=$$; }
           )*
 
 term = 
     integer
+    | path
     | dec_number
     | string
     | '(' - e:expr  - ')' { $$ = e; }
@@ -470,16 +531,43 @@ term =
     | class
     | funcall
     | qw
-    | twargs
     | hash
     | lambda
     | it_method
     | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
+    | perl5_regexp
+    | 'm:P5/./' { $$ = PVIP_node_new_children(PVIP_NODE_NOP); }
     | !reserved ident
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
     | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
+    | language
+    | ':' < [a-z]+ > { $$ = PVIP_node_new_children2(PVIP_NODE_PAIR, PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng), PVIP_node_new_children(PVIP_NODE_TRUE)); }
+    | regexp
+    | funcref
+    | < '$~' [A-Za-z] [A-Za-z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_SLANGS, yytext, yyleng); }
 
-reserved = 'class' | 'try'
+path =
+    'qp{' { $$ = PVIP_node_new_string(PVIP_NODE_PATH, "", 0); } (
+        < [^}] + > { PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "}" { PVIP_node_append_string($$, "/", 1); }
+    )+ '}'
+
+funcref = '&' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_FUNCREF, i); }
+
+twvars = 
+    '$*OUT' { $$ = PVIP_node_new_children(PVIP_NODE_STDOUT); }
+    | '$*ERR' { $$ = PVIP_node_new_children(PVIP_NODE_STDERR); }
+    | '@*ARGS' { $$ = PVIP_node_new_children(PVIP_NODE_CLARGS); }
+    | '@*INC' { $$ = PVIP_node_new_children(PVIP_NODE_TW_INC); }
+    | '$*VM' { $$ = PVIP_node_new_children(PVIP_NODE_TW_VM); }
+    | '$?PACKAGE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_PACKAGE); }
+    | '$?CLASS' { $$ = PVIP_node_new_children(PVIP_NODE_TW_CLASS); }
+    | '$?MODULE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_MODULE); }
+
+language =
+    ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
+
+reserved = 'class' | 'try' | 'has' | 'sub ' | 'cmp' ![a-z0-9]
 
 # TODO optimizable
 class =
@@ -503,13 +591,16 @@ it_method = (
         )?
     ) { $$=i; }
 
-ident = < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
-    $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
-}
+ident =
+    < [A-Za-z] [A-Za-z0-9_]* ( '::' [A-Za-z] [A-Za-z0-9_]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng); }
+    | < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
+        $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
+    }
 
 
 hash = '{' -
     p1:pair { $$ = PVIP_node_new_children1(PVIP_NODE_HASH, p1); p1=$$; } ( -  ',' - p2:pair { PVIP_node_push_child(p1, p2); $$=p1; } )*
+    ','?
     - '}' { $$=p1; }
 
 pair = k:hash_key - '=>' - v:loose_unary_expr { $$ = PVIP_node_new_children2(PVIP_NODE_PAIR, k, v); }
@@ -517,8 +608,6 @@ pair = k:hash_key - '=>' - v:loose_unary_expr { $$ = PVIP_node_new_children2(PVI
 hash_key =
     < [a-zA-Z0-9_]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
     | string
-
-twargs='@*ARGS' { $$ = PVIP_node_new_children(PVIP_NODE_CLARGS); }
 
 qw =
     '<<' - qw_list - '>>'
@@ -536,13 +625,13 @@ qw_item = < [a-zA-Z0-9_]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext
 # TODO optimize
 funcdef =
     'my' ws - f:funcdef { $$ = PVIP_node_new_children1(PVIP_NODE_MY, f); }
-    | 'sub' - i:ident - '(' - p:params? - ')' - b:block {
+    | 'sub' ws+ i:ident - '(' - p:params? - ')' - b:block {
         if (!p) {
             p = PVIP_node_new_children(PVIP_NODE_PARAMS);
         }
         $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, i, p, b);
     }
-    | 'sub' - i:ident - b:block {
+    | 'sub' ws+ i:ident - b:block {
         PVIPNode* pp = PVIP_node_new_children(PVIP_NODE_PARAMS);
         $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, i, pp, b);
     }
@@ -555,6 +644,10 @@ lambda =
         $$ = PVIP_node_new_children2(PVIP_NODE_LAMBDA, p, b);
     }
     | b:block { $$ = PVIP_node_new_children1(PVIP_NODE_LAMBDA, b); }
+    | 'sub' ws+ b:block {
+        PVIPNode* pp = PVIP_node_new_children(PVIP_NODE_PARAMS);
+        $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, PVIP_node_new_children(PVIP_NODE_NOP), pp, b);
+    }
 
 params =
     v:term { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }
@@ -562,25 +655,54 @@ params =
     { $$=v; }
 
 block = 
-    ('{' - s:statementlist - '}') { $$=s; }
+    ('{' - s:statementlist - '}') {
+        if (s->children.nodes[0]->type == PVIP_NODE_PAIR) {
+            PVIP_node_change_type(s, PVIP_NODE_HASH);
+            $$=s;
+        } else if (s->children.nodes[0]->type == PVIP_NODE_LIST && node_all_children_are(s->children.nodes[0], PVIP_NODE_PAIR)) {
+            PVIP_node_change_type(s, PVIP_NODE_HASH);
+            $$=s;
+        } else {
+            $$=s;
+        }
+    }
     | ('{' - '}' ) { $$ = PVIP_node_new_children(PVIP_NODE_STATEMENTS); }
 
 # XXX optimizable
 array =
-    '[' e:expr ']' { $$=e; PVIP_node_change_type($$, PVIP_NODE_ARRAY); }
+    '[' e:expr ']' {
+        if (PVIP_node_category(e->type) == PVIP_CATEGORY_CHILDREN) {
+            PVIP_node_change_type(e, PVIP_NODE_ARRAY);
+            $$=e;
+        } else {
+            $$=PVIP_node_new_children1(PVIP_NODE_ARRAY, e);
+        }
+    }
     | '[' - ']' { $$ = PVIP_node_new_children(PVIP_NODE_ARRAY); }
 
 my = 
     'my' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_MY, v); }
+    | 'my' ws+ '(' - v:bare_variables - ')' { $$ = PVIP_node_new_children1(PVIP_NODE_MY, v); }
     | 'our' ws+ v:variable { $$ = PVIP_node_new_children1(PVIP_NODE_OUR, v); }
 
-variable = scalar | array_var | hash_var
+bare_variables =
+    v1:variable { v1=PVIP_node_new_children1(PVIP_NODE_LIST, v1); } (
+        - ',' - v2:variable { PVIP_node_push_child(v1, v2); }
+    )* { $$=v1; }
 
-array_var = < '@' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+variable = scalar | array_var | hash_var | twvars | funcref
 
-hash_var = < '%' [a-zA-Z_] [a-zA-Z0-9_]* > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+array_var = < '@' varname > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
 
-scalar = < '$' [a-zA-Z_] [a-zA-Z0-9_]* > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+hash_var = < '%' varname > { $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+
+scalar =
+    '$' s:scalar { $$ = PVIP_node_new_children1(PVIP_NODE_SCALAR_DEREF, s); }
+    | < '$' varname > { assert(yyleng > 0); $$ = PVIP_node_new_string(PVIP_NODE_VARIABLE, yytext, yyleng); }
+    | '$!' { $$=PVIP_node_new_children(PVIP_NODE_SPECIAL_VARIABLE_EXCEPTIONS); }
+    | '$/' { $$=PVIP_node_new_children(PVIP_NODE_SPECIAL_VARIABLE_REGEXP_MATCH); }
+
+varname = [a-zA-Z_] ( [a-zA-Z0-9_]+ | '-' [a-zA-Z_] [a-zA-Z0-9_]* )*
 
 #  <?MARKED('endstmt')>
 #  <?terminator>
@@ -588,7 +710,10 @@ eat_terminator =
     (';' -) | end-of-file
 
 dec_number =
-    <([.][0-9]+)> {
+    <[0-9]+ 'e' [0-9]+> {
+    $$ = PVIP_node_new_number(PVIP_NODE_NUMBER, yytext, yyleng);
+}
+    | <([.][0-9]+)> {
     $$ = PVIP_node_new_number(PVIP_NODE_NUMBER, yytext, yyleng);
 }
     | <([0-9]+ '.' [0-9]+)> {
@@ -638,6 +763,7 @@ dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0
         | esc 'n' { s=PVIP_node_append_string(s, "\n", 1); }
         | esc '"' { s=PVIP_node_append_string(s, "\"", 1); }
         | esc '$' { s=PVIP_node_append_string(s, "\"", 1); }
+        | esc '0' { s=PVIP_node_append_string(s, "\0", 1); }
         | ( esc 'x' (
                   '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) >
             | '[' '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) > ']' )
@@ -654,6 +780,23 @@ dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0
         | esc esc { s=PVIP_node_append_string(s, "\\", 1); }
     )* '"' { $$=s; }
 
+perl5_regexp_start = 'm:P5/' { $$ = PVIP_node_new_string(PVIP_NODE_PERL5_REGEXP, "", 0); }
+
+perl5_regexp =
+    r:perl5_regexp_start (
+        <[^/]+> { r=PVIP_node_append_string(r, yytext, yyleng); }
+       | esc '/' { r=PVIP_node_append_string(r, "/", 1); }
+    )+ '/' { $$=r; }
+
+regexp_start = '/' { $$ = PVIP_node_new_string(PVIP_NODE_REGEXP, "", 0); }
+
+regexp =
+    r:regexp_start (
+        <[^/]+> { r=PVIP_node_append_string(r, yytext, yyleng); }
+       | esc '/' { r=PVIP_node_append_string(r, "/", 1); }
+    )+ '/' { $$=r; }
+
+
 esc = '\\'
 
 sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
@@ -663,6 +806,46 @@ sq_string = "'" { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
         | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
     )* "'"
+    | 'q/' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^/\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '/'
+    | 'q!' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^!\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '!'
+    | 'q|' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^|\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '|'
+    | 'q{' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^}\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "/" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* '}'
+    | 'q[' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
+        "\n" { G->data.line_number++; $$=PVIP_node_append_string($$, "\n", 1); }
+        | < [^\]\\\n]+ > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+        | esc "'" { $$=PVIP_node_append_string($$, "'", 1); }
+        | esc "]" { $$=PVIP_node_append_string($$, "/", 1); }
+        | esc esc { $$=PVIP_node_append_string($$, "\\", 1); }
+        | < esc . > { $$=PVIP_node_append_string($$, yytext, yyleng); }
+    )* ']'
 
 comment =
     '#`[' [^\]]* ']'
@@ -811,7 +994,9 @@ PVIPNode * PVIP_parse_fp(FILE *fp, int debug, PVIPString **error) {
     if (!feof(fp)) {
       if (error) {
         *error = PVIP_string_new();
-        PVIP_string_concat(*error, "Syntax error! Around:\n", strlen("Syntax error! Around:\n"));
+        PVIP_string_concat(*error, "Syntax error! At line ", strlen("Syntax error! At line "));
+        PVIP_string_concat_int(*error, g.data.line_number);
+        PVIP_string_concat(*error, ":\n", strlen(":\n"));
         int i;
         for (i=0; !feof(fp) && i<24; i++) {
           char ch = fgetc(fp);

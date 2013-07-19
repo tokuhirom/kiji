@@ -42,6 +42,7 @@ PVIPNode * PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t l
          type != PVIP_NODE_IDENT
       || type != PVIP_NODE_VARIABLE
       || type != PVIP_NODE_STRING
+      || type != PVIP_NODE_LANG
     );
     node->type = type;
     node->pv = PVIP_string_new();
@@ -50,10 +51,7 @@ PVIPNode * PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t l
 }
 
 PVIPNode* PVIP_node_append_string(PVIPNode *node, const char* txt, size_t length) {
-    if (node->type == PVIP_NODE_STRING) {
-        PVIP_string_concat(node->pv, txt, length);
-        return node;
-    } else if (node->type == PVIP_NODE_STRING_CONCAT) {
+    if (node->type == PVIP_NODE_STRING_CONCAT) {
         if (node->children.nodes[node->children.size-1]->type == PVIP_NODE_STRING) {
             PVIP_string_concat(node->children.nodes[node->children.size-1]->pv, txt, length);
             return node;
@@ -61,13 +59,15 @@ PVIPNode* PVIP_node_append_string(PVIPNode *node, const char* txt, size_t length
             PVIPNode *s = PVIP_node_new_string(PVIP_NODE_STRING, txt, length);
             return PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, node, s);
         }
-    } else {
-        abort();
     }
+
+    assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STRING);
+    PVIP_string_concat(node->pv, txt, length);
+    return node;
 }
 
 PVIPNode* PVIP_node_append_string_from_hex(PVIPNode *node, const char* str, size_t len) {
-    assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STR);
+    assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STRING);
     assert(len==2);
 
     char buf[3];
@@ -79,7 +79,7 @@ PVIPNode* PVIP_node_append_string_from_hex(PVIPNode *node, const char* str, size
 }
 
 PVIPNode* PVIP_node_append_string_from_oct(PVIPNode *node, const char* str, size_t len) {
-    assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STR);
+    assert(PVIP_node_category(node->type) == PVIP_CATEGORY_STRING);
     assert(len==2);
 
     char buf[3];
@@ -110,7 +110,7 @@ PVIPNode* PVIP_node_new_number(PVIP_node_type_t type, const char *str, size_t le
     PVIPNode *node = malloc(sizeof(PVIPNode));
     assert(type == PVIP_NODE_NUMBER);
     node->type = type;
-    node->nv = atof(str);
+    node->nv = strtod(str, NULL);
     return node;
 }
 
@@ -125,12 +125,17 @@ PVIPNode* PVIP_node_new_children(PVIP_node_type_t type) {
     return node;
 }
 PVIPNode* PVIP_node_new_children1(PVIP_node_type_t type, PVIPNode* n1) {
+    assert(n1);
+
     PVIPNode* node = PVIP_node_new_children(type);
     PVIP_node_push_child(node, n1);
     return node;
 }
 
 PVIPNode* PVIP_node_new_children2(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2) {
+    assert(n1);
+    assert(n2);
+
     PVIPNode* node = PVIP_node_new_children(type);
     PVIP_node_push_child(node, n1);
     PVIP_node_push_child(node, n2);
@@ -138,6 +143,10 @@ PVIPNode* PVIP_node_new_children2(PVIP_node_type_t type, PVIPNode* n1, PVIPNode 
 }
 
 PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2, PVIPNode *n3) {
+    assert(n1);
+    assert(n2);
+    assert(n3);
+
     PVIPNode* node = PVIP_node_new_children(type);
     PVIP_node_push_child(node, n1);
     PVIP_node_push_child(node, n2);
@@ -146,6 +155,8 @@ PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode 
 }
 
 void PVIP_node_push_child(PVIPNode* node, PVIPNode* child) {
+    assert(child);
+
     node->children.nodes = (PVIPNode**)realloc(node->children.nodes, sizeof(PVIPNode*)*(node->children.size+1));
     assert(node->children.nodes);
     node->children.nodes[node->children.size] = child;
@@ -157,7 +168,14 @@ PVIP_category_t PVIP_node_category(PVIP_node_type_t type) {
     case PVIP_NODE_STRING:
     case PVIP_NODE_VARIABLE:
     case PVIP_NODE_IDENT:
-        return PVIP_CATEGORY_STR;
+    case PVIP_NODE_LANG:
+    case PVIP_NODE_REGEXP:
+    case PVIP_NODE_PERL5_REGEXP:
+    case PVIP_NODE_PUBLIC_ATTRIBUTE:
+    case PVIP_NODE_PRIVATE_ATTRIBUTE:
+    case PVIP_NODE_PATH:
+    case PVIP_NODE_SLANGS:
+        return PVIP_CATEGORY_STRING;
     case PVIP_NODE_INT:
         return PVIP_CATEGORY_INT;
     case PVIP_NODE_NUMBER:
@@ -174,17 +192,19 @@ void PVIP_node_destroy(PVIPNode *node) {
         for (i=0; i<node->children.size; i++) {
             PVIP_node_destroy(node->children.nodes[i]);
         }
-    } else if (category == PVIP_CATEGORY_STR) {
+    } else if (category == PVIP_CATEGORY_STRING) {
         PVIP_string_destroy(node->pv);
     }
     free(node);
 }
 static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
+    assert(node);
+
     PVIP_string_concat(buf, "(", 1);
     const char *name = PVIP_node_name(node->type);
     PVIP_string_concat(buf, name, strlen(name));
     switch (PVIP_node_category(node->type)) {
-    case PVIP_CATEGORY_STR: {
+    case PVIP_CATEGORY_STRING: {
         int i;
         PVIP_string_concat(buf, " ", 1);
         PVIP_string_concat(buf, "\"", 1);
@@ -200,6 +220,7 @@ static void _PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf, int indent) {
             case '\r': PVIP_string_concat(buf, "\\r",     2); break;
             case '\t': PVIP_string_concat(buf, "\\t",     2); break;
             case '\a': PVIP_string_concat(buf, "\\u0007", 6); break;
+            case '\0': PVIP_string_concat(buf, "\\0",     2); break;
             default:   PVIP_string_concat(buf, &c,        1); break;
             }
         }

@@ -108,12 +108,40 @@ typedef enum {
     PVIP_NODE_UNARY_TILDE,
     PVIP_NODE_TRY,
     PVIP_NODE_REF,
-    PVIP_NODE_MULTI
+    PVIP_NODE_MULTI,
+    PVIP_NODE_LANG,
+    PVIP_NODE_UNARY_BOOLEAN, /* ? */
+    PVIP_NODE_UNARY_UPTO, /* ^ */
+    PVIP_NODE_STDOUT, /* $*OUT */
+    PVIP_NODE_STDERR, /* $*ERR */
+    PVIP_NODE_INFINITY, /* * in `1..*` */
+    PVIP_NODE_SCALAR_DEREF, /* $$var */
+    PVIP_NODE_TW_INC, /* @*INC */
+    PVIP_NODE_META_METHOD_CALL, /* $foo.^methods */
+    PVIP_NODE_REGEXP,
+    PVIP_NODE_SMART_MATCH, /* ~~ */
+    PVIP_NODE_PERL5_REGEXP, /* m:P5/./ */
+    PVIP_NODE_TRUE,
+    PVIP_NODE_TW_VM,  /* $*VM */
+    PVIP_NODE_HAS,
+    PVIP_NODE_PRIVATE_ATTRIBUTE, /* $.var */
+    PVIP_NODE_PUBLIC_ATTRIBUTE,  /* $!var */
+    PVIP_NODE_FUNCREF,           /* &var */
+    PVIP_NODE_PATH, /* qp{}, IO::Path literal */
+    PVIP_NODE_TW_PACKAGE, /* $?PACKAGE */
+    PVIP_NODE_TW_CLASS, /* $?CLASS */
+    PVIP_NODE_TW_MODULE, /* $?MODULE */
+    PVIP_NODE_SLANGS, /* $~MAIN */
+    PVIP_NODE_LOGICAL_ANDTHEN, /* andthen operator */
+    PVIP_NODE_VALUE_IDENTITY, /* '===' operator in S03-operators/value_equivalence.t */
+    PVIP_NODE_CMP, /* 'cmp' operator */
+    PVIP_NODE_SPECIAL_VARIABLE_REGEXP_MATCH, /* $/ - regex match */
+    PVIP_NODE_SPECIAL_VARIABLE_EXCEPTIONS, /* $! - exceptions */
 } PVIP_node_type_t;
 
 typedef enum {
     PVIP_CATEGORY_UNKNOWN,
-    PVIP_CATEGORY_STR,
+    PVIP_CATEGORY_STRING,
     PVIP_CATEGORY_INT,
     PVIP_CATEGORY_NUMBER,
     PVIP_CATEGORY_CHILDREN
@@ -164,6 +192,7 @@ PVIP_category_t PVIP_node_category(PVIP_node_type_t type);
 
 void PVIP_node_as_sexp(PVIPNode * node, PVIPString *buf);
 void PVIP_node_dump_sexp(PVIPNode * node);
+
 
 /* string */
 PVIPString *PVIP_string_new();

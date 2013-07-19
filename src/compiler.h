@@ -306,7 +306,7 @@ namespace kiji {
 
       // Bind class object to lexical variable
       auto name_node = node->children.nodes[0];
-      if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STR) {
+      if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STRING) {
         auto lex = push_lexical(PVIPSTRING2STDSTRING(name_node->pv), MVM_reg_obj);
         assembler().bindlex(
           lex,
