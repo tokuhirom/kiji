@@ -497,7 +497,7 @@ namespace kiji {
       oss << name << frame_no_++;
       std::shared_ptr<KijiFrame> frame = std::make_shared<KijiFrame>(tc_, oss.str());
       if (frames_.size() != 0) {
-        frame->set_outer(frames_.back());
+        frame->set_outer(&(*(frames_.back())));
       }
       frames_.push_back(frame);
       used_frames_.push_back(frames_.back());

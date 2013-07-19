@@ -8,7 +8,7 @@ enum Kiji_variable_type_t {
 typedef struct _KijiFrame {
   private:
   MVMStaticFrame frame_; // frame itself
-  std::shared_ptr<struct _KijiFrame> outer_;
+  struct _KijiFrame* outer_;
   MVMThreadContext *tc_;
 
   std::vector<MVMuint16> local_types_;
@@ -114,9 +114,9 @@ typedef struct _KijiFrame {
       package_variables_.push_back(name_cc);
   }
 
-  void set_outer(const std::shared_ptr<struct _KijiFrame>&frame) {
+  void set_outer(struct _KijiFrame*frame) {
       frame_.outer = &(frame->frame_);
-      outer_ = frame;
+      outer_ = &(*frame);
   }
 
   Kiji_variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
