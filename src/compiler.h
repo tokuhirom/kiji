@@ -162,8 +162,8 @@ namespace kiji {
     MVMCompUnit* cu_;
     MVMThreadContext *tc_;
     int frame_no_;
-    std::vector<std::shared_ptr<Frame>> frames_;
-    std::list<std::shared_ptr<Frame>> used_frames_;
+    std::vector<std::shared_ptr<KijiFrame>> frames_;
+    std::list<std::shared_ptr<KijiFrame>> used_frames_;
     MVMObject* current_class_how_;
 
     MVMSerializationContext * sc_classes_;
@@ -326,7 +326,7 @@ namespace kiji {
     uint16_t get_variable(const std::string &name) {
       int outer = 0;
       int lex_no = 0;
-      variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
+      Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
         auto reg_no = reg_obj();
         assembler().getlex(
@@ -367,7 +367,7 @@ namespace kiji {
     void set_variable(const std::string &name, uint16_t val_reg) {
       int lex_no = -1;
       int outer = -1;
-      variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
+      Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
         assembler().bindlex(
           lex_no,
@@ -427,7 +427,7 @@ namespace kiji {
       CU->strings[CU->num_strings-1] = str;
       return CU->num_strings-1;
     }
-    variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
+    Kiji_variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
       return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
     }
     // lexical variable number by name
@@ -495,7 +495,7 @@ namespace kiji {
     int push_frame(const std::string & name) {
       std::ostringstream oss;
       oss << name << frame_no_++;
-      std::shared_ptr<Frame> frame = std::make_shared<Frame>(tc_, oss.str());
+      std::shared_ptr<KijiFrame> frame = std::make_shared<KijiFrame>(tc_, oss.str());
       if (frames_.size() != 0) {
         frame->set_outer(frames_.back());
       }
