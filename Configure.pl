@@ -69,7 +69,8 @@ MOARVM_OBJS = \
 3rd/MoarVM/src/6model/sc.o                          3rd/MoarVM/src/strings/ops.o \
 3rd/MoarVM/src/6model/serialization.o               3rd/MoarVM/src/strings/unicode.o \
 3rd/MoarVM/src/core/args.o                          3rd/MoarVM/src/strings/utf16.o \
-3rd/MoarVM/src/core/bytecodedump.o                  3rd/MoarVM/src/strings/utf8.o
+3rd/MoarVM/src/core/bytecodedump.o                  3rd/MoarVM/src/strings/utf8.o \
+3rd/MoarVM/src/6model/containers.o 3rd/MoarVM/src/math/bigintops.o
 
 TOM = 3rd/MoarVM/3rdparty/libtommath/bn
 # libtommath files
@@ -202,6 +203,8 @@ kiji: 3rd/MoarVM/moarvm src/kiji.cc src/kiji.o 3rd/pvip/libpvip.a src/compiler.h
 	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.o $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o
 
 src/kiji.o: src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h
+
+src/builtin/array.o: 3rd/MoarVM/moarvm
 
 .c.o: src/builtin.h
     $(CC) $(CINCLUDE) $(CFLAGS) -c -o $@ $<
