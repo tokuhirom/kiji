@@ -28,8 +28,6 @@ public:
   struct _KijiFrame* outer;
 
 private:
-  std::vector<MVMFrameHandler*> handlers_;
-
   kiji::Assembler assembler_;
 
   void set_cuuid(MVMThreadContext *tc) {
@@ -64,20 +62,13 @@ private:
       frame.bytecode      = assembler_.bytecode();
       frame.bytecode_size = assembler_.bytecode_size();
 
-      // frame handlers
-      frame.num_handlers = handlers_.size();
-      frame.handlers = new MVMFrameHandler[handlers_.size()];
-      int i=0;
-      for (auto f: handlers_) {
-      frame.handlers[i] = *f;
-      ++i;
-      }
-
       return &frame;
   }
 
   void push_handler(MVMFrameHandler* handler) {
-      handlers_.push_back(handler);
+    frame.num_handlers++;
+    Renew(frame.handlers, frame.num_handlers, MVMFrameHandler);
+    frame.handlers[frame.num_handlers-1] = *handler;
   }
 
   // reserve register
