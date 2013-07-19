@@ -492,7 +492,7 @@ namespace kiji {
       for (int i=0; i<frame_no; i++) {
         iter++;
       }
-      return (*iter)->frame();
+      return &((*iter)->frame);
     }
     int push_frame(const std::string & name) {
       std::ostringstream oss;
