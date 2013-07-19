@@ -23,6 +23,9 @@
 #define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
 #define CU cu_
 
+#define MEMORY_ERROR() \
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
+
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
     MVMObject *method_table, *attributes, *BOOTArray, *BOOTHash,
@@ -162,7 +165,6 @@ namespace kiji {
     std::vector<std::shared_ptr<Frame>> frames_;
     std::list<std::shared_ptr<Frame>> used_frames_;
     MVMObject* current_class_how_;
-    std::vector<MVMCallsite*> callsites_;
 
     MVMSerializationContext * sc_classes_;
     int num_sc_classes_;
@@ -463,15 +465,19 @@ namespace kiji {
 
     size_t push_callsite(MVMCallsite *callsite) {
       int i=0;
-      for (auto c:callsites_) {
-        if (callsite_eq(c, callsite)) {
+      for (i=0; i<CU->num_callsites; i++) {
+        if (callsite_eq(CU->callsites[i], callsite)) {
           delete callsite; // free memory
           return i;
         }
-        ++i;
       }
-      callsites_.push_back(callsite);
-      return callsites_.size() - 1;
+      CU->num_callsites++;
+      CU->callsites = (MVMCallsite**)realloc(CU->callsites, sizeof(MVMCallsite*)*CU->num_callsites);
+      if (!CU->callsites) {
+        MEMORY_ERROR();
+      }
+      CU->callsites[CU->num_callsites-1] = callsite;
+      return CU->num_callsites-1;
     }
     void push_handler(MVMFrameHandler *handler) {
       return frames_.back()->push_handler(handler);
@@ -674,7 +680,7 @@ namespace kiji {
         assert(node->children.size ==1);
         auto reg = do_compile(node->children.nodes[0]);
         if (reg < 0) {
-          MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
+          MEMORY_ERROR();
         }
         // assembler().return_o(this->box(reg));
         switch (get_local_type(reg)) {
@@ -2216,18 +2222,10 @@ namespace kiji {
       Kiji_bootstrap_File(CU,  tc);
       Kiji_bootstrap_Int(CU,   tc);
 
-      // setup callsite
-      CU->callsites = (MVMCallsite**)malloc(sizeof(MVMCallsite*)*callsites_.size());
-      {
-        int i=0;
-        for (auto callsite: callsites_) {
-          CU->callsites[i] = callsite;
-          ++i;
-        }
-      }
-      CU->num_callsites = callsites_.size();
+      // finalize callsite
       CU->max_callsite_size = 0;
-      for (auto callsite: callsites_) {
+      for (int i=0; i<CU->num_callsites; i++) {
+        auto callsite = CU->callsites[i];
         CU->max_callsite_size = std::max(CU->max_callsite_size, callsite->arg_count);
       }
 
