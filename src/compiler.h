@@ -162,7 +162,6 @@ namespace kiji {
     std::vector<std::shared_ptr<Frame>> frames_;
     std::list<std::shared_ptr<Frame>> used_frames_;
     MVMObject* current_class_how_;
-    std::vector<MVMString*> strings_;
     std::vector<MVMCallsite*> callsites_;
 
     MVMSerializationContext * sc_classes_;
@@ -418,8 +417,13 @@ namespace kiji {
     }
     int push_string(const char*string, int length) {
       MVMString* str = MVM_string_utf8_decode(tc_, tc_->instance->VMString, string, length);
-      strings_.push_back(str);
-      return strings_.size() - 1;
+      CU->num_strings++;
+      CU->strings = (MVMString**)realloc(CU->strings, sizeof(MVMString*)*CU->num_strings);
+      if (!CU->strings) {
+        MVM_panic(MVM_exitcode_compunit, "Cannot allocate memory");
+      }
+      CU->strings[CU->num_strings-1] = str;
+      return CU->num_strings-1;
     }
     variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
       return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
@@ -2226,11 +2230,6 @@ namespace kiji {
       for (auto callsite: callsites_) {
         CU->max_callsite_size = std::max(CU->max_callsite_size, callsite->arg_count);
       }
-
-
-      // finalize strings
-      CU->strings     = strings_.data();
-      CU->num_strings = strings_.size();
 
       // Initialize @*ARGS
       MVMObject *clargs = MVM_repr_alloc_init(tc, tc->instance->boot_types->BOOTArray);
