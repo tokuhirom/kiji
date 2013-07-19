@@ -428,7 +428,8 @@ namespace kiji {
       return CU->num_strings-1;
     }
     Kiji_variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
-      return frames_.back()->find_variable_by_name(name_cc, lex_no, outer);
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+      return frames_.back()->find_variable_by_name(name, lex_no, outer);
     }
     // lexical variable number by name
     bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
@@ -441,7 +442,8 @@ namespace kiji {
     int push_lexical(const std::string name, MVMuint16 type) {
       return frames_.back()->push_lexical(name, type);
     }
-    void push_pkg_var(const std::string name) {
+    void push_pkg_var(const std::string name_cc) {
+      MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       frames_.back()->push_pkg_var(name);
     }
     // Is a and b equivalent?

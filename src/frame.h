@@ -13,7 +13,7 @@ typedef struct _KijiFrame {
 
   std::vector<MVMuint16> local_types_;
   std::vector<MVMuint16> lexical_types_;
-  std::vector<std::string> package_variables_;
+  std::vector<MVMString*> package_variables_;
 
   std::vector<MVMFrameHandler*> handlers_;
 
@@ -110,8 +110,8 @@ typedef struct _KijiFrame {
   }
 
   // TODO Throw exception at this code: `our $n; my $n`
-  void push_pkg_var(const std::string &name_cc) {
-      package_variables_.push_back(name_cc);
+  void push_pkg_var(MVMString *name) {
+      package_variables_.push_back(name);
   }
 
   void set_outer(struct _KijiFrame*frame) {
@@ -119,8 +119,7 @@ typedef struct _KijiFrame {
       outer_ = &(*frame);
   }
 
-  Kiji_variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
-      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+  Kiji_variable_type_t find_variable_by_name(MVMString * name, int &lex_no, int &outer) {
       struct _KijiFrame* f = this;
       outer = 0;
       while (f) {
@@ -136,8 +135,8 @@ typedef struct _KijiFrame {
 
       // check package variables
       for (auto n: f->package_variables_) {
-          if (n==name_cc) {
-          return VARIABLE_TYPE_OUR;
+          if (MVM_string_equal(tc_, n, name)) {
+            return VARIABLE_TYPE_OUR;
           }
       }
 
@@ -145,7 +144,8 @@ typedef struct _KijiFrame {
       ++outer;
       }
       // TODO I should use MVM_panic instead.
-      printf("Unknown lexical variable in find_variable_by_name: %s\n", name_cc.c_str());
+      printf("Unknown lexical variable in find_variable_by_name: ");
+      MVM_string_say(tc_, name);
       exit(0);
   }
 
