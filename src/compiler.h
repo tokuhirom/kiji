@@ -1655,20 +1655,20 @@ namespace kiji {
             assert(args->children.size == 1);
             auto fname_s = do_compile(args->children.nodes[0]);
             auto dst_reg_o = reg_obj();
-            auto flag_i = reg_int64();
-            assembler().const_i64(flag_i, APR_FOPEN_READ); // TODO support other flags, etc.
-            auto encoding_flag_i = reg_int64();
-            assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
-            assembler().open_fh(dst_reg_o, fname_s, flag_i, encoding_flag_i);
+            // TODO support latin1, etc.
+            auto mode = push_string("r");
+            auto mode_s = reg_str();
+            assembler().const_s(mode_s, mode);
+            assembler().open_fh(dst_reg_o, fname_s, mode_s);
             return dst_reg_o;
           } else if (std::string(ident->pv->buf, ident->pv->len) == "slurp") {
             assert(args->children.size <= 2);
             assert(args->children.size != 2 && "Encoding option is not supported yet");
             auto fname_s = do_compile(args->children.nodes[0]);
             auto dst_reg_s = reg_str();
-            auto encoding_flag_i = reg_int64();
-            assembler().const_i64(encoding_flag_i, MVM_encoding_type_utf8); // TODO support latin1, etc.
-            assembler().slurp(dst_reg_s, fname_s, encoding_flag_i);
+            auto encoding_s = reg_str();
+            assembler().const_s(encoding_s, push_string("utf8")); // TODO support latin1, etc.
+            assembler().slurp(dst_reg_s, fname_s, encoding_s);
             return dst_reg_s;
           }
         }
