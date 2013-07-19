@@ -429,18 +429,18 @@ namespace kiji {
     }
     Kiji_variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      return frames_.back()->find_variable_by_name(name, lex_no, outer);
+      return frames_.back()->find_variable_by_name(tc_, name, lex_no, outer);
     }
     // lexical variable number by name
     bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
-      return frames_.back()->find_lexical_by_name(name_cc, lex_no, outer);
+      return frames_.back()->find_lexical_by_name(tc_, name_cc, lex_no, outer);
     }
     // Push lexical variable.
     int push_lexical(PVIPString *pv, MVMuint16 type) {
       return push_lexical(std::string(pv->buf, pv->len), type);
     }
     int push_lexical(const std::string name, MVMuint16 type) {
-      return frames_.back()->push_lexical(name, type);
+      return frames_.back()->push_lexical(tc_, name, type);
     }
     void push_pkg_var(const std::string name_cc) {
       MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
@@ -2133,7 +2133,7 @@ namespace kiji {
       {
         int i=0;
         for (auto frame: used_frames_) {
-          cu_->frames[i] = frame->finalize();
+          cu_->frames[i] = frame->finalize(tc_);
           cu_->frames[i]->cu = cu_;
           cu_->frames[i]->work_size = 0;
           ++i;
