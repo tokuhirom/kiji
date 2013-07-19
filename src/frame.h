@@ -21,11 +21,12 @@ enum Kiji_variable_type_t {
 };
 
 typedef struct _KijiFrame {
+public:
+  MVMString **package_variables;
+  MVMuint32 num_package_variables;
   private:
   MVMStaticFrame frame_; // frame itself
   struct _KijiFrame* outer_;
-
-  std::vector<MVMString*> package_variables_;
 
   std::vector<MVMFrameHandler*> handlers_;
 
@@ -121,7 +122,9 @@ typedef struct _KijiFrame {
 
   // TODO Throw exception at this code: `our $n; my $n`
   void push_pkg_var(MVMString *name) {
-      package_variables_.push_back(name);
+    num_package_variables++;
+    Renew(package_variables, num_package_variables, MVMString*);
+    package_variables[num_package_variables-1] = name;
   }
 
   void set_outer(struct _KijiFrame*frame) {
@@ -144,10 +147,11 @@ typedef struct _KijiFrame {
       }
 
       // check package variables
-      for (auto n: f->package_variables_) {
-          if (MVM_string_equal(tc, n, name)) {
-            return VARIABLE_TYPE_OUR;
-          }
+      for (int i=0; i<f->num_package_variables; i++) {
+        auto n = f->package_variables[i];
+        if (MVM_string_equal(tc, n, name)) {
+          return VARIABLE_TYPE_OUR;
+        }
       }
 
       f = &(*(f->outer_));
