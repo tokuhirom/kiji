@@ -6,6 +6,11 @@ The XSUB-writer's interface to the C C<realloc> function, with
 cast.
 */
 
+#pragma once
+
+#include <sstream>
+#include "gen.assembler.h"
+
 // TODO use MVM_panic
 #define Renew(v,n,t) \
   v = (t*)realloc(v, sizeof(t)*n); \
@@ -151,26 +156,7 @@ private:
       exit(0);
   }
 
-  // lexical variable number by name
-  bool find_lexical_by_name(MVMThreadContext* tc, const std::string &name_cc, int *lex_no, int *outer) {
-      MVMString* name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_cc.c_str(), name_cc.size());
-      MVMStaticFrame *f = &frame;
-      *outer = 0;
-      while (f) {
-      MVMLexicalHashEntry *lexical_names = f->lexical_names;
-      MVMLexicalHashEntry *entry;
-      MVM_HASH_GET(tc, lexical_names, name, entry);
-
-      if (entry) {
-          *lex_no= entry->value;
-          return true;
-      }
-      f = f->outer;
-      ++(*outer);
-      }
-      return false;
-      // printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
-      // exit(0);
-  }
 } KijiFrame;
+
+bool Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer);
 

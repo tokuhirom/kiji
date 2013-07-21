@@ -198,15 +198,23 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
+KIJI_OBJS = src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o
 
-all: kiji
+KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h
 
-kiji: 3rd/MoarVM/moarvm src/kiji.cc src/kiji.o 3rd/pvip/libpvip.a src/compiler.h src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o
-	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.o $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o
+all: Makefile kiji
 
-src/kiji.o: src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h
+Makefile: Configure.pl
+    perl Configure.pl
+    echo "Re-run make"
+    exit 1
 
-src/builtin/array.o: 3rd/MoarVM/moarvm
+kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS)
+	$(CXX) $(CXXFLAGS) -Wall $(CINCLUDE) src/kiji.o -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
+
+src/kiji.o: $(KIJI_HEADERS)
+
+src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
 
 .c.o: src/builtin.h
     $(CC) $(CINCLUDE) $(CFLAGS) -c -o $@ $<
@@ -234,9 +242,6 @@ clean:
 	rm -rf kiji src/gen.* 3rd/greg/greg 3rd/greg/*.o vgcore.* core Makefile 3rd/pvip/libpvip.a
     cd 3rd/pvip/ && make clean
     cd 3rd/MoarVM/ && make clean
-
-src/gen.stdafx.pch: src/stdafx.h
-	clang++ $(CXXFLAGS) -cc1 -emit-pch -x c++-header ./src/stdafx.h -o src/gen.stdafx.pch
 
 src/gen.assembler.h: build/asm.pl
 	perl build/asm.pl
