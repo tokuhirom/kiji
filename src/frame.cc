@@ -61,3 +61,9 @@ void Kiji_frame_set_outer(KijiFrame *self, KijiFrame*framef) {
     self->outer = framef;
 }
 
+// TODO Throw exception at this code: `our $n; my $n`
+void Kiji_frame_push_pkg_var(KijiFrame* self, MVMString *name) {
+  self->num_package_variables++;
+  Renew(self->package_variables, self->num_package_variables, MVMString*);
+  self->package_variables[self->num_package_variables-1] = name;
+}

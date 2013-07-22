@@ -459,7 +459,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     }
     void push_pkg_var(const std::string name_cc) {
       MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      frames_.back()->push_pkg_var(name);
+      Kiji_frame_push_pkg_var(frames_.back(), name);
     }
     // Is a and b equivalent?
     bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {

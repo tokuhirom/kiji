@@ -67,14 +67,9 @@ public:
       return idx;
   }
 
-  // TODO Throw exception at this code: `our $n; my $n`
-  void push_pkg_var(MVMString *name) {
-    num_package_variables++;
-    Renew(package_variables, num_package_variables, MVMString*);
-    package_variables[num_package_variables-1] = name;
-  }
 } KijiFrame;
 
+void Kiji_frame_push_pkg_var(KijiFrame* self, MVMString *name);
 void Kiji_frame_set_outer(KijiFrame *self, KijiFrame*framef);
 bool Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer);
 Kiji_variable_type_t Kiji_find_variable_by_name(KijiFrame *f, MVMThreadContext* tc, MVMString * name, int &lex_no, int &outer);
