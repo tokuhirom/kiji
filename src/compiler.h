@@ -156,22 +156,20 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
   }
 
 
-namespace kiji {
-
-  void dump_object(MVMThreadContext*tc, MVMObject* obj) {
-    if (obj==NULL) {
-      printf("(null)\n");
-      return;
-    }
-    MVM_string_say(tc, REPR(obj)->name);
+void dump_object(MVMThreadContext*tc, MVMObject* obj) {
+  if (obj==NULL) {
+    printf("(null)\n");
+    return;
   }
+  MVM_string_say(tc, REPR(obj)->name);
+}
 
   /**
    * OP map is 3rd/MoarVM/src/core/oplist
    * interp code is 3rd/MoarVM/src/core/interp.c
    */
   enum { UNKNOWN_REG = -1 };
-  class Compiler {
+  class KijiCompiler {
   private:
     MVMCompUnit* cu_;
     MVMThreadContext *tc_;
@@ -193,12 +191,12 @@ namespace kiji {
 
     class Label {
     private:
-      Compiler *compiler_;
+      KijiCompiler *compiler_;
       ssize_t address_;
       std::vector<ssize_t> reserved_addresses_;
     public:
-      Label(Compiler *compiler) :compiler_(compiler), address_(-1) { }
-      Label(Compiler *compiler, ssize_t address) :compiler_(compiler), address_(address) { }
+      Label(KijiCompiler *compiler) :compiler_(compiler), address_(-1) { }
+      Label(KijiCompiler *compiler, ssize_t address) :compiler_(compiler), address_(address) { }
       ~Label() {
         assert(address_ != -1 && "Unsolved label");
       }
@@ -546,13 +544,13 @@ namespace kiji {
 
     class LoopGuard {
     private:
-      kiji::Compiler *compiler_;
+      KijiCompiler *compiler_;
       MVMuint32 start_offset_;
       MVMuint32 last_offset_;
       MVMuint32 next_offset_;
       MVMuint32 redo_offset_;
     public:
-      LoopGuard(kiji::Compiler *compiler) :compiler_(compiler) {
+      LoopGuard(KijiCompiler *compiler) :compiler_(compiler) {
         start_offset_ = compiler_->ASM_BYTECODE_SIZE()-1;
       }
       ~LoopGuard() {
@@ -2118,7 +2116,7 @@ namespace kiji {
       }
     }
   public:
-    Compiler(MVMCompUnit * cu, MVMThreadContext * tc): cu_(cu), frame_no_(0), tc_(tc) {
+    KijiCompiler(MVMCompUnit * cu, MVMThreadContext * tc): cu_(cu), frame_no_(0), tc_(tc) {
       initialize();
 
       current_class_how_ = NULL;
@@ -2129,7 +2127,7 @@ namespace kiji {
 
       num_sc_classes_ = 0;
     }
-    ~Compiler() { }
+    ~KijiCompiler() { }
     void initialize() {
       // init compunit.
       int apr_return_status;
@@ -2287,5 +2285,4 @@ namespace kiji {
       CU->scs_to_resolve[1] = NULL;
     }
   };
-}
 

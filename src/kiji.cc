@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
   MVMCompUnit cu;
   memset(&cu, 0, sizeof(MVMCompUnit));
 
-  kiji::Compiler compiler(&cu, vm->main_thread);
+  KijiCompiler compiler(&cu, vm->main_thread);
   compiler.compile(root_node, vm);
   compiler.finalize(vm);
 #ifdef DEBUG_ASM
