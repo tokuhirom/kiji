@@ -512,7 +512,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       frame->frame.name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, buf, len);
       free(buf);
       if (frames_.size() != 0) {
-        frame->set_outer(&(*(frames_.back())));
+        Kiji_frame_set_outer(frame, frames_.back());
       }
       frames_.push_back(frame);
       cu_->num_frames++;

@@ -73,13 +73,9 @@ public:
     Renew(package_variables, num_package_variables, MVMString*);
     package_variables[num_package_variables-1] = name;
   }
-
-  void set_outer(struct _KijiFrame*framef) {
-      frame.outer = &(framef->frame);
-      this->outer = &(*framef);
-  }
 } KijiFrame;
 
+void Kiji_frame_set_outer(KijiFrame *self, KijiFrame*framef);
 bool Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer);
 Kiji_variable_type_t Kiji_find_variable_by_name(KijiFrame *f, MVMThreadContext* tc, MVMString * name, int &lex_no, int &outer);
 

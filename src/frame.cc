@@ -56,3 +56,8 @@ Kiji_variable_type_t Kiji_find_variable_by_name(KijiFrame *f, MVMThreadContext* 
     exit(0);
 }
 
+void Kiji_frame_set_outer(KijiFrame *self, KijiFrame*framef) {
+    self->frame.outer = &(framef->frame);
+    self->outer = framef;
+}
+
