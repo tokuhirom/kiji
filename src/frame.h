@@ -78,39 +78,8 @@ public:
       frame.outer = &(framef->frame);
       this->outer = &(*framef);
   }
-
-  Kiji_variable_type_t find_variable_by_name(MVMThreadContext* tc, MVMString * name, int &lex_no, int &outer) {
-      struct _KijiFrame* f = this;
-      outer = 0;
-      while (f) {
-      // check lexical variables
-      MVMLexicalHashEntry *lexical_names = f->frame.lexical_names;
-      MVMLexicalHashEntry *entry;
-      MVM_HASH_GET(tc, lexical_names, name, entry);
-
-      if (entry) {
-          lex_no = entry->value;
-          return KIJI_VARIABLE_TYPE_MY;
-      }
-
-      // check package variables
-      for (int i=0; i<f->num_package_variables; i++) {
-        auto n = f->package_variables[i];
-        if (MVM_string_equal(tc, n, name)) {
-          return KIJI_VARIABLE_TYPE_OUR;
-        }
-      }
-
-      f = &(*(f->outer));
-      ++outer;
-      }
-      // TODO I should use MVM_panic instead.
-      printf("Unknown lexical variable in find_variable_by_name: ");
-      MVM_string_say(tc, name);
-      exit(0);
-  }
-
 } KijiFrame;
 
 bool Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer);
+Kiji_variable_type_t Kiji_find_variable_by_name(KijiFrame *f, MVMThreadContext* tc, MVMString * name, int &lex_no, int &outer);
 

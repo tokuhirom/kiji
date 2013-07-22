@@ -445,7 +445,7 @@ namespace kiji {
     }
     Kiji_variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      return frames_.back()->find_variable_by_name(tc_, name, lex_no, outer);
+      return Kiji_find_variable_by_name(frames_.back(), tc_, name, lex_no, outer);
     }
     // lexical variable number by name
     bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
@@ -2285,9 +2285,6 @@ namespace kiji {
       CU->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
       CU->scs_to_resolve[0] = NULL;
       CU->scs_to_resolve[1] = NULL;
-    }
-    MVMStaticFrame * get_start_frame() {
-      return cu_->main_frame ? cu_->main_frame : cu_->frames[0];
     }
   };
 }

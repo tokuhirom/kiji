@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
     free(dump);
   } else {
     MVMThreadContext *tc = vm->main_thread;
-    MVMStaticFrame *start_frame = compiler.get_start_frame();
+    MVMStaticFrame *start_frame = cu.main_frame ? cu.main_frame : cu.frames[0];
     MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
   }
 
