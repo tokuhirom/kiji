@@ -1,6 +1,6 @@
 // vim:ts=2:sw=2:tw=0:
 
-
+#include <stddef.h>
 #include <stdio.h>
 #include <assert.h>
 #include <fstream>
@@ -12,6 +12,7 @@ extern "C" {
 #include "commander.h"
 }
 #include "compiler.h"
+#include "asm.h"
 
 typedef struct _CmdLineState {
     int dump_ast;
@@ -127,17 +128,18 @@ int main(int argc, char** argv) {
 
   kiji::Compiler compiler(&cu, vm->main_thread);
   compiler.compile(root_node, vm);
-  if (state->dump_bytecode) {
-    compiler.finalize(vm);
+  compiler.finalize(vm);
+#ifdef DEBUG_ASM
+  Kiji_asm_dump_compunit(&cu);
+#endif
 
+  if (state->dump_bytecode) {
     // dump it
     char *dump = MVM_bytecode_dump(vm->main_thread, &cu);
 
     printf("%s", dump);
     free(dump);
   } else {
-    compiler.finalize(vm);
-
     MVMThreadContext *tc = vm->main_thread;
     MVMStaticFrame *start_frame = compiler.get_start_frame();
     MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);

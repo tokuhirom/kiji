@@ -9,16 +9,7 @@ cast.
 #pragma once
 
 #include <sstream>
-#include "gen.assembler.h"
-
-// TODO use MVM_panic
-#define Renew(v,n,t) \
-  v = (t*)realloc(v, sizeof(t)*n); \
-  assert(v);
-
-#define Renewc(v,n,t,c) \
-  v = (c*)realloc(v, sizeof(t)*n); \
-  assert(v);
+#include "handy.h"
 
 enum Kiji_variable_type_t {
   VARIABLE_TYPE_MY,
@@ -32,44 +23,7 @@ public:
   MVMStaticFrame frame; // frame itself
   struct _KijiFrame* outer;
 
-private:
-  kiji::Assembler assembler_;
-
-  void set_cuuid(MVMThreadContext *tc) {
-      static int cuuid_counter = 0;
-      std::ostringstream oss;
-      oss << "frame_cuuid_" << cuuid_counter++;
-      std::string cuuid = oss.str();
-      frame.cuuid = MVM_string_utf8_decode(tc, tc->instance->VMString, cuuid.c_str(), cuuid.size());
-  }
-
   public:
-  _KijiFrame(MVMThreadContext* tc, const std::string name) {
-      memset(&frame, 0, sizeof(MVMFrame));
-      frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, name.c_str(), name.size());
-  }
-  ~_KijiFrame(){ }
-
-  kiji::Assembler & assembler() {
-      return assembler_;
-  }
-
-  MVMStaticFrame* finalize(MVMThreadContext * tc) {
-      // see src/core/bytecode.c
-      frame.env_size = frame.num_lexicals * sizeof(MVMRegister);
-      frame.static_env = (MVMRegister*)malloc(frame.env_size);
-      memset(frame.static_env, 0, frame.env_size);
-
-      // cuuid
-      set_cuuid(tc);
-
-      // bytecode
-      frame.bytecode      = assembler_.bytecode();
-      frame.bytecode_size = assembler_.bytecode_size();
-
-      return &frame;
-  }
-
   void push_handler(MVMFrameHandler* handler) {
     frame.num_handlers++;
     Renew(frame.handlers, frame.num_handlers, MVMFrameHandler);

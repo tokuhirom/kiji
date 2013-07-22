@@ -10,6 +10,7 @@ my $p = Getopt::Long::Parser->new(
 );
 $p->getoptions(
     'debug!' => \my $debug,
+    'debug-asm!' => \my $debug_asm,
 );
 my @CXXFLAGS = qw(-g -std=c++11);
 my @CFLAGS= qw(-g);
@@ -22,6 +23,7 @@ if ($debug) {
     push @CXXFLAGS, qw(-O3);
     push @CFLAGS, qw(-O3);
 }
+push @CXXFLAGS, qw(-DDEBUG_ASM) if $debug_asm;
 push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin' || $ENV{TRAVIS};
 my $CXXFLAGS=join(' ', @CXXFLAGS);
 my $CFLAGS=join(' ', @CFLAGS);
@@ -198,7 +200,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
-KIJI_OBJS = src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o
+KIJI_OBJS = src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o
 
 KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h
 
@@ -209,12 +211,14 @@ Makefile: Configure.pl
     echo "Re-run make"
     exit 1
 
-kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS)
-	$(CXX) $(CXXFLAGS) -Wall $(CINCLUDE) src/kiji.o -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
+kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
+	$(CXX) $(CXXFLAGS) -Wall $(CINCLUDE) -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
 
-src/kiji.o: $(KIJI_HEADERS)
+src/kiji.o: $(KIJI_HEADERS) Makefile
 
-src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
+src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
+
+src/builtin/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
 
 .c.o: src/builtin.h
     $(CC) $(CINCLUDE) $(CFLAGS) -c -o $@ $<

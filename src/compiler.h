@@ -12,6 +12,20 @@
 #include "builtin.h"
 #include "pvip.h"
 #include "frame.h"
+#include "handy.h"
+#include "asm.h"
+
+#define ASM_OP_U16_U16_U16(a,b,c,d,e) \
+  Kiji_asm_op_u16_u16_u16(&(*(frames_.back())), a,b,c,d,e)
+
+#define ASM_OP_U16_U16(a,b,c,d) \
+  Kiji_asm_op_u16_u16(&(*(frames_.back())), a,b,c,d)
+
+#define ASM_WRITE_UINT16_T(a,b) \
+  Kiji_asm_write_uint16_t_for(&(*(frames_.back())), a,b)
+
+#define ASM_OP_U16_U32(a,b, c, d) \
+  Kiji_asm_op_u16_u32(&(*(frames_.back())), a,b, c,d)
 
 #define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
     { \
@@ -162,8 +176,7 @@ namespace kiji {
     MVMCompUnit* cu_;
     MVMThreadContext *tc_;
     int frame_no_;
-    std::vector<std::shared_ptr<KijiFrame>> frames_;
-    std::list<std::shared_ptr<KijiFrame>> used_frames_;
+    std::vector<KijiFrame*> frames_;
     MVMObject* current_class_how_;
 
     MVMSerializationContext * sc_classes_;
@@ -194,11 +207,11 @@ namespace kiji {
       }
       void put() {
         assert(address_ == -1);
-        address_ = compiler_->assembler().bytecode_size();
+        address_ = compiler_->frames_.back()->frame.bytecode_size;
 
         // rewrite reserved addresses
         for (auto r: reserved_addresses_) {
-          compiler_->assembler().write_uint32_t(address_, r);
+          Kiji_asm_write_uint32_t(&(*(compiler_->frames_.back())), address_, r);
         }
         reserved_addresses_.empty();
       }
@@ -208,43 +221,46 @@ namespace kiji {
       bool is_solved() const { return address_!=-1; }
     };
 
-    Label label() { return Label(this, assembler().bytecode_size()); }
+    Label label() { return Label(this, frames_.back()->frame.bytecode_size); }
     Label label_unsolved() { return Label(this); }
+
+#define ASM_BYTECODE_SIZE() \
+    frames_.back()->frame.bytecode_size
 
     void goto_(Label &label) {
       if (!label.is_solved()) {
-        label.reserve(assembler().bytecode_size() + 2);
+        label.reserve(ASM_BYTECODE_SIZE() + 2);
       }
-      assembler().goto_(label.address());
+      ASM_GOTO(label.address());
     }
     void return_any(uint16_t reg) {
       switch (get_local_type(reg)) {
       case MVM_reg_int64:
-        assembler().return_i(reg);
+        ASM_RETURN_I(reg);
         break;
       case MVM_reg_str:
-        assembler().return_s(reg);
+        ASM_RETURN_S(reg);
         break;
       case MVM_reg_obj:
-        assembler().return_o(reg);
+        ASM_RETURN_O(reg);
         break;
       case MVM_reg_num64:
-        assembler().return_n(reg);
+        ASM_RETURN_N(reg);
         break;
       default: abort();
       }
     }
     void if_any(uint16_t reg, Label &label) {
       if (!label.is_solved()) {
-        label.reserve(assembler().bytecode_size() + 2 + 2);
+        label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
-      assembler().op_u16_u32(MVM_OP_BANK_primitives, if_op(reg), reg, label.address());
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, if_op(reg), reg, label.address());
     }
     void unless_any(uint16_t reg, Label &label) {
       if (!label.is_solved()) {
-        label.reserve(assembler().bytecode_size() + 2 + 2);
+        label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
-      assembler().op_u16_u32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
     }
 
     // reserve register
@@ -303,13 +319,13 @@ namespace kiji {
       current_class_how_ = NULL;
 
       auto retval = reg_obj();
-      assembler().wval(retval, wval1, wval2);
+      ASM_WVAL(retval, wval1, wval2);
 
       // Bind class object to lexical variable
       auto name_node = node->children.nodes[0];
       if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STRING) {
         auto lex = push_lexical(PVIPSTRING2STDSTRING(name_node->pv), MVM_reg_obj);
-        assembler().bindlex(
+        ASM_BINDLEX(
           lex,
           0,
           retval
@@ -329,7 +345,7 @@ namespace kiji {
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
         auto reg_no = reg_obj();
-        assembler().getlex(
+        ASM_GETLEX(
           reg_no,
           lex_no,
           outer // outer frame
@@ -343,17 +359,17 @@ namespace kiji {
         auto reg = reg_obj();
         auto varname = push_string(name);
         auto varname_s = reg_str();
-        assembler().getlex(
+        ASM_GETLEX(
           reg,
           lex_no,
           outer // outer frame
         );
-        assembler().const_s(
+        ASM_CONST_S(
           varname_s,
           varname
         );
         // TODO getwho
-        assembler().atkey_o(
+        ASM_ATKEY_O(
           reg,
           reg,
           varname_s
@@ -369,7 +385,7 @@ namespace kiji {
       int outer = -1;
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==VARIABLE_TYPE_MY) {
-        assembler().bindlex(
+        ASM_BINDLEX(
           lex_no,
           outer,
           val_reg
@@ -382,17 +398,17 @@ namespace kiji {
         auto reg = reg_obj();
         auto varname = push_string(name);
         auto varname_s = reg_str();
-        assembler().getlex(
+        ASM_GETLEX(
           reg,
           lex_no,
           outer // outer frame
         );
-        assembler().const_s(
+        ASM_CONST_S(
           varname_s,
           varname
         );
         // TODO getwho
-        assembler().bindkey_o(
+        ASM_BINDKEY_O(
           reg,
           varname_s,
           val_reg
@@ -403,7 +419,7 @@ namespace kiji {
     // This reg returns register number contains true value.
     int const_true() {
       auto reg = reg_int64();
-      assembler().const_i64(reg, 1);
+      ASM_CONST_I64(reg, 1);
       return reg;
     }
 
@@ -485,26 +501,28 @@ namespace kiji {
     void push_handler(MVMFrameHandler *handler) {
       return frames_.back()->push_handler(handler);
     }
-    Assembler & assembler() {
-      return frames_.back()->assembler();
-    }
     MVMStaticFrame* get_frame(int frame_no) {
-      auto iter = used_frames_.begin();
-      for (int i=0; i<frame_no; i++) {
-        iter++;
-      }
-      return &((*iter)->frame);
+      return cu_->frames[frame_no];
     }
     int push_frame(const std::string & name) {
-      std::ostringstream oss;
-      oss << name << frame_no_++;
-      std::shared_ptr<KijiFrame> frame = std::make_shared<KijiFrame>(tc_, oss.str());
+      assert(tc_);
+      char *buf = (char*)malloc((name.size()+32)*sizeof(char));
+      int len = snprintf(buf, name.size()+31, "%s%d", name.c_str(), frame_no_++);
+      // TODO Newxz
+      KijiFrame* frame = (KijiFrame*)malloc(sizeof(KijiFrame));
+      memset(frame, 0, sizeof(KijiFrame));
+      frame->frame.name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, buf, len);
+      free(buf);
       if (frames_.size() != 0) {
         frame->set_outer(&(*(frames_.back())));
       }
       frames_.push_back(frame);
-      used_frames_.push_back(frames_.back());
-      return used_frames_.size()-1;
+      cu_->num_frames++;
+      Renew(cu_->frames, cu_->num_frames, MVMStaticFrame*);
+      cu_->frames[cu_->num_frames-1] = &(frames_.back()->frame);
+      cu_->frames[cu_->num_frames-1]->cu = cu_;
+      cu_->frames[cu_->num_frames-1]->work_size = 0;
+      return cu_->num_frames-1;
     }
     void pop_frame() {
       frames_.pop_back();
@@ -522,7 +540,7 @@ namespace kiji {
         }
       } else {
         auto reg = this->box(do_compile(node));
-        assembler().push_o(array_reg, reg);
+        ASM_PUSH_O(array_reg, reg);
       }
     }
 
@@ -535,10 +553,10 @@ namespace kiji {
       MVMuint32 redo_offset_;
     public:
       LoopGuard(kiji::Compiler *compiler) :compiler_(compiler) {
-        start_offset_ = compiler_->assembler().bytecode_size()-1;
+        start_offset_ = compiler_->ASM_BYTECODE_SIZE()-1;
       }
       ~LoopGuard() {
-        MVMuint32 end_offset = compiler_->assembler().bytecode_size()-1;
+        MVMuint32 end_offset = compiler_->ASM_BYTECODE_SIZE()-1;
 
         MVMFrameHandler *last_handler = new MVMFrameHandler;
         last_handler->start_offset = start_offset_;
@@ -569,13 +587,13 @@ namespace kiji {
       }
       // fixme: `put` is not the best verb in English here.
       void put_last() {
-        last_offset_ = compiler_->assembler().bytecode_size()-1+1;
+        last_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
       }
       void put_redo() {
-        redo_offset_ = compiler_->assembler().bytecode_size()-1+1;
+        redo_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
       }
       void put_next() {
-        next_offset_ = compiler_->assembler().bytecode_size()-1+1;
+        next_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
       }
     };
 
@@ -589,7 +607,7 @@ namespace kiji {
         }
         auto reg_no = get_variable(node->children.nodes[0]->pv);
         auto i_tmp = to_i(reg_no);
-        assembler().dec_i(i_tmp);
+        ASM_DEC_I(i_tmp);
         set_variable(node->children.nodes[0]->pv, to_o(i_tmp));
         return reg_no;
       }
@@ -600,7 +618,7 @@ namespace kiji {
         }
         auto reg_no = get_variable(node->children.nodes[0]->pv);
         auto i_tmp = to_i(reg_no);
-        assembler().inc_i(i_tmp);
+        ASM_INC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
         set_variable(node->children.nodes[0]->pv, dst_reg);
         return reg_no;
@@ -612,7 +630,7 @@ namespace kiji {
         }
         auto reg_no = get_variable(node->children.nodes[0]->pv);
         auto i_tmp = to_i(reg_no);
-        assembler().inc_i(i_tmp);
+        ASM_INC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
         set_variable(node->children.nodes[0]->pv, dst_reg);
         return dst_reg;
@@ -624,38 +642,38 @@ namespace kiji {
         }
         auto reg_no = get_variable(PVIPSTRING2STDSTRING(node->children.nodes[0]->pv));
         auto i_tmp = to_i(reg_no);
-        assembler().dec_i(i_tmp);
+        ASM_DEC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
         set_variable(PVIPSTRING2STDSTRING(node->children.nodes[0]->pv), dst_reg);
         return dst_reg;
       }
       case PVIP_NODE_UNARY_BITWISE_NEGATION: { // +^1
         auto reg = to_i(do_compile(node->children.nodes[0]));
-        assembler().bnot_i(reg, reg);
+        ASM_BNOT_I(reg, reg);
         return reg;
       }
       case PVIP_NODE_BRSHIFT: { // +>
         auto l = to_i(do_compile(node->children.nodes[0]));
         auto r = to_i(do_compile(node->children.nodes[1]));
-        assembler().brshift_i(r, l, r);
+        ASM_BRSHIFT_I(r, l, r);
         return r;
       }
       case PVIP_NODE_BLSHIFT: { // +<
         auto l = to_i(do_compile(node->children.nodes[0]));
         auto r = to_i(do_compile(node->children.nodes[1]));
-        assembler().blshift_i(r, l, r);
+        ASM_BLSHIFT_I(r, l, r);
         return r;
       }
       case PVIP_NODE_ABS: {
         // TODO support abs_n?
         auto r = to_i(do_compile(node->children.nodes[0]));
-        assembler().abs_i(r, r);
+        ASM_ABS_I(r, r);
         return r;
       }
       case PVIP_NODE_LAST: {
         // break from for, while, loop.
         auto ret = reg_obj();
-        assembler().throwcatlex(
+        ASM_THROWCATLEX(
           ret,
           MVM_EX_CAT_LAST
         );
@@ -664,7 +682,7 @@ namespace kiji {
       case PVIP_NODE_REDO: {
         // redo from for, while, loop.
         auto ret = reg_obj();
-        assembler().throwcatlex(
+        ASM_THROWCATLEX(
           ret,
           MVM_EX_CAT_REDO
         );
@@ -673,7 +691,7 @@ namespace kiji {
       case PVIP_NODE_NEXT: {
         // continue from for, while, loop.
         auto ret = reg_obj();
-        assembler().throwcatlex(
+        ASM_THROWCATLEX(
           ret,
           MVM_EX_CAT_NEXT
         );
@@ -685,19 +703,19 @@ namespace kiji {
         if (reg < 0) {
           MEMORY_ERROR();
         }
-        // assembler().return_o(this->box(reg));
+        // ASM_RETURN_O(this->box(reg));
         switch (get_local_type(reg)) {
         case MVM_reg_int64:
-          assembler().return_i(reg);
+          ASM_RETURN_I(reg);
           break;
         case MVM_reg_str:
-          assembler().return_s(reg);
+          ASM_RETURN_S(reg);
           break;
         case MVM_reg_obj:
-          assembler().return_o(this->box(reg));
+          ASM_RETURN_O(this->box(reg));
           break;
         case MVM_reg_num64:
-          assembler().return_n(reg);
+          ASM_RETURN_N(reg);
           break;
         default:
           MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", get_local_type(reg));
@@ -726,21 +744,21 @@ namespace kiji {
         }
 
         auto frame_no = push_frame(path);
-        assembler().checkarity(0,0);
+        ASM_CHECKARITY(0,0);
         this->do_compile(root_node);
-        assembler().return_();
+        ASM_RETURN();
         pop_frame();
 
         auto code_reg = reg_obj();
-        assembler().getcode(code_reg, frame_no);
+        ASM_GETCODE(code_reg, frame_no);
         MVMCallsite* callsite = new MVMCallsite;
         memset(callsite, 0, sizeof(MVMCallsite));
         callsite->arg_count = 0;
         callsite->num_pos = 0;
         callsite->arg_flags = NULL;
         auto callsite_no = push_callsite(callsite);
-        assembler().prepargs(callsite_no);
-        assembler().invoke_v(code_reg);
+        ASM_PREPARGS(callsite_no);
+        ASM_INVOKE_V(code_reg);
 
         return UNKNOWN_REG;
       }
@@ -748,7 +766,7 @@ namespace kiji {
         int msg_reg = to_s(do_compile(node->children.nodes[0]));
         int dst_reg = reg_obj();
         assert(msg_reg != UNKNOWN_REG);
-        assembler().die(dst_reg, msg_reg);
+        ASM_DIE(dst_reg, msg_reg);
         return UNKNOWN_REG;
       }
       case PVIP_NODE_WHILE: {
@@ -778,7 +796,7 @@ namespace kiji {
       }
       case PVIP_NODE_LAMBDA: {
         auto frame_no = push_frame("lambda");
-        assembler().checkarity(
+        ASM_CHECKARITY(
           node->children.nodes[0]->children.size,
           node->children.nodes[0]->children.size
         );
@@ -786,35 +804,35 @@ namespace kiji {
           PVIPNode *n = node->children.nodes[0]->children.nodes[i];
           int reg = reg_obj();
           int lex = push_lexical(PVIPSTRING2STDSTRING(n->pv), MVM_reg_obj);
-          assembler().param_rp_o(reg, i);
-          assembler().bindlex(lex, 0, reg);
+          ASM_PARAM_RP_O(reg, i);
+          ASM_BINDLEX(lex, 0, reg);
         }
         auto retval = do_compile(node->children.nodes[1]);
         if (retval == UNKNOWN_REG) {
           retval = reg_obj();
-          assembler().null(retval);
+          ASM_NULL(retval);
         }
         return_any(retval);
         pop_frame();
 
         // warn if void context.
         auto dst_reg = reg_obj();
-        assembler().getcode(dst_reg, frame_no);
+        ASM_GETCODE(dst_reg, frame_no);
 
         return dst_reg;
       }
       case PVIP_NODE_BLOCK: {
         auto frame_no = push_frame("block");
-        assembler().checkarity(0,0);
+        ASM_CHECKARITY(0,0);
         for (int i=0; i<node->children.size; i++) {
           PVIPNode *n = node->children.nodes[i];
           (void)do_compile(n);
         }
-        assembler().return_();
+        ASM_RETURN();
         pop_frame();
 
         auto frame_reg = reg_obj();
-        assembler().getcode(frame_reg, frame_no);
+        ASM_GETCODE(frame_reg, frame_no);
 
         MVMCallsite* callsite = new MVMCallsite;
         memset(callsite, 0, sizeof(MVMCallsite));
@@ -822,28 +840,28 @@ namespace kiji {
         callsite->num_pos = 0;
         callsite->arg_flags = NULL;
         auto callsite_no = push_callsite(callsite);
-        assembler().prepargs(callsite_no);
+        ASM_PREPARGS(callsite_no);
 
-        assembler().invoke_v(frame_reg); // trash result
+        ASM_INVOKE_V(frame_reg); // trash result
 
         return UNKNOWN_REG;
       }
       case PVIP_NODE_STRING: {
         int str_num = push_string(node->pv);
         int reg_num = reg_str();
-        assembler().const_s(reg_num, str_num);
+        ASM_CONST_S(reg_num, str_num);
         return reg_num;
       }
       case PVIP_NODE_INT: {
         uint16_t reg_num = reg_int64();
         int64_t n = node->iv;
-        assembler().const_i64(reg_num, n);
+        ASM_CONST_I64(reg_num, n);
         return reg_num;
       }
       case PVIP_NODE_NUMBER: {
         uint16_t reg_num = reg_num64();
         MVMnum64 n = node->nv;
-        assembler().const_n64(reg_num, n);
+        ASM_CONST_N64(reg_num, n);
         return reg_num;
       }
       case PVIP_NODE_BIND: {
@@ -853,7 +871,7 @@ namespace kiji {
           // my $var := foo;
           int lex_no = do_compile(lhs);
           int val    = this->box(do_compile(rhs));
-          assembler().bindlex(
+          ASM_BINDLEX(
             lex_no, // lex number
             0,      // frame outer count
             val     // value
@@ -871,16 +889,16 @@ namespace kiji {
             MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
           }
           auto package = reg_obj();
-          assembler().getlex(
+          ASM_GETLEX(
             package,
             lex_no,
             outer // outer frame
           );
           // TODO getwho
           auto varname_s = reg_str();
-          assembler().const_s(varname_s, varname);
+          ASM_CONST_S(varname_s, varname);
           // 0x0F    bindkey_o           r(obj) r(str) r(obj)
-          assembler().bindkey_o(
+          ASM_BINDKEY_O(
             package,
             varname_s,
             val
@@ -902,9 +920,9 @@ namespace kiji {
 
         auto funcreg = reg_obj();
         auto funclex = push_lexical(std::string("&") + name, MVM_reg_obj);
-        auto func_pos = assembler().bytecode_size() + 2 + 2;
-        assembler().getcode(funcreg, 0);
-        assembler().bindlex(
+        auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
+        ASM_GETCODE(funcreg, 0);
+        ASM_BINDLEX(
             funclex,
             0, // frame outer count
             funcreg
@@ -916,7 +934,7 @@ namespace kiji {
         // TODO process named params
         // TODO process types
         {
-          assembler().checkarity(
+          ASM_CHECKARITY(
               node->children.nodes[1]->children.size+1,
               node->children.nodes[1]->children.size+1
           );
@@ -925,16 +943,16 @@ namespace kiji {
             // push self
             int lex = push_lexical("__self", MVM_reg_obj);
             int reg = reg_obj();
-            assembler().param_rp_o(reg, 0);
-            assembler().bindlex(lex, 0, reg);
+            ASM_PARAM_RP_O(reg, 0);
+            ASM_BINDLEX(lex, 0, reg);
           }
 
           for (int i=1; i<node->children.nodes[1]->children.size; ++i) {
             auto n = node->children.nodes[1]->children.nodes[i];
             int reg = reg_obj();
             int lex = push_lexical(n->pv, MVM_reg_obj);
-            assembler().param_rp_o(reg, i);
-            assembler().bindlex(lex, 0, reg);
+            ASM_PARAM_RP_O(reg, i);
+            ASM_BINDLEX(lex, 0, reg);
             ++i;
           }
         }
@@ -949,16 +967,16 @@ namespace kiji {
             if (i==stmts->children.size-1 && reg >= 0) {
               switch (get_local_type(reg)) {
               case MVM_reg_int64:
-                assembler().return_i(reg);
+                ASM_RETURN_I(reg);
                 break;
               case MVM_reg_str:
-                assembler().return_s(reg);
+                ASM_RETURN_S(reg);
                 break;
               case MVM_reg_obj:
-                assembler().return_o(reg);
+                ASM_RETURN_O(reg);
                 break;
               case MVM_reg_num64:
-                assembler().return_n(reg);
+                ASM_RETURN_N(reg);
                 break;
               default: abort();
               }
@@ -969,13 +987,13 @@ namespace kiji {
           // return null
           if (!returned) {
             int reg = reg_obj();
-            assembler().null(reg);
-            assembler().return_o(reg);
+            ASM_NULL(reg);
+            ASM_RETURN_O(reg);
           }
         }
         pop_frame();
 
-        assembler().write_uint16_t(frame_no, func_pos);
+        ASM_WRITE_UINT16_T(frame_no, func_pos);
 
         // bind method object to class how
         if (!current_class_how_) {
@@ -1000,9 +1018,9 @@ namespace kiji {
 
         auto funcreg = reg_obj();
         auto funclex = push_lexical(std::string("&") + name, MVM_reg_obj);
-        auto func_pos = assembler().bytecode_size() + 2 + 2;
-        assembler().getcode(funcreg, 0);
-        assembler().bindlex(
+        auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
+        ASM_GETCODE(funcreg, 0);
+        ASM_BINDLEX(
             funclex,
             0, // frame outer count
             funcreg
@@ -1014,7 +1032,7 @@ namespace kiji {
         // TODO process named params
         // TODO process types
         {
-          assembler().checkarity(
+          ASM_CHECKARITY(
               node->children.nodes[1]->children.size,
               node->children.nodes[1]->children.size
           );
@@ -1023,8 +1041,8 @@ namespace kiji {
             auto n = node->children.nodes[1]->children.nodes[i];
             int reg = reg_obj();
             int lex = push_lexical(n->pv, MVM_reg_obj);
-            assembler().param_rp_o(reg, i);
-            assembler().bindlex(lex, 0, reg);
+            ASM_PARAM_RP_O(reg, i);
+            ASM_BINDLEX(lex, 0, reg);
             ++i;
           }
         }
@@ -1039,16 +1057,16 @@ namespace kiji {
             if (i==stmts->children.size-1 && reg >= 0) {
               switch (get_local_type(reg)) {
               case MVM_reg_int64:
-                assembler().return_i(reg);
+                ASM_RETURN_I(reg);
                 break;
               case MVM_reg_str:
-                assembler().return_s(reg);
+                ASM_RETURN_S(reg);
                 break;
               case MVM_reg_obj:
-                assembler().return_o(reg);
+                ASM_RETURN_O(reg);
                 break;
               case MVM_reg_num64:
-                assembler().return_n(reg);
+                ASM_RETURN_N(reg);
                 break;
               default: abort();
               }
@@ -1059,13 +1077,13 @@ namespace kiji {
           // return null
           if (!returned) {
             int reg = reg_obj();
-            assembler().null(reg);
-            assembler().return_o(reg);
+            ASM_NULL(reg);
+            ASM_RETURN_O(reg);
           }
         }
         pop_frame();
 
-        assembler().write_uint16_t(frame_no, func_pos);
+        ASM_WRITE_UINT16_T(frame_no, func_pos);
 
         return funcreg;
       }
@@ -1075,7 +1093,7 @@ namespace kiji {
       }
       case PVIP_NODE_CLARGS: { // @*ARGS
         auto retval = reg_obj();
-        assembler().wval(retval, 0,0);
+        ASM_WVAL(retval, 0,0);
         return retval;
       }
       case PVIP_NODE_CLASS: {
@@ -1093,14 +1111,14 @@ namespace kiji {
           auto src_reg = box(do_compile(node->children.nodes[0]));
           auto iter_reg = reg_obj();
           auto label_end = label_unsolved();
-          assembler().iter(iter_reg, src_reg);
+          ASM_ITER(iter_reg, src_reg);
           unless_any(iter_reg, label_end);
 
         auto label_for = label();
         loop.put_next();
 
           auto val = reg_obj();
-          assembler().shift_o(val, iter_reg);
+          ASM_SHIFT_O(val, iter_reg);
 
           if (node->children.nodes[1]->type == PVIP_NODE_LAMBDA) {
             auto body = do_compile(node->children.nodes[1]);
@@ -1111,12 +1129,12 @@ namespace kiji {
             callsite->arg_flags = new MVMCallsiteEntry[1];
             callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
             auto callsite_no = push_callsite(callsite);
-            assembler().prepargs(callsite_no);
-            assembler().arg_o(0, val);
-            assembler().invoke_v(body);
+            ASM_PREPARGS(callsite_no);
+            ASM_ARG_O(0, val);
+            ASM_INVOKE_V(body);
           } else {
             int it = push_lexical("$_", MVM_reg_obj);
-            assembler().bindlex(it, 0, val);
+            ASM_BINDLEX(it, 0, val);
             do_compile(node->children.nodes[1]);
           }
 
@@ -1246,7 +1264,7 @@ namespace kiji {
         // class Foo { }; Foo;
         if (find_lexical_by_name(std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
           auto reg_no = reg_obj();
-          assembler().getlex(
+          ASM_GETLEX(
             reg_no,
             lex_no,
             outer // outer frame
@@ -1255,7 +1273,7 @@ namespace kiji {
         // sub fooo { }; foooo;
         } else if (find_lexical_by_name(std::string("&") + std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
           auto func_reg_no = reg_obj();
-          assembler().getlex(
+          ASM_GETLEX(
             func_reg_no,
             lex_no,
             outer // outer frame
@@ -1268,10 +1286,10 @@ namespace kiji {
           callsite->arg_flags = new MVMCallsiteEntry[0];
 
           auto callsite_no = push_callsite(callsite);
-          assembler().prepargs(callsite_no);
+          ASM_PREPARGS(callsite_no);
 
           auto dest_reg = reg_obj(); // ctx
-          assembler().invoke_o(
+          ASM_INVOKE_O(
               dest_reg,
               func_reg_no
           );
@@ -1293,7 +1311,7 @@ namespace kiji {
         auto rhs = node->children.nodes[1];
         auto l = stringify(do_compile(lhs));
         auto r = stringify(do_compile(rhs));
-        assembler().concat_s(
+        ASM_CONCAT_S(
           dst_reg,
           l,
           r
@@ -1304,7 +1322,7 @@ namespace kiji {
         auto dst_reg = reg_str();
         auto lhs = node->children.nodes[0];
         auto rhs = node->children.nodes[1];
-        assembler().repeat_s(
+        ASM_REPEAT_S(
           dst_reg,
           to_s(do_compile(lhs)),
           to_i(do_compile(rhs))
@@ -1315,8 +1333,8 @@ namespace kiji {
       case PVIP_NODE_ARRAY: { // TODO: use 6model's container feature after released it.
         // create array
         auto array_reg = reg_obj();
-        assembler().hlllist(array_reg);
-        assembler().create(array_reg, array_reg);
+        ASM_HLLLIST(array_reg);
+        ASM_CREATE(array_reg, array_reg);
 
         // push elements
         for (int i=0; i<node->children.size; i++) {
@@ -1330,7 +1348,7 @@ namespace kiji {
         auto container = do_compile(node->children.nodes[0]);
         auto idx       = this->to_i(do_compile(node->children.nodes[1]));
         auto dst = reg_obj();
-        assembler().atpos_o(dst, container, idx);
+        ASM_ATPOS_O(dst, container, idx);
         return dst;
       }
       case PVIP_NODE_IT_METHODCALL: {
@@ -1349,8 +1367,8 @@ namespace kiji {
         auto meth = reg_obj();
         auto ret = reg_obj();
 
-        assembler().findmeth(meth, obj, str);
-        assembler().arg_o(0, obj);
+        ASM_FINDMETH(meth, obj, str);
+        ASM_ARG_O(0, obj);
 
         if (node->children.size == 3) {
           auto args = node->children.nodes[2];
@@ -1365,11 +1383,11 @@ namespace kiji {
           for (int j=0; j<args->children.size; j++) {
             PVIPNode* a= args->children.nodes[j];
             callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
-            assembler().arg_o(i, to_o(do_compile(a)));
+            ASM_ARG_O(i, to_o(do_compile(a)));
             ++i;
           }
           auto callsite_no = push_callsite(callsite);
-          assembler().prepargs(callsite_no);
+          ASM_PREPARGS(callsite_no);
         } else {
           MVMCallsite* callsite = new MVMCallsite;
           memset(callsite, 0, sizeof(MVMCallsite));
@@ -1378,10 +1396,10 @@ namespace kiji {
           callsite->arg_flags = new MVMCallsiteEntry[1];
           callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
           auto callsite_no = push_callsite(callsite);
-          assembler().prepargs(callsite_no);
+          ASM_PREPARGS(callsite_no);
         }
 
-        assembler().invoke_o(ret, meth);
+        ASM_INVOKE_O(ret, meth);
         return ret;
       }
       case PVIP_NODE_CONDITIONAL: {
@@ -1404,12 +1422,12 @@ namespace kiji {
           unless_any(cond_reg, label_else);
 
           auto if_reg = do_compile(node->children.nodes[1]);
-          assembler().set(dst_reg, to_o(if_reg));
+          ASM_SET(dst_reg, to_o(if_reg));
           goto_(label_end);
 
         label_else.put();
           auto else_reg = do_compile(node->children.nodes[2]);
-          assembler().set(dst_reg, to_o(else_reg));
+          ASM_SET(dst_reg, to_o(else_reg));
 
         label_end.put();
 
@@ -1418,7 +1436,7 @@ namespace kiji {
       case PVIP_NODE_NOT: {
         auto src_reg = this->to_i(do_compile(node->children.nodes[0]));
         auto dst_reg = reg_int64();
-        assembler().not_i(dst_reg, src_reg);
+        ASM_NOT_I(dst_reg, src_reg);
         return dst_reg;
       }
       case PVIP_NODE_BIN_AND: {
@@ -1497,20 +1515,20 @@ namespace kiji {
         auto dst       = reg_obj();
         auto container = to_o(do_compile(node->children.nodes[0]));
         auto key       = to_s(do_compile(node->children.nodes[1]));
-        assembler().atkey_o(dst, container, key);
+        ASM_ATKEY_O(dst, container, key);
         return dst;
       }
       case PVIP_NODE_HASH: {
         auto hashtype = reg_obj();
         auto hash     = reg_obj();
-        assembler().hllhash(hashtype);
-        assembler().create(hash, hashtype);
+        ASM_HLLHASH(hashtype);
+        ASM_CREATE(hash, hashtype);
         for (int i=0; i<node->children.size; i++) {
           PVIPNode* pair = node->children.nodes[i];
           assert(pair->type == PVIP_NODE_PAIR);
           auto k = to_s(do_compile(pair->children.nodes[0]));
           auto v = to_o(do_compile(pair->children.nodes[1]));
-          assembler().bindkey_o(hash, k, v);
+          ASM_BINDKEY_O(hash, k, v);
         }
         return hash;
       }
@@ -1545,17 +1563,17 @@ namespace kiji {
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
           if_any(arg1, label_a1_true);
           unless_any(arg2, label_both_false);
-          assembler().set(dst_reg, arg2);
+          ASM_SET(dst_reg, arg2);
           goto_(label_end);
         label_both_false.put();
-          assembler().set(dst_reg, arg1);
+          ASM_SET(dst_reg, arg1);
           goto_(label_end);
         label_a1_true.put(); // a1:true, a2:unknown
           if_any(arg2, label_both_true);
-          assembler().set(dst_reg, arg1);
+          ASM_SET(dst_reg, arg1);
           goto_(label_end);
         label_both_true.put();
-          assembler().null(dst_reg);
+          ASM_NULL(dst_reg);
           goto_(label_end);
         label_end.put();
         return dst_reg;
@@ -1576,10 +1594,10 @@ namespace kiji {
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
           if_any(arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
-          assembler().set(dst_reg, arg2);
+          ASM_SET(dst_reg, arg2);
           goto_(label_end);
         label_a1.put();
-          assembler().set(dst_reg, arg1);
+          ASM_SET(dst_reg, arg1);
         label_end.put();
         return dst_reg;
       }
@@ -1599,10 +1617,10 @@ namespace kiji {
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
           unless_any(arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
-          assembler().set(dst_reg, arg2);
+          ASM_SET(dst_reg, arg2);
           goto_(label_end);
         label_a1.put();
-          assembler().set(dst_reg, arg1);
+          ASM_SET(dst_reg, arg1);
         label_end.put();
         return dst_reg;
       }
@@ -1612,11 +1630,11 @@ namespace kiji {
       case PVIP_NODE_UNARY_MINUS: {
         auto reg = do_compile(node->children.nodes[0]);
         if (get_local_type(reg) == MVM_reg_int64) {
-          assembler().neg_i(reg, reg);
+          ASM_NEG_I(reg, reg);
           return reg;
         } else {
           reg = to_n(reg);
-          assembler().neg_n(reg, reg);
+          ASM_NEG_N(reg, reg);
           return reg;
         }
       }
@@ -1638,9 +1656,9 @@ namespace kiji {
               PVIPNode* a = args->children.nodes[i];
               uint16_t reg_num = to_s(do_compile(a));
               if (i==args->children.size-1) {
-                assembler().say(reg_num);
+                ASM_SAY(reg_num);
               } else {
-                assembler().print(reg_num);
+                ASM_PRINT(reg_num);
               }
             }
             return const_true();
@@ -1648,7 +1666,7 @@ namespace kiji {
             for (int i=0; i<args->children.size; i++) {
               PVIPNode* a = args->children.nodes[i];
               uint16_t reg_num = stringify(do_compile(a));
-              assembler().print(reg_num);
+              ASM_PRINT(reg_num);
             }
             return const_true();
           } else if (std::string(ident->pv->buf, ident->pv->len) == "open") {
@@ -1659,8 +1677,8 @@ namespace kiji {
             // TODO support latin1, etc.
             auto mode = push_string("r");
             auto mode_s = reg_str();
-            assembler().const_s(mode_s, mode);
-            assembler().open_fh(dst_reg_o, fname_s, mode_s);
+            ASM_CONST_S(mode_s, mode);
+            ASM_OPEN_FH(dst_reg_o, fname_s, mode_s);
             return dst_reg_o;
           } else if (std::string(ident->pv->buf, ident->pv->len) == "slurp") {
             assert(args->children.size <= 2);
@@ -1668,8 +1686,8 @@ namespace kiji {
             auto fname_s = do_compile(args->children.nodes[0]);
             auto dst_reg_s = reg_str();
             auto encoding_s = reg_str();
-            assembler().const_s(encoding_s, push_string("utf8")); // TODO support latin1, etc.
-            assembler().slurp(dst_reg_s, fname_s, encoding_s);
+            ASM_CONST_S(encoding_s, push_string("utf8")); // TODO support latin1, etc.
+            ASM_SLURP(dst_reg_s, fname_s, encoding_s);
             return dst_reg_s;
           }
         }
@@ -1682,7 +1700,7 @@ namespace kiji {
             if (!find_lexical_by_name(std::string("&") + std::string(ident->pv->buf, ident->pv->len), &lex_no, &outer)) {
               MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", (std::string("&") + std::string(ident->pv->buf, ident->pv->len)).c_str());
             }
-            assembler().getlex(
+            ASM_GETLEX(
               func_reg_no,
               lex_no,
               outer // outer frame
@@ -1731,22 +1749,22 @@ namespace kiji {
             }
 
             auto callsite_no = push_callsite(callsite);
-            assembler().prepargs(callsite_no);
+            ASM_PREPARGS(callsite_no);
 
             int i=0;
             for (auto reg:arg_regs) {
               switch (get_local_type(reg)) {
               case MVM_reg_int64:
-                assembler().arg_i(i, reg);
+                ASM_ARG_I(i, reg);
                 break;
               case MVM_reg_num64:
-                assembler().arg_n(i, reg);
+                ASM_ARG_N(i, reg);
                 break;
               case MVM_reg_str:
-                assembler().arg_s(i, reg);
+                ASM_ARG_S(i, reg);
                 break;
               case MVM_reg_obj:
-                assembler().arg_o(i, reg);
+                ASM_ARG_O(i, reg);
                 break;
               default:
                 abort();
@@ -1755,7 +1773,7 @@ namespace kiji {
             }
           }
           auto dest_reg = reg_obj(); // ctx
-          assembler().invoke_o(
+          ASM_INVOKE_O(
               dest_reg,
               func_reg_no
           );
@@ -1784,16 +1802,16 @@ namespace kiji {
       int boxtype_reg = reg_obj();
       switch (reg_type) {
       case MVM_reg_str:
-        assembler().hllboxtype_s(boxtype_reg);
-        assembler().box_s(dst_num, reg_num, boxtype_reg);
+        ASM_HLLBOXTYPE_S(boxtype_reg);
+        ASM_BOX_S(dst_num, reg_num, boxtype_reg);
         return dst_num;
       case MVM_reg_int64:
-        assembler().hllboxtype_i(boxtype_reg);
-        assembler().box_i(dst_num, reg_num, boxtype_reg);
+        ASM_HLLBOXTYPE_I(boxtype_reg);
+        ASM_BOX_I(dst_num, reg_num, boxtype_reg);
         return dst_num;
       case MVM_reg_num64:
-        assembler().hllboxtype_n(boxtype_reg);
-        assembler().box_n(dst_num, reg_num, boxtype_reg);
+        ASM_HLLBOXTYPE_N(boxtype_reg);
+        ASM_BOX_N(dst_num, reg_num, boxtype_reg);
         return dst_num;
       default:
         MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", get_local_type(reg_num));
@@ -1805,7 +1823,7 @@ namespace kiji {
       switch (get_local_type(reg_num)) {
       case MVM_reg_str: {
         int dst_num = reg_num64();
-        assembler().coerce_sn(dst_num, reg_num);
+        ASM_COERCE_SN(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_num64: {
@@ -1813,12 +1831,12 @@ namespace kiji {
       }
       case MVM_reg_int64: {
         int dst_num = reg_num64();
-        assembler().coerce_in(dst_num, reg_num);
+        ASM_COERCE_IN(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
         int dst_num = reg_num64();
-        assembler().smrt_numify(dst_num, reg_num);
+        ASM_SMRT_NUMIFY(dst_num, reg_num);
         return dst_num;
       }
       default:
@@ -1832,12 +1850,12 @@ namespace kiji {
       switch (get_local_type(reg_num)) {
       case MVM_reg_str: {
         int dst_num = reg_int64();
-        assembler().coerce_si(dst_num, reg_num);
+        ASM_COERCE_SI(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_num64: {
         int dst_num = reg_num64();
-        assembler().coerce_ni(dst_num, reg_num);
+        ASM_COERCE_NI(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_int64: {
@@ -1847,8 +1865,8 @@ namespace kiji {
         int dst_num = reg_num64();
         int dst_int = reg_int64();
         // TODO: I need smrt_intify?
-        assembler().smrt_numify(dst_num, reg_num);
-        assembler().coerce_ni(dst_int, dst_num);
+        ASM_SMRT_NUMIFY(dst_num, reg_num);
+        ASM_COERCE_NI(dst_int, dst_num);
         return dst_int;
       }
       default:
@@ -1866,17 +1884,17 @@ namespace kiji {
         return reg_num;
       case MVM_reg_num64: {
         int dst_num = reg_str();
-        assembler().coerce_ns(dst_num, reg_num);
+        ASM_COERCE_NS(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_int64: {
         int dst_num = reg_str();
-        assembler().coerce_is(dst_num, reg_num);
+        ASM_COERCE_IS(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
         int dst_num = reg_str();
-        assembler().smrt_strify(dst_num, reg_num);
+        ASM_SMRT_STRIFY(dst_num, reg_num);
         return dst_num;
       }
       default:
@@ -1891,7 +1909,7 @@ namespace kiji {
         int reg_num1 = to_s(do_compile(node->children.nodes[0]));
         int reg_num2 = to_s(do_compile(node->children.nodes[1]));
         int reg_num_dst = reg_int64();
-        assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
+        ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
     }
     int binary_binop(const PVIPNode* node, uint16_t op_i) {
@@ -1900,7 +1918,7 @@ namespace kiji {
         int reg_num1 = to_i(do_compile(node->children.nodes[0]));
         int reg_num2 = to_i(do_compile(node->children.nodes[1]));
         auto dst_reg = reg_int64();
-        assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
+        ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
         return dst_reg;
     }
     int numeric_inplace(const PVIPNode* node, uint16_t op_i, uint16_t op_n) {
@@ -1910,7 +1928,7 @@ namespace kiji {
         auto lhs = get_variable(node->children.nodes[0]->pv);
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = reg_num64();
-        assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, tmp, to_n(lhs), to_n(rhs));
+        ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, tmp, to_n(lhs), to_n(rhs));
         set_variable(node->children.nodes[0]->pv, to_o(tmp));
         return tmp;
     }
@@ -1921,7 +1939,7 @@ namespace kiji {
         auto lhs = get_variable(node->children.nodes[0]->pv);
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = reg_int64();
-        assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op, tmp, to_i(lhs), to_i(rhs));
+        ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op, tmp, to_i(lhs), to_i(rhs));
         set_variable(node->children.nodes[0]->pv, to_o(tmp));
         return tmp;
     }
@@ -1932,7 +1950,7 @@ namespace kiji {
         auto lhs = get_variable(node->children.nodes[0]->pv);
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = reg_str();
-        assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, tmp, to_s(lhs), rhs_type == MVM_reg_int64 ? to_i(rhs) : to_s(rhs));
+        ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, tmp, to_s(lhs), rhs_type == MVM_reg_int64 ? to_i(rhs) : to_s(rhs));
         set_variable(node->children.nodes[0]->pv, to_o(tmp));
         return tmp;
     }
@@ -1945,32 +1963,32 @@ namespace kiji {
           int reg_num2 = this->to_i(do_compile(node->children.nodes[1]));
           assert(get_local_type(reg_num1) == MVM_reg_int64);
           assert(get_local_type(reg_num2) == MVM_reg_int64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
+          ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
         } else if (get_local_type(reg_num1) == MVM_reg_num64) {
           int reg_num_dst = reg_num64();
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
           assert(get_local_type(reg_num2) == MVM_reg_num64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
+          ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
         } else if (get_local_type(reg_num1) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
           int reg_num_dst = reg_num64();
 
           int dst_num = reg_num64();
-          assembler().op_u16_u16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
+          ASM_OP_U16_U16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
 
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
           assert(get_local_type(reg_num2) == MVM_reg_num64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
+          ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
           return reg_num_dst;
         } else if (get_local_type(reg_num1) == MVM_reg_str) {
           int dst_num = reg_num64();
-          assembler().coerce_sn(dst_num, reg_num1);
+          ASM_COERCE_SN(dst_num, reg_num1);
 
           int reg_num_dst = reg_num64();
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
+          ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
 
           return reg_num_dst;
         } else {
@@ -2015,9 +2033,9 @@ namespace kiji {
         reg = do_compile(node);
       }
       if (reg == UNKNOWN_REG) {
-        assembler().null(dst_reg);
+        ASM_NULL(dst_reg);
       } else {
-        assembler().set(dst_reg, to_o(reg));
+        ASM_SET(dst_reg, to_o(reg));
       }
     }
     // Compile chained comparisions like `1 < $n < 3`.
@@ -2035,10 +2053,10 @@ namespace kiji {
         unless_any(ret, label_false);
         lhs = rhs;
       }
-      assembler().const_i64(dst_reg, 1);
+      ASM_CONST_I64(dst_reg, 1);
       goto_(label_end);
     label_false.put();
-      assembler().const_i64(dst_reg, 0);
+      ASM_CONST_I64(dst_reg, 0);
       // goto_(label_end());
     label_end.put();
       return dst_reg;
@@ -2048,14 +2066,14 @@ namespace kiji {
         if (get_local_type(lhs) == MVM_reg_int64) {
           assert(get_local_type(lhs) == MVM_reg_int64);
           // assert(get_local_type(rhs) == MVM_reg_int64);
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_i, reg_num_dst, lhs, to_i(rhs));
+          ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, reg_num_dst, lhs, to_i(rhs));
           return reg_num_dst;
         } else if (get_local_type(lhs) == MVM_reg_num64) {
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, lhs, to_n(rhs));
+          ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, lhs, to_n(rhs));
           return reg_num_dst;
         } else if (get_local_type(lhs) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
-          assembler().op_u16_u16_u16(MVM_OP_BANK_primitives, op_n, reg_num_dst, to_n(lhs), to_n(rhs));
+          ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, to_n(lhs), to_n(rhs));
           return reg_num_dst;
         } else {
           // NOT IMPLEMENTED
@@ -2064,7 +2082,7 @@ namespace kiji {
     }
     int str_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op) {
         int reg_num_dst = reg_int64();
-        assembler().op_u16_u16_u16(MVM_OP_BANK_string, op, reg_num_dst, to_s(lhs), to_s(rhs));
+        ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, to_s(lhs), to_s(rhs));
         return reg_num_dst;
     }
     uint16_t do_compare(PVIP_node_type_t type, uint16_t lhs, uint16_t rhs) {
@@ -2106,6 +2124,7 @@ namespace kiji {
       current_class_how_ = NULL;
 
       auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
+      assert(tc);
       sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
 
       num_sc_classes_ = 0;
@@ -2120,26 +2139,27 @@ namespace kiji {
         MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
       }
       cu_->pool       = pool;
-      this->push_frame("frame_name_0");
+      assert(tc_);
+      this->push_frame(std::string("frame_name_0"));
     }
     void finalize(MVMInstance* vm) {
       MVMThreadContext *tc = tc_; // remove me
       MVMInstance *vm_ = vm; // remove me
 
-      // finalize frames
-      cu_->num_frames  = used_frames_.size();
-      assert(frames_.size() >= 1);
+      // finalize frame
+      for (int i=0; i<cu_->num_frames; i++) {
+        MVMStaticFrame *frame = cu_->frames[i];
+        frame->env_size = frame->num_lexicals * sizeof(MVMRegister);
+        // TODO use Newz
+        frame->static_env = (MVMRegister*) malloc(frame->env_size);
+        assert(frame->static_env);
+        memset(frame->static_env, 0, frame->env_size);
 
-      cu_->frames = (MVMStaticFrame**)malloc(sizeof(MVMStaticFrame*)*used_frames_.size());
-      {
-        int i=0;
-        for (auto frame: used_frames_) {
-          cu_->frames[i] = frame->finalize(tc_);
-          cu_->frames[i]->cu = cu_;
-          cu_->frames[i]->work_size = 0;
-          ++i;
-        }
+        char buf[1023+1];
+        int len = snprintf(buf, 1023, "frame_cuuid_%d", i);
+        frame->cuuid = MVM_string_utf8_decode(tc_, tc_->instance->VMString, buf, len);
       }
+
       cu_->main_frame = cu_->frames[0];
       assert(cu_->main_frame->cuuid);
 
@@ -2156,13 +2176,12 @@ namespace kiji {
       }
     }
     void compile(PVIPNode*node, MVMInstance* vm) {
-      assembler().checkarity(0, -1);
-
+      ASM_CHECKARITY(0, -1);
 
       /*
       int code = reg_obj();
       int dest_reg = reg_obj();
-      assembler().wval(code, 0, 1);
+      ASM_WVAL(code, 0, 1);
       MVMCallsite* callsite = new MVMCallsite;
       memset(callsite, 0, sizeof(MVMCallsite));
       callsite->arg_count = 0;
@@ -2171,8 +2190,8 @@ namespace kiji {
       // callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;;
 
       auto callsite_no = interp_.push_callsite(callsite);
-      assembler().prepargs(callsite_no);
-      assembler().invoke_o( dest_reg, code);
+      ASM_PREPARGS(callsite_no);
+      ASM_INVOKE_O( dest_reg, code);
       */
 
       // bootstrap $?PACKAGE
@@ -2182,9 +2201,9 @@ namespace kiji {
         auto lex = push_lexical("$?PACKAGE", MVM_reg_obj);
         auto package = reg_obj();
         auto hash_type = reg_obj();
-        assembler().hllhash(hash_type);
-        assembler().create(package, hash_type);
-        assembler().bindlex(lex, 0, package);
+        ASM_HLLHASH(hash_type);
+        ASM_CREATE(package, hash_type);
+        ASM_BINDLEX(lex, 0, package);
       }
 
       do_compile(node);
@@ -2192,21 +2211,21 @@ namespace kiji {
       // bootarray
       /*
       int ary = interp_.push_local_type(MVM_reg_obj);
-      assembler().bootarray(ary);
-      assembler().create(ary, ary);
-      assembler().prepargs(1);
-      assembler().invoke_o(ary, ary);
+      ASM_BOOTARRAY(ary);
+      ASM_CREATE(ary, ary);
+      ASM_PREPARGS(1);
+      ASM_INVOKE_O(ary, ary);
 
-      assembler().bootstrarray(ary);
-      assembler().create(ary, ary);
-      assembler().prepargs(1);
-      assembler().invoke_o(ary, ary);
+      ASM_BOOTSTRARRAY(ary);
+      ASM_CREATE(ary, ary);
+      ASM_PREPARGS(1);
+      ASM_INVOKE_O(ary, ary);
       */
 
       // final op must be return.
       int reg = reg_obj();
-      assembler().null(reg);
-      assembler().return_o(reg);
+      ASM_NULL(reg);
+      ASM_RETURN_O(reg);
 
       // setup hllconfig
       MVMThreadContext * tc = tc_;
