@@ -12,8 +12,8 @@ cast.
 #include "handy.h"
 
 enum Kiji_variable_type_t {
-  VARIABLE_TYPE_MY,
-  VARIABLE_TYPE_OUR
+  KIJI_VARIABLE_TYPE_MY,
+  KIJI_VARIABLE_TYPE_OUR
 };
 
 typedef struct _KijiFrame {
@@ -90,14 +90,14 @@ public:
 
       if (entry) {
           lex_no = entry->value;
-          return VARIABLE_TYPE_MY;
+          return KIJI_VARIABLE_TYPE_MY;
       }
 
       // check package variables
       for (int i=0; i<f->num_package_variables; i++) {
         auto n = f->package_variables[i];
         if (MVM_string_equal(tc, n, name)) {
-          return VARIABLE_TYPE_OUR;
+          return KIJI_VARIABLE_TYPE_OUR;
         }
       }
 

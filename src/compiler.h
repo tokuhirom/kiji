@@ -343,7 +343,7 @@ namespace kiji {
       int outer = 0;
       int lex_no = 0;
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
-      if (vartype==VARIABLE_TYPE_MY) {
+      if (vartype==KIJI_VARIABLE_TYPE_MY) {
         auto reg_no = reg_obj();
         ASM_GETLEX(
           reg_no,
@@ -384,7 +384,7 @@ namespace kiji {
       int lex_no = -1;
       int outer = -1;
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
-      if (vartype==VARIABLE_TYPE_MY) {
+      if (vartype==KIJI_VARIABLE_TYPE_MY) {
         ASM_BINDLEX(
           lex_no,
           outer,
