@@ -120,7 +120,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   public:
     KijiCompiler(MVMCompUnit * cu, MVMThreadContext * tc);
     ~KijiCompiler() { }
-    void compile(PVIPNode*node, MVMInstance* vm);
   };
 
     void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
@@ -163,3 +162,4 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     uint16_t Kiji_compiler_compile_chained_comparisions(KijiCompiler *self, const PVIPNode* node);
     int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
     uint16_t Kiji_compiler_do_compare(KijiCompiler* self, PVIP_node_type_t type, uint16_t lhs, uint16_t rhs);
+    void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm);

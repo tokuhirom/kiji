@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
   cu.pool       = pool;
 
   KijiCompiler compiler(&cu, vm->main_thread);
-  compiler.compile(root_node, vm);
+  Kiji_compiler_compile(&compiler, root_node, vm);
   Kiji_compiler_finalize(&compiler, vm);
 #ifdef DEBUG_ASM
   Kiji_asm_dump_compunit(&cu);

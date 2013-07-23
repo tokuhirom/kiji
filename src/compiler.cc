@@ -1880,8 +1880,9 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
 
-    void KijiCompiler::compile(PVIPNode*node, MVMInstance* vm) {
-      KijiCompiler *self = this;
+    void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm) {
+      MVMCompUnit *cu = self->cu;
+      MVMThreadContext *tc_ = self->tc_;
       ASM_CHECKARITY(0, -1);
 
       /*
@@ -1905,7 +1906,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       // $?PACKAGE.WHO<bar> should work.
       {
         MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "$?PACKAGE", strlen("$?PACKAGE"));
-        auto lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+        auto lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
         auto package = REG_OBJ();
         auto hash_type = REG_OBJ();
         ASM_HLLHASH(hash_type);
@@ -1913,7 +1914,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         ASM_BINDLEX(lex, 0, package);
       }
 
-      do_compile(node);
+      self->do_compile(node);
 
       // bootarray
       /*
