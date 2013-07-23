@@ -202,7 +202,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
-KIJI_OBJS = src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop.o
+KIJI_OBJS = src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop.o src/compiler/label.o
 
 KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h src/handy.h src/asm.h src/compiler/loop.h
 
@@ -219,6 +219,8 @@ kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
 src/kiji.o: $(KIJI_HEADERS) Makefile
 src/frame.o: $(KIJI_HEADERS) Makefile
 src/compiler.o: $(KIJI_HEADERS) Makefile src/compiler.cc
+src/compiler/loop.o: $(KIJI_HEADERS) Makefile src/compiler.cc
+src/compiler/label.o: $(KIJI_HEADERS) Makefile src/compiler.cc
 src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
 src/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
 

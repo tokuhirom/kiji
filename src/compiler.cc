@@ -30,12 +30,6 @@ extern "C" {
 #define newMVMStringFromSTDSTRING(p) \
   MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (p).c_str(), (p).size())
 
-#define LABEL_HERE(name) \
-  KijiCompiler name(self, Kiji_compiler_top_frame(self)->frame.bytecode_size);
-
-#define LABEL(name) \
-  KijiLabel name(self);
-
     size_t Kiji_compiler_bytecode_size(KijiCompiler*self) {
       return Kiji_compiler_top_frame(self)->frame.bytecode_size;
     }
@@ -268,16 +262,6 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
       return cu->num_frames-1;
     }
 
-  void KijiLabel::put() {
-    assert(address_ == -1);
-    address_ = Kiji_compiler_top_frame(compiler_)->frame.bytecode_size;
-
-    // rewrite reserved addresses
-    for (auto r: reserved_addresses_) {
-      Kiji_asm_write_uint32_t_for(&(*(Kiji_compiler_top_frame(compiler_))), address_, r);
-    }
-    reserved_addresses_.empty();
-  }
 
     void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node) {
       if (node->type==PVIP_NODE_LIST) {

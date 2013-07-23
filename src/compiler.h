@@ -9,6 +9,7 @@
 #include "frame.h"
 #include "handy.h"
 #include "asm.h"
+#include "compiler/label.h"
 #include <vector>
 
 #define ASM_OP_U16_U16_U16(a,b,c,d,e) \
@@ -34,28 +35,6 @@
 #define REG_STR() Kiji_compiler_push_local_type(self, MVM_reg_str)
 #define REG_INT64() Kiji_compiler_push_local_type(self, MVM_reg_int64)
 #define REG_NUM64() Kiji_compiler_push_local_type(self, MVM_reg_num64)
-
-struct KijiCompiler;
-
-class KijiLabel {
-private:
-  KijiCompiler *compiler_;
-  ssize_t address_;
-  std::vector<ssize_t> reserved_addresses_;
-public:
-  KijiLabel(KijiCompiler *compiler) :compiler_(compiler), address_(-1) { }
-  ~KijiLabel() {
-    assert(address_ != -1 && "Unsolved label");
-  }
-  ssize_t address() const {
-    return address_;
-  }
-  void put();
-  void reserve(ssize_t address) {
-    reserved_addresses_.push_back(address);
-  }
-  bool is_solved() const { return address_!=-1; }
-};
 
 /**
 * OP map is 3rd/MoarVM/src/core/oplist
