@@ -279,6 +279,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         start_offset_ = compiler_->ASM_BYTECODE_SIZE()-1;
       }
     void KijiCompiler::compile_array(uint16_t array_reg, const PVIPNode* node) {
+      KijiCompiler *self = this;
       if (node->type==PVIP_NODE_LIST) {
         for (int i=0; i<node->children.size; i++) {
           PVIPNode* m = node->children.nodes[i];
@@ -290,6 +291,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     int KijiCompiler::do_compile(const PVIPNode*node) {
+      KijiCompiler *self = this;
       // printf("node: %s\n", node.type_name());
       switch (node->type) {
       case PVIP_NODE_POSTDEC: { // $i--
@@ -1493,6 +1495,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       abort();
     }
     int KijiCompiler::to_o(int reg_num) {
+      KijiCompiler *self = this;
       assert(reg_num != UNKNOWN_REG);
       auto reg_type = Kiji_compiler_get_local_type(this, reg_num);
       if (reg_type == MVM_reg_obj) {
@@ -1520,6 +1523,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     int KijiCompiler::to_n(int reg_num) {
+      KijiCompiler *self = this;
       assert(reg_num != UNKNOWN_REG);
       switch (Kiji_compiler_get_local_type(this, reg_num)) {
       case MVM_reg_str: {
@@ -1547,6 +1551,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     int KijiCompiler::to_i(int reg_num) {
+      KijiCompiler *self = this;
       assert(reg_num != UNKNOWN_REG);
       switch (Kiji_compiler_get_local_type(this, reg_num)) {
       case MVM_reg_str: {
@@ -1577,6 +1582,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     int KijiCompiler::to_s(int reg_num) {
+      KijiCompiler *self = this;
       assert(reg_num != UNKNOWN_REG);
       switch (Kiji_compiler_get_local_type(this, reg_num)) {
       case MVM_reg_str:
@@ -1604,6 +1610,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     int KijiCompiler::str_binop(const PVIPNode* node, uint16_t op) {
+      KijiCompiler *self = this;
         assert(node->children.size == 2);
 
         int reg_num1 = to_s(do_compile(node->children.nodes[0]));
@@ -1613,6 +1620,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return reg_num_dst;
     }
     int KijiCompiler::binary_binop(const PVIPNode* node, uint16_t op_i) {
+      KijiCompiler *self = this;
         assert(node->children.size == 2);
 
         int reg_num1 = to_i(do_compile(node->children.nodes[0]));
@@ -1622,6 +1630,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return dst_reg;
     }
     int KijiCompiler::numeric_inplace(const PVIPNode* node, uint16_t op_i, uint16_t op_n) {
+      KijiCompiler *self = this;
         assert(node->children.size == 2);
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
@@ -1633,6 +1642,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return tmp;
     }
     int KijiCompiler::binary_inplace(const PVIPNode* node, uint16_t op) {
+      KijiCompiler *self = this;
         assert(node->children.size == 2);
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
@@ -1644,6 +1654,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return tmp;
     }
     int KijiCompiler::str_inplace(const PVIPNode* node, uint16_t op, uint16_t rhs_type) {
+      KijiCompiler *self = this;
         assert(node->children.size == 2);
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
@@ -1655,6 +1666,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return tmp;
     }
     int KijiCompiler::numeric_binop(const PVIPNode* node, uint16_t op_i, uint16_t op_n) {
+      KijiCompiler *self = this;
         assert(node->children.size == 2);
 
         int reg_num1 = do_compile(node->children.nodes[0]);
@@ -1711,6 +1723,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     void KijiCompiler::compile_statements(const PVIPNode*node, int dst_reg) {
+      KijiCompiler *self = this;
       int reg = UNKNOWN_REG;
       if (node->type == PVIP_NODE_STATEMENTS || node->type == PVIP_NODE_ELSE) {
         for (int i=0, l=node->children.size; i<l; i++) {
@@ -1729,6 +1742,7 @@ KijiLoopGuard::~KijiLoopGuard() {
     // Compile chained comparisions like `1 < $n < 3`.
     // TODO: optimize simple case like `1 < $n`
     uint16_t KijiCompiler::compile_chained_comparisions(const PVIPNode* node) {
+      KijiCompiler *self = this;
       auto lhs = do_compile(node->children.nodes[0]);
       auto dst_reg = REG_INT64();
       auto label_end = label_unsolved();
@@ -1750,6 +1764,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       return dst_reg;
     }
     int KijiCompiler::num_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n) {
+      KijiCompiler *self = this;
         int reg_num_dst = REG_INT64();
         if (Kiji_compiler_get_local_type(this, lhs) == MVM_reg_int64) {
           assert(Kiji_compiler_get_local_type(this, lhs) == MVM_reg_int64);
@@ -1770,6 +1785,7 @@ KijiLoopGuard::~KijiLoopGuard() {
     }
 
     int KijiCompiler::str_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op) {
+      KijiCompiler *self = this;
         int reg_num_dst = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, to_s(lhs), to_s(rhs));
         return reg_num_dst;
@@ -1863,6 +1879,7 @@ KijiLoopGuard::~KijiLoopGuard() {
     }
 
     void KijiCompiler::compile(PVIPNode*node, MVMInstance* vm) {
+      KijiCompiler *self = this;
       ASM_CHECKARITY(0, -1);
 
       /*
@@ -1976,6 +1993,7 @@ KijiLoopGuard::~KijiLoopGuard() {
     }
 
     int KijiCompiler::compile_class(const PVIPNode* node) {
+      KijiCompiler *self = this;
       int wval1, wval2;
       {
         // Create new class.
@@ -2058,12 +2076,14 @@ KijiLoopGuard::~KijiLoopGuard() {
 
     // This reg returns register number contains true value.
     int KijiCompiler::const_true() {
+      KijiCompiler *self = this;
       auto reg = REG_INT64();
       ASM_CONST_I64(reg, 1);
       return reg;
     }
 
     void KijiCompiler::set_variable(const std::string &name, uint16_t val_reg) {
+      KijiCompiler *self = this;
       int lex_no = -1;
       int outer = -1;
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
@@ -2099,6 +2119,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     uint16_t KijiCompiler::get_variable(const std::string &name) {
+      KijiCompiler *self = this;
       int outer = 0;
       int lex_no = 0;
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
@@ -2137,18 +2158,21 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     void KijiCompiler::unless_any(uint16_t reg, KijiLabel &label) {
+      KijiCompiler *self = this;
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
       ASM_OP_U16_U32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
     }
     void KijiCompiler::if_any(uint16_t reg, KijiLabel &label) {
+      KijiCompiler *self = this;
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
       ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_if_op(this, reg), reg, label.address());
     }
     void KijiCompiler::return_any(uint16_t reg) {
+      KijiCompiler *self = this;
       switch (Kiji_compiler_get_local_type(this, reg)) {
       case MVM_reg_int64:
         ASM_RETURN_I(reg);
@@ -2166,6 +2190,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
     void KijiCompiler::goto_(KijiLabel &label) {
+      KijiCompiler *self = this;
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2);
       }

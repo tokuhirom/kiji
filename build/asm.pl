@@ -61,7 +61,6 @@ sub read_ops {
             push @{$ops{$bank_num}}, $op;
         }
     }
-    use Data::Dumper; warn Dumper(\%ops);
     return (\%bank_names, \%ops);
 }
 
@@ -128,9 +127,9 @@ __DATA__
 ?        for my $i (0..@{$op->{params}}-1) {
     <?= $op->{types}->[$i] ?> _<?= $op->{params}->[$i] ?> = <?= $op->{params}->[$i] ?>; \\
 ?        }
-    Kiji_asm_op(&(*(frames_.back())), MVM_OP_BANK_<?= $op->{bank} ?>, MVM_OP_<?= $op->{name} ?>); \\
+    Kiji_asm_op(Kiji_compiler_top_frame(self), MVM_OP_BANK_<?= $op->{bank} ?>, MVM_OP_<?= $op->{name} ?>); \\
 ?        for my $i (0..@{$op->{params}}-1) {
-        Kiji_asm_write_<?= $op->{types}->[$i] ?>(&(*(frames_.back())), _<?= $op->{params}->[$i] ?>); \\
+        Kiji_asm_write_<?= $op->{types}->[$i] ?>(Kiji_compiler_top_frame(self), _<?= $op->{params}->[$i] ?>); \\
 ?        }
   } while(0)
 
