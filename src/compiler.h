@@ -40,6 +40,12 @@
 #define MEMORY_ERROR() \
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
 
+#define REG_OBJ() push_local_type(MVM_reg_obj)
+#define REG_STR() push_local_type(MVM_reg_str)
+#define REG_INT64() push_local_type(MVM_reg_int64)
+#define REG_NUM64() push_local_type(MVM_reg_num64)
+
+
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
     MVMObject *method_table, *attributes, *BOOTArray, *BOOTHash,
@@ -266,11 +272,6 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       return Kiji_frame_push_local_type(frames_.back(), reg_type);
     }
 
-    int reg_obj() { return push_local_type(MVM_reg_obj); }
-    int reg_str() { return push_local_type(MVM_reg_str); }
-    int reg_int64() { return push_local_type(MVM_reg_int64); }
-    int reg_num64() { return push_local_type(MVM_reg_num64); }
-
     int compile_class(const PVIPNode* node) {
       int wval1, wval2;
       {
@@ -316,7 +317,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
       current_class_how_ = NULL;
 
-      auto retval = reg_obj();
+      auto retval = REG_OBJ();
       ASM_WVAL(retval, wval1, wval2);
 
       // Bind class object to lexical variable
@@ -342,7 +343,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       int lex_no = 0;
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==KIJI_VARIABLE_TYPE_MY) {
-        auto reg_no = reg_obj();
+        auto reg_no = REG_OBJ();
         ASM_GETLEX(
           reg_no,
           lex_no,
@@ -354,9 +355,9 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
-        auto reg = reg_obj();
+        auto reg = REG_OBJ();
         auto varname = push_string(name);
-        auto varname_s = reg_str();
+        auto varname_s = REG_STR();
         ASM_GETLEX(
           reg,
           lex_no,
@@ -393,9 +394,9 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
-        auto reg = reg_obj();
+        auto reg = REG_OBJ();
         auto varname = push_string(name);
-        auto varname_s = reg_str();
+        auto varname_s = REG_STR();
         ASM_GETLEX(
           reg,
           lex_no,
@@ -416,7 +417,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
     // This reg returns register number contains true value.
     int const_true() {
-      auto reg = reg_int64();
+      auto reg = REG_INT64();
       ASM_CONST_I64(reg, 1);
       return reg;
     }
@@ -672,7 +673,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       case PVIP_NODE_LAST: {
         // break from for, while, loop.
-        auto ret = reg_obj();
+        auto ret = REG_OBJ();
         ASM_THROWCATLEX(
           ret,
           MVM_EX_CAT_LAST
@@ -681,7 +682,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       case PVIP_NODE_REDO: {
         // redo from for, while, loop.
-        auto ret = reg_obj();
+        auto ret = REG_OBJ();
         ASM_THROWCATLEX(
           ret,
           MVM_EX_CAT_REDO
@@ -690,7 +691,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       case PVIP_NODE_NEXT: {
         // continue from for, while, loop.
-        auto ret = reg_obj();
+        auto ret = REG_OBJ();
         ASM_THROWCATLEX(
           ret,
           MVM_EX_CAT_NEXT
@@ -749,7 +750,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         ASM_RETURN();
         pop_frame();
 
-        auto code_reg = reg_obj();
+        auto code_reg = REG_OBJ();
         ASM_GETCODE(code_reg, frame_no);
         MVMCallsite* callsite = new MVMCallsite;
         memset(callsite, 0, sizeof(MVMCallsite));
@@ -764,7 +765,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       case PVIP_NODE_DIE: {
         int msg_reg = to_s(do_compile(node->children.nodes[0]));
-        int dst_reg = reg_obj();
+        int dst_reg = REG_OBJ();
         assert(msg_reg != UNKNOWN_REG);
         ASM_DIE(dst_reg, msg_reg);
         return UNKNOWN_REG;
@@ -802,21 +803,21 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         );
         for (int i=0; i<node->children.nodes[0]->children.size; i++) {
           PVIPNode *n = node->children.nodes[0]->children.nodes[i];
-          int reg = reg_obj();
+          int reg = REG_OBJ();
           int lex = push_lexical(PVIPSTRING2STDSTRING(n->pv), MVM_reg_obj);
           ASM_PARAM_RP_O(reg, i);
           ASM_BINDLEX(lex, 0, reg);
         }
         auto retval = do_compile(node->children.nodes[1]);
         if (retval == UNKNOWN_REG) {
-          retval = reg_obj();
+          retval = REG_OBJ();
           ASM_NULL(retval);
         }
         return_any(retval);
         pop_frame();
 
         // warn if void context.
-        auto dst_reg = reg_obj();
+        auto dst_reg = REG_OBJ();
         ASM_GETCODE(dst_reg, frame_no);
 
         return dst_reg;
@@ -831,7 +832,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         ASM_RETURN();
         pop_frame();
 
-        auto frame_reg = reg_obj();
+        auto frame_reg = REG_OBJ();
         ASM_GETCODE(frame_reg, frame_no);
 
         MVMCallsite* callsite = new MVMCallsite;
@@ -848,18 +849,18 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       case PVIP_NODE_STRING: {
         int str_num = push_string(node->pv);
-        int reg_num = reg_str();
+        int reg_num = REG_STR();
         ASM_CONST_S(reg_num, str_num);
         return reg_num;
       }
       case PVIP_NODE_INT: {
-        uint16_t reg_num = reg_int64();
+        uint16_t reg_num = REG_INT64();
         int64_t n = node->iv;
         ASM_CONST_I64(reg_num, n);
         return reg_num;
       }
       case PVIP_NODE_NUMBER: {
-        uint16_t reg_num = reg_num64();
+        uint16_t reg_num = REG_NUM64();
         MVMnum64 n = node->nv;
         ASM_CONST_N64(reg_num, n);
         return reg_num;
@@ -888,14 +889,14 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
             MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
           }
-          auto package = reg_obj();
+          auto package = REG_OBJ();
           ASM_GETLEX(
             package,
             lex_no,
             outer // outer frame
           );
           // TODO getwho
-          auto varname_s = reg_str();
+          auto varname_s = REG_STR();
           ASM_CONST_S(varname_s, varname);
           // 0x0F    bindkey_o           r(obj) r(str) r(obj)
           ASM_BINDKEY_O(
@@ -918,7 +919,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         PVIPNode * name_node = node->children.nodes[0];
         std::string name(name_node->pv->buf, name_node->pv->len);
 
-        auto funcreg = reg_obj();
+        auto funcreg = REG_OBJ();
         auto funclex = push_lexical(std::string("&") + name, MVM_reg_obj);
         auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
         ASM_GETCODE(funcreg, 0);
@@ -942,14 +943,14 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           {
             // push self
             int lex = push_lexical("__self", MVM_reg_obj);
-            int reg = reg_obj();
+            int reg = REG_OBJ();
             ASM_PARAM_RP_O(reg, 0);
             ASM_BINDLEX(lex, 0, reg);
           }
 
           for (int i=1; i<node->children.nodes[1]->children.size; ++i) {
             auto n = node->children.nodes[1]->children.nodes[i];
-            int reg = reg_obj();
+            int reg = REG_OBJ();
             int lex = push_lexical(n->pv, MVM_reg_obj);
             ASM_PARAM_RP_O(reg, i);
             ASM_BINDLEX(lex, 0, reg);
@@ -986,7 +987,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
           // return null
           if (!returned) {
-            int reg = reg_obj();
+            int reg = REG_OBJ();
             ASM_NULL(reg);
             ASM_RETURN_O(reg);
           }
@@ -1016,7 +1017,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         PVIPNode * name_node = node->children.nodes[0];
         std::string name(name_node->pv->buf, name_node->pv->len);
 
-        auto funcreg = reg_obj();
+        auto funcreg = REG_OBJ();
         auto funclex = push_lexical(std::string("&") + name, MVM_reg_obj);
         auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
         ASM_GETCODE(funcreg, 0);
@@ -1039,7 +1040,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
           for (int i=0; i<node->children.nodes[1]->children.size; ++i) {
             auto n = node->children.nodes[1]->children.nodes[i];
-            int reg = reg_obj();
+            int reg = REG_OBJ();
             int lex = push_lexical(n->pv, MVM_reg_obj);
             ASM_PARAM_RP_O(reg, i);
             ASM_BINDLEX(lex, 0, reg);
@@ -1076,7 +1077,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
           // return null
           if (!returned) {
-            int reg = reg_obj();
+            int reg = REG_OBJ();
             ASM_NULL(reg);
             ASM_RETURN_O(reg);
           }
@@ -1092,7 +1093,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         return get_variable(std::string(node->pv->buf, node->pv->len));
       }
       case PVIP_NODE_CLARGS: { // @*ARGS
-        auto retval = reg_obj();
+        auto retval = REG_OBJ();
         ASM_WVAL(retval, 0,0);
         return retval;
       }
@@ -1109,7 +1110,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         LoopGuard loop(this);
           auto src_reg = box(do_compile(node->children.nodes[0]));
-          auto iter_reg = reg_obj();
+          auto iter_reg = REG_OBJ();
           auto label_end = label_unsolved();
           ASM_ITER(iter_reg, src_reg);
           unless_any(iter_reg, label_end);
@@ -1117,7 +1118,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         auto label_for = label();
         loop.put_next();
 
-          auto val = reg_obj();
+          auto val = REG_OBJ();
           ASM_SHIFT_O(val, iter_reg);
 
           if (node->children.nodes[1]->type == PVIP_NODE_LAMBDA) {
@@ -1206,7 +1207,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         auto if_cond_reg = do_compile(node->children.nodes[0]);
         auto if_body = node->children.nodes[1];
-        auto dst_reg = reg_obj();
+        auto dst_reg = REG_OBJ();
 
         auto label_if = label_unsolved();
         if_any(if_cond_reg, label_if);
@@ -1263,7 +1264,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         // auto lex_no = find_lexical_by_name(std::string(node->pv->buf, node->pv->len), outer);
         // class Foo { }; Foo;
         if (find_lexical_by_name(std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
-          auto reg_no = reg_obj();
+          auto reg_no = REG_OBJ();
           ASM_GETLEX(
             reg_no,
             lex_no,
@@ -1272,7 +1273,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           return reg_no;
         // sub fooo { }; foooo;
         } else if (find_lexical_by_name(std::string("&") + std::string(node->pv->buf, node->pv->len), &lex_no, &outer)) {
-          auto func_reg_no = reg_obj();
+          auto func_reg_no = REG_OBJ();
           ASM_GETLEX(
             func_reg_no,
             lex_no,
@@ -1288,7 +1289,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           auto callsite_no = push_callsite(callsite);
           ASM_PREPARGS(callsite_no);
 
-          auto dest_reg = reg_obj(); // ctx
+          auto dest_reg = REG_OBJ(); // ctx
           ASM_INVOKE_O(
               dest_reg,
               func_reg_no
@@ -1306,7 +1307,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         }
         return UNKNOWN_REG;
       case PVIP_NODE_STRING_CONCAT: {
-        auto dst_reg = reg_str();
+        auto dst_reg = REG_STR();
         auto lhs = node->children.nodes[0];
         auto rhs = node->children.nodes[1];
         auto l = stringify(do_compile(lhs));
@@ -1319,7 +1320,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         return dst_reg;
       }
       case PVIP_NODE_REPEAT_S: { // x operator
-        auto dst_reg = reg_str();
+        auto dst_reg = REG_STR();
         auto lhs = node->children.nodes[0];
         auto rhs = node->children.nodes[1];
         ASM_REPEAT_S(
@@ -1332,7 +1333,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       case PVIP_NODE_LIST:
       case PVIP_NODE_ARRAY: { // TODO: use 6model's container feature after released it.
         // create array
-        auto array_reg = reg_obj();
+        auto array_reg = REG_OBJ();
         ASM_HLLLIST(array_reg);
         ASM_CREATE(array_reg, array_reg);
 
@@ -1347,7 +1348,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         assert(node->children.size == 2);
         auto container = do_compile(node->children.nodes[0]);
         auto idx       = this->to_i(do_compile(node->children.nodes[1]));
-        auto dst = reg_obj();
+        auto dst = REG_OBJ();
         ASM_ATPOS_O(dst, container, idx);
         return dst;
       }
@@ -1364,8 +1365,8 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         assert(node->children.size == 3 || node->children.size==2);
         auto obj = to_o(do_compile(node->children.nodes[0]));
         auto str = push_string(node->children.nodes[1]->pv);
-        auto meth = reg_obj();
-        auto ret = reg_obj();
+        auto meth = REG_OBJ();
+        auto ret = REG_OBJ();
 
         ASM_FINDMETH(meth, obj, str);
         ASM_ARG_O(0, obj);
@@ -1416,7 +1417,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
          */
         auto label_end  = label_unsolved();
         auto label_else = label_unsolved();
-        auto dst_reg = reg_obj();
+        auto dst_reg = REG_OBJ();
 
           auto cond_reg = do_compile(node->children.nodes[0]);
           unless_any(cond_reg, label_else);
@@ -1435,7 +1436,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       case PVIP_NODE_NOT: {
         auto src_reg = this->to_i(do_compile(node->children.nodes[0]));
-        auto dst_reg = reg_int64();
+        auto dst_reg = REG_INT64();
         ASM_NOT_I(dst_reg, src_reg);
         return dst_reg;
       }
@@ -1512,15 +1513,15 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         return -1;
       case PVIP_NODE_ATKEY: {
         assert(node->children.size == 2);
-        auto dst       = reg_obj();
+        auto dst       = REG_OBJ();
         auto container = to_o(do_compile(node->children.nodes[0]));
         auto key       = to_s(do_compile(node->children.nodes[1]));
         ASM_ATKEY_O(dst, container, key);
         return dst;
       }
       case PVIP_NODE_HASH: {
-        auto hashtype = reg_obj();
-        auto hash     = reg_obj();
+        auto hashtype = REG_OBJ();
+        auto hash     = REG_OBJ();
         ASM_HLLHASH(hashtype);
         ASM_CREATE(hash, hashtype);
         for (int i=0; i<node->children.size; i++) {
@@ -1557,7 +1558,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         auto label_both_true  = label_unsolved();
         auto label_end        = label_unsolved();
 
-        auto dst_reg = reg_obj();
+        auto dst_reg = REG_OBJ();
 
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
@@ -1590,7 +1591,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         // label_end:
         auto label_end = label_unsolved();
         auto label_a1  = label_unsolved();
-        auto dst_reg = reg_obj();
+        auto dst_reg = REG_OBJ();
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
           if_any(arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
@@ -1613,7 +1614,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         // label_end:
         auto label_end = label_unsolved();
         auto label_a1  = label_unsolved();
-        auto dst_reg = reg_obj();
+        auto dst_reg = REG_OBJ();
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
           unless_any(arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
@@ -1673,10 +1674,10 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
             // TODO support arguments
             assert(args->children.size == 1);
             auto fname_s = do_compile(args->children.nodes[0]);
-            auto dst_reg_o = reg_obj();
+            auto dst_reg_o = REG_OBJ();
             // TODO support latin1, etc.
             auto mode = push_string("r");
-            auto mode_s = reg_str();
+            auto mode_s = REG_STR();
             ASM_CONST_S(mode_s, mode);
             ASM_OPEN_FH(dst_reg_o, fname_s, mode_s);
             return dst_reg_o;
@@ -1684,8 +1685,8 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
             assert(args->children.size <= 2);
             assert(args->children.size != 2 && "Encoding option is not supported yet");
             auto fname_s = do_compile(args->children.nodes[0]);
-            auto dst_reg_s = reg_str();
-            auto encoding_s = reg_str();
+            auto dst_reg_s = REG_STR();
+            auto encoding_s = REG_STR();
             ASM_CONST_S(encoding_s, push_string("utf8")); // TODO support latin1, etc.
             ASM_SLURP(dst_reg_s, fname_s, encoding_s);
             return dst_reg_s;
@@ -1695,7 +1696,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         {
           uint16_t func_reg_no;
           if (node->children.nodes[0]->type == PVIP_NODE_IDENT) {
-            func_reg_no = reg_obj();
+            func_reg_no = REG_OBJ();
             int lex_no, outer;
             if (!find_lexical_by_name(std::string("&") + std::string(ident->pv->buf, ident->pv->len), &lex_no, &outer)) {
               MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", (std::string("&") + std::string(ident->pv->buf, ident->pv->len)).c_str());
@@ -1772,7 +1773,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
               ++i;
             }
           }
-          auto dest_reg = reg_obj(); // ctx
+          auto dest_reg = REG_OBJ(); // ctx
           ASM_INVOKE_O(
               dest_reg,
               func_reg_no
@@ -1798,8 +1799,8 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         return reg_num;
       }
 
-      int dst_num = reg_obj();
-      int boxtype_reg = reg_obj();
+      int dst_num = REG_OBJ();
+      int boxtype_reg = REG_OBJ();
       switch (reg_type) {
       case MVM_reg_str:
         ASM_HLLBOXTYPE_S(boxtype_reg);
@@ -1822,7 +1823,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       assert(reg_num != UNKNOWN_REG);
       switch (get_local_type(reg_num)) {
       case MVM_reg_str: {
-        int dst_num = reg_num64();
+        int dst_num = REG_NUM64();
         ASM_COERCE_SN(dst_num, reg_num);
         return dst_num;
       }
@@ -1830,12 +1831,12 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         return reg_num;
       }
       case MVM_reg_int64: {
-        int dst_num = reg_num64();
+        int dst_num = REG_NUM64();
         ASM_COERCE_IN(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
-        int dst_num = reg_num64();
+        int dst_num = REG_NUM64();
         ASM_SMRT_NUMIFY(dst_num, reg_num);
         return dst_num;
       }
@@ -1849,12 +1850,12 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       assert(reg_num != UNKNOWN_REG);
       switch (get_local_type(reg_num)) {
       case MVM_reg_str: {
-        int dst_num = reg_int64();
+        int dst_num = REG_INT64();
         ASM_COERCE_SI(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_num64: {
-        int dst_num = reg_num64();
+        int dst_num = REG_NUM64();
         ASM_COERCE_NI(dst_num, reg_num);
         return dst_num;
       }
@@ -1862,8 +1863,8 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         return reg_num;
       }
       case MVM_reg_obj: {
-        int dst_num = reg_num64();
-        int dst_int = reg_int64();
+        int dst_num = REG_NUM64();
+        int dst_int = REG_INT64();
         // TODO: I need smrt_intify?
         ASM_SMRT_NUMIFY(dst_num, reg_num);
         ASM_COERCE_NI(dst_int, dst_num);
@@ -1883,17 +1884,17 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         // nop
         return reg_num;
       case MVM_reg_num64: {
-        int dst_num = reg_str();
+        int dst_num = REG_STR();
         ASM_COERCE_NS(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_int64: {
-        int dst_num = reg_str();
+        int dst_num = REG_STR();
         ASM_COERCE_IS(dst_num, reg_num);
         return dst_num;
       }
       case MVM_reg_obj: {
-        int dst_num = reg_str();
+        int dst_num = REG_STR();
         ASM_SMRT_STRIFY(dst_num, reg_num);
         return dst_num;
       }
@@ -1908,7 +1909,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         int reg_num1 = to_s(do_compile(node->children.nodes[0]));
         int reg_num2 = to_s(do_compile(node->children.nodes[1]));
-        int reg_num_dst = reg_int64();
+        int reg_num_dst = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
     }
@@ -1917,7 +1918,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         int reg_num1 = to_i(do_compile(node->children.nodes[0]));
         int reg_num2 = to_i(do_compile(node->children.nodes[1]));
-        auto dst_reg = reg_int64();
+        auto dst_reg = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
         return dst_reg;
     }
@@ -1927,7 +1928,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         auto lhs = get_variable(node->children.nodes[0]->pv);
         auto rhs = do_compile(node->children.nodes[1]);
-        auto tmp = reg_num64();
+        auto tmp = REG_NUM64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, tmp, to_n(lhs), to_n(rhs));
         set_variable(node->children.nodes[0]->pv, to_o(tmp));
         return tmp;
@@ -1938,7 +1939,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         auto lhs = get_variable(node->children.nodes[0]->pv);
         auto rhs = do_compile(node->children.nodes[1]);
-        auto tmp = reg_int64();
+        auto tmp = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op, tmp, to_i(lhs), to_i(rhs));
         set_variable(node->children.nodes[0]->pv, to_o(tmp));
         return tmp;
@@ -1949,7 +1950,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         auto lhs = get_variable(node->children.nodes[0]->pv);
         auto rhs = do_compile(node->children.nodes[1]);
-        auto tmp = reg_str();
+        auto tmp = REG_STR();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, tmp, to_s(lhs), rhs_type == MVM_reg_int64 ? to_i(rhs) : to_s(rhs));
         set_variable(node->children.nodes[0]->pv, to_o(tmp));
         return tmp;
@@ -1959,23 +1960,23 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
         int reg_num1 = do_compile(node->children.nodes[0]);
         if (get_local_type(reg_num1) == MVM_reg_int64) {
-          int reg_num_dst = reg_int64();
+          int reg_num_dst = REG_INT64();
           int reg_num2 = this->to_i(do_compile(node->children.nodes[1]));
           assert(get_local_type(reg_num1) == MVM_reg_int64);
           assert(get_local_type(reg_num2) == MVM_reg_int64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
         } else if (get_local_type(reg_num1) == MVM_reg_num64) {
-          int reg_num_dst = reg_num64();
+          int reg_num_dst = REG_NUM64();
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
           assert(get_local_type(reg_num2) == MVM_reg_num64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
         } else if (get_local_type(reg_num1) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
-          int reg_num_dst = reg_num64();
+          int reg_num_dst = REG_NUM64();
 
-          int dst_num = reg_num64();
+          int dst_num = REG_NUM64();
           ASM_OP_U16_U16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
 
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
@@ -1983,10 +1984,10 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
           return reg_num_dst;
         } else if (get_local_type(reg_num1) == MVM_reg_str) {
-          int dst_num = reg_num64();
+          int dst_num = REG_NUM64();
           ASM_COERCE_SN(dst_num, reg_num1);
 
-          int reg_num_dst = reg_num64();
+          int reg_num_dst = REG_NUM64();
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
 
@@ -2042,7 +2043,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     // TODO: optimize simple case like `1 < $n`
     uint16_t compile_chained_comparisions(const PVIPNode* node) {
       auto lhs = do_compile(node->children.nodes[0]);
-      auto dst_reg = reg_int64();
+      auto dst_reg = REG_INT64();
       auto label_end = label_unsolved();
       auto label_false = label_unsolved();
       for (int i=1; i<node->children.size; i++) {
@@ -2062,7 +2063,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       return dst_reg;
     }
     int num_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n) {
-        int reg_num_dst = reg_int64();
+        int reg_num_dst = REG_INT64();
         if (get_local_type(lhs) == MVM_reg_int64) {
           assert(get_local_type(lhs) == MVM_reg_int64);
           // assert(get_local_type(rhs) == MVM_reg_int64);
@@ -2081,7 +2082,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         }
     }
     int str_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op) {
-        int reg_num_dst = reg_int64();
+        int reg_num_dst = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, to_s(lhs), to_s(rhs));
         return reg_num_dst;
     }
@@ -2176,8 +2177,8 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       ASM_CHECKARITY(0, -1);
 
       /*
-      int code = reg_obj();
-      int dest_reg = reg_obj();
+      int code = REG_OBJ();
+      int dest_reg = REG_OBJ();
       ASM_WVAL(code, 0, 1);
       MVMCallsite* callsite = new MVMCallsite;
       memset(callsite, 0, sizeof(MVMCallsite));
@@ -2196,8 +2197,8 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       // $?PACKAGE.WHO<bar> should work.
       {
         auto lex = push_lexical("$?PACKAGE", MVM_reg_obj);
-        auto package = reg_obj();
-        auto hash_type = reg_obj();
+        auto package = REG_OBJ();
+        auto hash_type = REG_OBJ();
         ASM_HLLHASH(hash_type);
         ASM_CREATE(package, hash_type);
         ASM_BINDLEX(lex, 0, package);
@@ -2220,7 +2221,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       */
 
       // final op must be return.
-      int reg = reg_obj();
+      int reg = REG_OBJ();
       ASM_NULL(reg);
       ASM_RETURN_O(reg);
 
