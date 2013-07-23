@@ -126,9 +126,17 @@ int main(int argc, char** argv) {
   MVMCompUnit cu;
   memset(&cu, 0, sizeof(MVMCompUnit));
 
+  int apr_return_status;
+  apr_pool_t  *pool        = NULL;
+  /* Ensure the file exists, and get its size. */
+  if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
+    MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
+  }
+  cu.pool       = pool;
+
   KijiCompiler compiler(&cu, vm->main_thread);
   compiler.compile(root_node, vm);
-  compiler.finalize(vm);
+  Kiji_compiler_finalize(&compiler, vm);
 #ifdef DEBUG_ASM
   Kiji_asm_dump_compunit(&cu);
 #endif

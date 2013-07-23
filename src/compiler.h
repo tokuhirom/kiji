@@ -106,10 +106,10 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   class KijiCompiler {
   public:
     std::vector<KijiFrame*> frames_;
-  public:
     MVMCompUnit* cu;
+  public:
     MVMThreadContext *tc_;
-    int frame_no_;
+    int frame_no;
     MVMObject* current_class_how_;
 
     MVMSerializationContext * sc_classes_;
@@ -155,10 +155,10 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   public:
     KijiCompiler(MVMCompUnit * cu, MVMThreadContext * tc);
     ~KijiCompiler() { }
-    void initialize();
-    void finalize(MVMInstance* vm);
     void compile(PVIPNode*node, MVMInstance* vm);
   };
+
+    void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
 
   KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
     return self->frames_.back();

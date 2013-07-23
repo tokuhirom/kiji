@@ -222,7 +222,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
       MVMThreadContext *tc_ = self->tc_;
       assert(tc_);
       char *buf = (char*)malloc((name.size()+32)*sizeof(char));
-      int len = snprintf(buf, name.size()+31, "%s%d", name.c_str(), self->frame_no_++);
+      int len = snprintf(buf, name.size()+31, "%s%d", name.c_str(), self->frame_no++);
       // TODO Newxz
       KijiFrame* frame = (KijiFrame*)malloc(sizeof(KijiFrame));
       memset(frame, 0, sizeof(KijiFrame));
@@ -1842,8 +1842,10 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
 
-    KijiCompiler::KijiCompiler(MVMCompUnit * cu__, MVMThreadContext * tc): cu(cu__), frame_no_(0), tc_(tc) {
-      initialize();
+    KijiCompiler::KijiCompiler(MVMCompUnit * cu__, MVMThreadContext * tc): cu(cu__), frame_no(0), tc_(tc) {
+      // init compunit.
+      Kiji_compiler_push_frame(this, std::string("frame_name_0"));
+      assert(tc_);
 
       current_class_how_ = NULL;
 
@@ -1854,21 +1856,9 @@ KijiLoopGuard::~KijiLoopGuard() {
       num_sc_classes_ = 0;
     }
 
-    void KijiCompiler::initialize() {
-      // init compunit.
-      int apr_return_status;
-      apr_pool_t  *pool        = NULL;
-      /* Ensure the file exists, and get its size. */
-      if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
-        MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
-      }
-      cu->pool       = pool;
-      assert(tc_);
-      Kiji_compiler_push_frame(this, std::string("frame_name_0"));
-    }
-    void KijiCompiler::finalize(MVMInstance* vm) {
-      MVMThreadContext *tc = tc_; // remove me
-      MVMInstance *vm_ = vm; // remove me
+    void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm) {
+      MVMThreadContext *tc = self->tc_; // remove me
+      MVMCompUnit *cu = self->cu;
 
       // finalize frame
       for (int i=0; i<cu->num_frames; i++) {
@@ -1879,7 +1869,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         char buf[1023+1];
         int len = snprintf(buf, 1023, "frame_cuuid_%d", i);
-        frame->cuuid = MVM_string_utf8_decode(tc_, tc_->instance->VMString, buf, len);
+        frame->cuuid = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
       }
 
       cu->main_frame = cu->frames[0];
