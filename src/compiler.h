@@ -283,67 +283,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
       ASM_OP_U16_U32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
     }
 
-    int compile_class(const PVIPNode* node) {
-      int wval1, wval2;
-      {
-        // Create new class.
-        MVMObject * type = MVM_6model_find_method(
-          tc_,
-          STABLE(tc_->instance->KnowHOW)->HOW,
-          MVM_string_ascii_decode_nt(tc_, tc_->instance->VMString, (char*)"new_type")
-        );
-        MVMObject * how = STABLE(type)->HOW;
-
-        // Add "new" method
-        {
-          MVMString * name = MVM_string_ascii_decode_nt(tc_, tc_->instance->VMString, (char*)"new");
-          // self, type_obj, name, method
-          MVMObject * method_cache = REPR(tc_->instance->boot_types->BOOTHash)->allocate(tc_, STABLE(tc_->instance->boot_types->BOOTHash));
-          // MVMObject * method_cache = REPR(type)->allocate(tc_, STABLE(type));
-          // MVMObject * method_table = ((MVMKnowHOWREPR *)type)->body.methods;
-          MVMObject * BOOTCCode = tc_->instance->boot_types->BOOTCCode;
-          MVMObject * method = REPR(BOOTCCode)->allocate(tc_, STABLE(BOOTCCode));
-          ((MVMCFunction *)method)->body.func = Mu_new;
-          REPR(method_cache)->ass_funcs->bind_key_boxed(
-              tc_,
-              STABLE(method_cache),
-              method_cache,
-              OBJECT_BODY(method_cache),
-              (MVMObject*)name,
-              method);
-          // REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
-              // method_table, OBJECT_BODY(method_table), (MVMObject *)name, method);
-          STABLE(type)->method_cache = method_cache;
-        }
-
-        this->push_sc_object(type, &wval1, &wval2);
-        current_class_how_ = how;
-      }
-
-      // compile body
-      for (int i=0; i<node->children.nodes[2]->children.size; i++) {
-        PVIPNode *n = node->children.nodes[2]->children.nodes[i];
-        (void)do_compile(n);
-      }
-
-      current_class_how_ = NULL;
-
-      auto retval = REG_OBJ();
-      ASM_WVAL(retval, wval1, wval2);
-
-      // Bind class object to lexical variable
-      auto name_node = node->children.nodes[0];
-      if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STRING) {
-        auto lex = push_lexical(PVIPSTRING2STDSTRING(name_node->pv), MVM_reg_obj);
-        ASM_BINDLEX(
-          lex,
-          0,
-          retval
-        );
-      }
-
-      return retval;
-    }
+    int compile_class(const PVIPNode* node);
 
     uint16_t get_variable(PVIPString * name) {
       return get_variable(std::string(name->buf, name->len));
@@ -457,15 +397,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc_, name, lex_no, outer) == KIJI_TRUE;
-    }
-    // Push lexical variable.
-    int push_lexical(PVIPString *pv, MVMuint16 type) {
-      MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, pv->buf, pv->len);
-      return Kiji_frame_push_lexical(frames_.back(), tc_, name, type);
-    }
-    int push_lexical(const std::string name_cc, MVMuint16 type) {
-      MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      return Kiji_frame_push_lexical(frames_.back(), tc_, name, type);
     }
     void compile_array(uint16_t array_reg, const PVIPNode* node);
     int do_compile(const PVIPNode*node);
