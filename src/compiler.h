@@ -172,7 +172,29 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
 struct KijiCompiler;
 
+    class KijiLabel {
+    private:
+      KijiCompiler *compiler_;
+      ssize_t address_;
+      std::vector<ssize_t> reserved_addresses_;
+    public:
+      KijiLabel(KijiCompiler *compiler) :compiler_(compiler), address_(-1) { }
+      KijiLabel(KijiCompiler *compiler, ssize_t address) :compiler_(compiler), address_(address) { }
+      ~KijiLabel() {
+        assert(address_ != -1 && "Unsolved label");
+      }
+      ssize_t address() const {
+        return address_;
+      }
+      void put();
+      void reserve(ssize_t address) {
+        reserved_addresses_.push_back(address);
+      }
+      bool is_solved() const { return address_!=-1; }
+    };
+
   KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n);
+
 
   /**
    * OP map is 3rd/MoarVM/src/core/oplist
@@ -200,43 +222,13 @@ struct KijiCompiler;
       MVM_sc_set_object(tc_, sc_classes_, num_sc_classes_-1, object);
     }
 
-    class Label {
-    private:
-      KijiCompiler *compiler_;
-      ssize_t address_;
-      std::vector<ssize_t> reserved_addresses_;
-    public:
-      Label(KijiCompiler *compiler) :compiler_(compiler), address_(-1) { }
-      Label(KijiCompiler *compiler, ssize_t address) :compiler_(compiler), address_(address) { }
-      ~Label() {
-        assert(address_ != -1 && "Unsolved label");
-      }
-      ssize_t address() const {
-        return address_;
-      }
-      void put() {
-        assert(address_ == -1);
-        address_ = compiler_->frames_.back()->frame.bytecode_size;
-
-        // rewrite reserved addresses
-        for (auto r: reserved_addresses_) {
-          Kiji_asm_write_uint32_t(&(*(compiler_->frames_.back())), address_, r);
-        }
-        reserved_addresses_.empty();
-      }
-      void reserve(ssize_t address) {
-        reserved_addresses_.push_back(address);
-      }
-      bool is_solved() const { return address_!=-1; }
-    };
-
-    Label label() { return Label(this, frames_.back()->frame.bytecode_size); }
-    Label label_unsolved() { return Label(this); }
+    KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
+    KijiLabel label_unsolved() { return KijiLabel(this); }
 
 #define ASM_BYTECODE_SIZE() \
     frames_.back()->frame.bytecode_size
 
-    void goto_(Label &label) {
+    void goto_(KijiLabel &label) {
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2);
       }
@@ -259,13 +251,13 @@ struct KijiCompiler;
       default: abort();
       }
     }
-    void if_any(uint16_t reg, Label &label) {
+    void if_any(uint16_t reg, KijiLabel &label) {
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
       ASM_OP_U16_U32(MVM_OP_BANK_primitives, if_op(reg), reg, label.address());
     }
-    void unless_any(uint16_t reg, Label &label) {
+    void unless_any(uint16_t reg, KijiLabel &label) {
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
@@ -1214,7 +1206,7 @@ struct KijiCompiler;
         if_any(if_cond_reg, label_if);
 
         // put else if conditions
-        std::list<Label> elsif_poses;
+        std::list<KijiLabel> elsif_poses;
         for (int i=2; i<node->children.size; ++i) {
           PVIPNode *n = node->children.nodes[i];
           if (n->type == PVIP_NODE_ELSE) {
@@ -2294,5 +2286,16 @@ struct KijiCompiler;
   // Get register type at 'n'
   KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n) {
     return Kiji_frame_get_local_type(Kiji_compiler_top_frame(self), n);
+  }
+
+  void KijiLabel::put() {
+    assert(address_ == -1);
+    address_ = compiler_->frames_.back()->frame.bytecode_size;
+
+    // rewrite reserved addresses
+    for (auto r: reserved_addresses_) {
+      Kiji_asm_write_uint32_t(&(*(compiler_->frames_.back())), address_, r);
+    }
+    reserved_addresses_.empty();
   }
 
