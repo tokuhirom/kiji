@@ -110,15 +110,13 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   public:
     MVMThreadContext *tc_;
     int frame_no;
-    MVMObject* current_class_how_;
+    MVMObject* current_class_how;
 
     MVMSerializationContext * sc_classes_;
     int num_sc_classes_;
 
     KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
     KijiLabel label_unsolved() { return KijiLabel(this); }
-
-    void set_variable(MVMString *name, uint16_t val_reg);
 
     // This reg returns register number contains true value.
     int do_compile(const PVIPNode*node);
@@ -170,4 +168,5 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int Kiji_compiler_const_true(KijiCompiler *self);
     void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node);
     int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node);
+    void Kiji_compiler_set_variable(KijiCompiler *self, MVMString * name, uint16_t val_reg);
 
