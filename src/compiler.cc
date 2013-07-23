@@ -822,7 +822,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return retval;
       }
       case PVIP_NODE_CLASS: {
-        return compile_class(node);
+        return Kiji_compiler_compile_class(self, node);
       }
       case PVIP_NODE_FOR: {
         //   init_iter
@@ -2004,8 +2004,8 @@ KijiLoopGuard::~KijiLoopGuard() {
       CU->scs_to_resolve[1] = NULL;
     }
 
-    int KijiCompiler::compile_class(const PVIPNode* node) {
-      KijiCompiler *self = this;
+    int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node) {
+      MVMThreadContext *tc_ = self->tc_;
       int wval1, wval2;
       {
         // Create new class.
@@ -2038,17 +2038,17 @@ KijiLoopGuard::~KijiLoopGuard() {
           STABLE(type)->method_cache = method_cache;
         }
 
-        Kiji_compiler_push_sc_object(this, type, &wval1, &wval2);
-        current_class_how_ = how;
+        Kiji_compiler_push_sc_object(self, type, &wval1, &wval2);
+        self->current_class_how_ = how;
       }
 
       // compile body
       for (int i=0; i<node->children.nodes[2]->children.size; i++) {
         PVIPNode *n = node->children.nodes[2]->children.nodes[i];
-        (void)do_compile(n);
+        (void)self->do_compile(n);
       }
 
-      current_class_how_ = NULL;
+      self->current_class_how_ = NULL;
 
       auto retval = REG_OBJ();
       ASM_WVAL(retval, wval1, wval2);
@@ -2057,7 +2057,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       auto name_node = node->children.nodes[0];
       if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STRING) {
         MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_node->pv->buf, name_node->pv->len);
-        auto lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+        auto lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
         ASM_BINDLEX(
           lex,
           0,

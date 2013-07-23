@@ -118,11 +118,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
     KijiLabel label_unsolved() { return KijiLabel(this); }
 
-    void if_any(uint16_t reg, KijiLabel &label);
-    void unless_any(uint16_t reg, KijiLabel &label);
-
-    int compile_class(const PVIPNode* node);
-
     void set_variable(MVMString *name, uint16_t val_reg);
 
     // This reg returns register number contains true value.
@@ -174,4 +169,5 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
     int Kiji_compiler_const_true(KijiCompiler *self);
     void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node);
+    int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node);
 
