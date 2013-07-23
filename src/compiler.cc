@@ -232,7 +232,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
     }
 
     KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
-      self->frames_.pop_back();
+      self->frames.pop_back();
     }
 
     int Kiji_compiler_push_frame(KijiCompiler* self, const std::string & name) {
@@ -245,14 +245,14 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
       memset(frame, 0, sizeof(KijiFrame));
       frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
       free(buf);
-      if (self->frames_.size() != 0) {
-        Kiji_frame_set_outer(frame, self->frames_.back());
+      if (self->frames.size() != 0) {
+        Kiji_frame_set_outer(frame, Kiji_compiler_top_frame(self));
       }
-      self->frames_.push_back(frame);
+      self->frames.push_back(frame);
       MVMCompUnit *cu = self->cu;
       cu->num_frames++;
       Renew(cu->frames, cu->num_frames, MVMStaticFrame*);
-      cu->frames[cu->num_frames-1] = &(self->frames_.back()->frame);
+      cu->frames[cu->num_frames-1] = &(Kiji_compiler_top_frame(self)->frame);
       cu->frames[cu->num_frames-1]->cu = cu;
       cu->frames[cu->num_frames-1]->work_size = 0;
       return cu->num_frames-1;
@@ -260,11 +260,11 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
 
   void KijiLabel::put() {
     assert(address_ == -1);
-    address_ = compiler_->frames_.back()->frame.bytecode_size;
+    address_ = Kiji_compiler_top_frame(compiler_)->frame.bytecode_size;
 
     // rewrite reserved addresses
     for (auto r: reserved_addresses_) {
-      Kiji_asm_write_uint32_t_for(&(*(compiler_->frames_.back())), address_, r);
+      Kiji_asm_write_uint32_t_for(&(*(Kiji_compiler_top_frame(compiler_))), address_, r);
     }
     reserved_addresses_.empty();
   }
@@ -289,7 +289,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         last_handler->action = MVM_EX_ACTION_GOTO;
         last_handler->block_reg = 0;
         last_handler->goto_offset = last_offset_;
-        Kiji_frame_push_handler(compiler_->frames_.back(), last_handler);
+        Kiji_frame_push_handler(Kiji_compiler_top_frame(compiler_), last_handler);
 
         MVMFrameHandler *next_handler = new MVMFrameHandler;
         next_handler->start_offset = start_offset_;
@@ -298,7 +298,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         next_handler->action = MVM_EX_ACTION_GOTO;
         next_handler->block_reg = 0;
         next_handler->goto_offset = next_offset_;
-        Kiji_frame_push_handler(compiler_->frames_.back(), next_handler);
+        Kiji_frame_push_handler(Kiji_compiler_top_frame(compiler_), next_handler);
 
         MVMFrameHandler *redo_handler = new MVMFrameHandler;
         redo_handler->start_offset = start_offset_;
@@ -307,7 +307,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         redo_handler->action = MVM_EX_ACTION_GOTO;
         redo_handler->block_reg = 0;
         redo_handler->goto_offset = redo_offset_;
-        Kiji_frame_push_handler(compiler_->frames_.back(), redo_handler);
+        Kiji_frame_push_handler(Kiji_compiler_top_frame(compiler_), redo_handler);
       }
       KijiLoopGuard::KijiLoopGuard(KijiCompiler *compiler) :compiler_(compiler) {
         start_offset_ = Kiji_compiler_bytecode_size(compiler_)-1;

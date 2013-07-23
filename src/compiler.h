@@ -79,7 +79,7 @@ public:
 */
 enum { UNKNOWN_REG = -1 };
 struct KijiCompiler {
-  std::vector<KijiFrame*> frames_;
+  std::vector<KijiFrame*> frames;
   MVMCompUnit* cu;
   MVMThreadContext *tc;
   int frame_no;
@@ -91,7 +91,7 @@ struct KijiCompiler {
 
 
 KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
-  return self->frames_.back();
+  return self->frames.back();
 }
 
 // reserve register
