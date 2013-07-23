@@ -1765,7 +1765,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         PVIPNode *iter = node->children.nodes[i];
         auto rhs = self->do_compile(iter->children.nodes[0]);
         // result will store to lhs.
-        uint16_t ret = self->do_compare(iter->type, lhs, rhs);
+        uint16_t ret = Kiji_compiler_do_compare(self, iter->type, lhs, rhs);
         Kiji_compiler_unless_any(self, ret, label_false);
         lhs = rhs;
       }
@@ -1777,18 +1777,17 @@ KijiLoopGuard::~KijiLoopGuard() {
     label_end.put();
       return dst_reg;
     }
-    int KijiCompiler::num_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n) {
-      KijiCompiler *self = this;
+    int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n) {
         int reg_num_dst = REG_INT64();
-        if (Kiji_compiler_get_local_type(this, lhs) == MVM_reg_int64) {
-          assert(Kiji_compiler_get_local_type(this, lhs) == MVM_reg_int64);
-          // assert(Kiji_compiler_get_local_type(this, rhs) == MVM_reg_int64);
+        if (Kiji_compiler_get_local_type(self, lhs) == MVM_reg_int64) {
+          assert(Kiji_compiler_get_local_type(self, lhs) == MVM_reg_int64);
+          // assert(Kiji_compiler_get_local_type(self, rhs) == MVM_reg_int64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, reg_num_dst, lhs, Kiji_compiler_to_i(self, rhs));
           return reg_num_dst;
-        } else if (Kiji_compiler_get_local_type(this, lhs) == MVM_reg_num64) {
+        } else if (Kiji_compiler_get_local_type(self, lhs) == MVM_reg_num64) {
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, lhs, Kiji_compiler_to_n(self, rhs));
           return reg_num_dst;
-        } else if (Kiji_compiler_get_local_type(this, lhs) == MVM_reg_obj) {
+        } else if (Kiji_compiler_get_local_type(self, lhs) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, Kiji_compiler_to_n(self, lhs), Kiji_compiler_to_n(self, rhs));
           return reg_num_dst;
@@ -1798,40 +1797,39 @@ KijiLoopGuard::~KijiLoopGuard() {
         }
     }
 
-    int KijiCompiler::str_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op) {
-      KijiCompiler *self = this;
+    int Kiji_compiler_str_cmp_binop(KijiCompiler * self, uint16_t lhs, uint16_t rhs, uint16_t op) {
         int reg_num_dst = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, Kiji_compiler_to_s(self, lhs), Kiji_compiler_to_s(self, rhs));
         return reg_num_dst;
     }
-    uint16_t KijiCompiler::do_compare(PVIP_node_type_t type, uint16_t lhs, uint16_t rhs) {
+    uint16_t Kiji_compiler_do_compare(KijiCompiler* self, PVIP_node_type_t type, uint16_t lhs, uint16_t rhs) {
       switch (type) {
       case PVIP_NODE_STREQ:
-        return this->str_cmp_binop(lhs, rhs, MVM_OP_eq_s);
+        return Kiji_compiler_str_cmp_binop(self, lhs, rhs, MVM_OP_eq_s);
       case PVIP_NODE_STRNE:
-        return this->str_cmp_binop(lhs, rhs, MVM_OP_ne_s);
+        return Kiji_compiler_str_cmp_binop(self, lhs, rhs, MVM_OP_ne_s);
       case PVIP_NODE_STRGT:
-        return this->str_cmp_binop(lhs, rhs, MVM_OP_gt_s);
+        return Kiji_compiler_str_cmp_binop(self, lhs, rhs, MVM_OP_gt_s);
       case PVIP_NODE_STRGE:
-        return this->str_cmp_binop(lhs, rhs, MVM_OP_ge_s);
+        return Kiji_compiler_str_cmp_binop(self, lhs, rhs, MVM_OP_ge_s);
       case PVIP_NODE_STRLT:
-        return this->str_cmp_binop(lhs, rhs, MVM_OP_lt_s);
+        return Kiji_compiler_str_cmp_binop(self, lhs, rhs, MVM_OP_lt_s);
       case PVIP_NODE_STRLE:
-        return this->str_cmp_binop(lhs, rhs, MVM_OP_le_s);
+        return Kiji_compiler_str_cmp_binop(self, lhs, rhs, MVM_OP_le_s);
       case PVIP_NODE_EQ:
-        return this->num_cmp_binop(lhs, rhs, MVM_OP_eq_i, MVM_OP_eq_n);
+        return Kiji_compiler_num_cmp_binop(self, lhs, rhs, MVM_OP_eq_i, MVM_OP_eq_n);
       case PVIP_NODE_NE:
-        return this->num_cmp_binop(lhs, rhs, MVM_OP_ne_i, MVM_OP_ne_n);
+        return Kiji_compiler_num_cmp_binop(self, lhs, rhs, MVM_OP_ne_i, MVM_OP_ne_n);
       case PVIP_NODE_LT:
-        return this->num_cmp_binop(lhs, rhs, MVM_OP_lt_i, MVM_OP_lt_n);
+        return Kiji_compiler_num_cmp_binop(self, lhs, rhs, MVM_OP_lt_i, MVM_OP_lt_n);
       case PVIP_NODE_LE:
-        return this->num_cmp_binop(lhs, rhs, MVM_OP_le_i, MVM_OP_le_n);
+        return Kiji_compiler_num_cmp_binop(self, lhs, rhs, MVM_OP_le_i, MVM_OP_le_n);
       case PVIP_NODE_GT:
-        return this->num_cmp_binop(lhs, rhs, MVM_OP_gt_i, MVM_OP_gt_n);
+        return Kiji_compiler_num_cmp_binop(self, lhs, rhs, MVM_OP_gt_i, MVM_OP_gt_n);
       case PVIP_NODE_GE:
-        return this->num_cmp_binop(lhs, rhs, MVM_OP_ge_i, MVM_OP_ge_n);
+        return Kiji_compiler_num_cmp_binop(self, lhs, rhs, MVM_OP_ge_i, MVM_OP_ge_n);
       case PVIP_NODE_EQV:
-        return this->str_cmp_binop(lhs, rhs, MVM_OP_eq_s);
+        return Kiji_compiler_str_cmp_binop(self, lhs, rhs, MVM_OP_eq_s);
       default:
         abort();
       }
