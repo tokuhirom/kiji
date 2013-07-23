@@ -122,7 +122,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int do_compile(const PVIPNode*node);
   public:
     // objectify the register.
-    int to_o(int reg_num);
     int to_n(int reg_num);
     int to_i(int reg_num);
     int to_s(int reg_num);
@@ -169,4 +168,5 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node);
     int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node);
     void Kiji_compiler_set_variable(KijiCompiler *self, MVMString * name, uint16_t val_reg);
+    int Kiji_compiler_to_o(KijiCompiler *self, int reg_num);
 
