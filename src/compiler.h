@@ -2294,7 +2294,7 @@ struct KijiCompiler;
 
     // rewrite reserved addresses
     for (auto r: reserved_addresses_) {
-      Kiji_asm_write_uint32_t(&(*(compiler_->frames_.back())), address_, r);
+      Kiji_asm_write_uint32_t_for(&(*(compiler_->frames_.back())), address_, r);
     }
     reserved_addresses_.empty();
   }
