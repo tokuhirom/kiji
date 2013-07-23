@@ -467,11 +467,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
       MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       return Kiji_frame_push_lexical(frames_.back(), tc_, name, type);
     }
-    void push_pkg_var(const std::string name_cc) {
-      MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      Kiji_frame_push_pkg_var(frames_.back(), name);
-    }
-
     void compile_array(uint16_t array_reg, const PVIPNode* node);
     int do_compile(const PVIPNode*node);
   private:

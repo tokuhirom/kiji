@@ -21,6 +21,11 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
     }
 }
 
+    void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name) {
+      Kiji_frame_push_pkg_var(Kiji_compiler_top_frame(self), name);
+    }
+
+
     // Is a and b equivalent?
     KIJI_STATIC_INLINE bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
       if (a->arg_count != b->arg_count) {
@@ -432,7 +437,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         } else if (lhs->type == PVIP_NODE_OUR) {
           // our $var := foo;
           assert(lhs->children.nodes[0]->type == PVIP_NODE_VARIABLE);
-          push_pkg_var(PVIPSTRING2STDSTRING(lhs->children.nodes[0]->pv));
+          MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
+          Kiji_compiler_push_pkg_var(this, name);
           auto varname = push_string(lhs->children.nodes[0]->pv);
           int val    = to_o(do_compile(rhs));
           int outer = 0;
@@ -707,7 +713,8 @@ KijiLoopGuard::~KijiLoopGuard() {
           printf("This is variable: %s\n", PVIP_node_name(n->type));
           exit(0);
         }
-        push_pkg_var(std::string(n->pv->buf, n->pv->len));
+        MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
+        Kiji_compiler_push_pkg_var(this, name);
         return UNKNOWN_REG;
       }
       case PVIP_NODE_MY: {
