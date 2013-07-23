@@ -10,13 +10,13 @@ extern "C" {
     frames_.back()->frame.bytecode_size
 
 #define newMVMString(str, len) \
-  MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, str, len)
+  MVM_string_utf8_decode(tc_, tc_->instance->VMString, str, len)
 
 #define newMVMString_nolen(str) \
-  MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (str), strlen((str)))
+  MVM_string_utf8_decode(tc_, tc_->instance->VMString, (str), strlen((str)))
 
 #define newMVMStringFromPVIP(p) \
-  MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (p)->buf, (p)->len)
+  MVM_string_utf8_decode(self->tc_, self->tc_->instance->VMString, (p)->buf, (p)->len)
 
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
@@ -156,13 +156,13 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
       *wval1 = 1;
       *wval2 = self->num_sc_classes_-1;
 
-      MVM_sc_set_object(self->tc, self->sc_classes_, self->num_sc_classes_-1, object);
+      MVM_sc_set_object(self->tc_, self->sc_classes_, self->num_sc_classes_-1, object);
     }
 
 
     // Push lexical variable.
     int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type) {
-      return Kiji_frame_push_lexical(Kiji_compiler_top_frame(self), self->tc, name, type);
+      return Kiji_frame_push_lexical(Kiji_compiler_top_frame(self), self->tc_, name, type);
     }
 
     void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name) {
@@ -211,14 +211,14 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
     }
 
     int Kiji_compiler_push_frame(KijiCompiler* self, const std::string & name) {
-      MVMThreadContext *tc = self->tc;
-      assert(tc);
+      MVMThreadContext *tc_ = self->tc_;
+      assert(tc_);
       char *buf = (char*)malloc((name.size()+32)*sizeof(char));
       int len = snprintf(buf, name.size()+31, "%s%d", name.c_str(), self->frame_no_++);
       // TODO Newxz
       KijiFrame* frame = (KijiFrame*)malloc(sizeof(KijiFrame));
       memset(frame, 0, sizeof(KijiFrame));
-      frame->frame.name = MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, buf, len);
+      frame->frame.name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, buf, len);
       free(buf);
       if (self->frames_.size() != 0) {
         Kiji_frame_set_outer(frame, self->frames_.back());
@@ -506,7 +506,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         for (int i=0; i<node->children.nodes[0]->children.size; i++) {
           PVIPNode *n = node->children.nodes[0]->children.nodes[i];
           int reg = REG_OBJ();
-          MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
+          MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
           int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
           ASM_PARAM_RP_O(reg, i);
           ASM_BINDLEX(lex, 0, reg);
@@ -584,7 +584,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         } else if (lhs->type == PVIP_NODE_OUR) {
           // our $var := foo;
           assert(lhs->children.nodes[0]->type == PVIP_NODE_VARIABLE);
-          MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
+          MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
           Kiji_compiler_push_pkg_var(this, name);
           auto varname = push_string(newMVMStringFromPVIP(lhs->children.nodes[0]->pv));
           int val    = to_o(do_compile(rhs));
@@ -625,7 +625,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         auto funcreg = REG_OBJ();
         std::string amp_name(std::string("&") + name);
-        MVMString * mvm_name = MVM_string_utf8_decode(tc, tc->instance->VMString, amp_name.c_str(), amp_name.size());
+        MVMString * mvm_name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, amp_name.c_str(), amp_name.size());
         auto funclex = Kiji_compiler_push_lexical(this, mvm_name, MVM_reg_obj);
         auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
         ASM_GETCODE(funcreg, 0);
@@ -648,7 +648,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
           {
             // push self
-            MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, "__self", strlen("__self"));
+            MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "__self", strlen("__self"));
             int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
             int reg = REG_OBJ();
             ASM_PARAM_RP_O(reg, 0);
@@ -658,7 +658,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           for (int i=1; i<node->children.nodes[1]->children.size; ++i) {
             auto n = node->children.nodes[1]->children.nodes[i];
             int reg = REG_OBJ();
-            MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
+            MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
             int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
             ASM_PARAM_RP_O(reg, i);
             ASM_BINDLEX(lex, 0, reg);
@@ -709,13 +709,13 @@ KijiLoopGuard::~KijiLoopGuard() {
           MVM_panic(MVM_exitcode_compunit, "Compilation error. You can't write methods outside of class definition");
         }
         {
-          MVMString * methname = MVM_string_utf8_decode(tc, tc->instance->VMString, name.c_str(), name.size());
+          MVMString * methname = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name.c_str(), name.size());
           // self, type_obj, name, method
           MVMObject * method_table = ((MVMKnowHOWREPR *)current_class_how_)->body.methods;
-          MVMObject* code_type = tc->instance->boot_types->BOOTCode;
-          MVMCode *coderef = (MVMCode*)REPR(code_type)->allocate(tc, STABLE(code_type));
+          MVMObject* code_type = tc_->instance->boot_types->BOOTCode;
+          MVMCode *coderef = (MVMCode*)REPR(code_type)->allocate(tc_, STABLE(code_type));
           coderef->body.sf = this->cu->frames[frame_no];
-          REPR(method_table)->ass_funcs->bind_key_boxed(tc, STABLE(method_table),
+          REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
               method_table, OBJECT_BODY(method_table), (MVMObject *)methname, (MVMObject*)coderef);
         }
 
@@ -727,7 +727,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         auto funcreg = REG_OBJ();
         std::string amp_name(std::string("&") + name);
-        MVMString * mvm_name = MVM_string_utf8_decode(tc, tc->instance->VMString, amp_name.c_str(), amp_name.size());
+        MVMString * mvm_name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, amp_name.c_str(), amp_name.size());
         auto funclex = Kiji_compiler_push_lexical(this, mvm_name, MVM_reg_obj);
         auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
         ASM_GETCODE(funcreg, 0);
@@ -751,7 +751,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           for (int i=0; i<node->children.nodes[1]->children.size; ++i) {
             auto n = node->children.nodes[1]->children.nodes[i];
             int reg = REG_OBJ();
-            MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
+            MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
             int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
             ASM_PARAM_RP_O(reg, i);
             ASM_BINDLEX(lex, 0, reg);
@@ -845,7 +845,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             ASM_ARG_O(0, val);
             ASM_INVOKE_V(body);
           } else {
-            MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, "$_", strlen("$_"));
+            MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "$_", strlen("$_"));
             int it = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
             ASM_BINDLEX(it, 0, val);
             do_compile(node->children.nodes[1]);
@@ -868,7 +868,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           printf("This is variable: %s\n", PVIP_node_name(n->type));
           exit(0);
         }
-        MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
+        MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
         Kiji_compiler_push_pkg_var(this, name);
         return UNKNOWN_REG;
       }
@@ -882,7 +882,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           printf("This is variable: %s\n", PVIP_node_name(n->type));
           exit(0);
         }
-        MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
+        MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
         int idx = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
         return idx;
       }
@@ -1832,14 +1832,14 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
 
-    KijiCompiler::KijiCompiler(MVMCompUnit * cu__, MVMThreadContext * tc): cu(cu__), frame_no_(0), tc(tc) {
+    KijiCompiler::KijiCompiler(MVMCompUnit * cu__, MVMThreadContext * tc): cu(cu__), frame_no_(0), tc_(tc) {
       initialize();
 
       current_class_how_ = NULL;
 
       auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
       assert(tc);
-      sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc, handle);
+      sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
 
       num_sc_classes_ = 0;
     }
@@ -1853,11 +1853,11 @@ KijiLoopGuard::~KijiLoopGuard() {
         MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
       }
       cu->pool       = pool;
-      assert(tc);
+      assert(tc_);
       Kiji_compiler_push_frame(this, std::string("frame_name_0"));
     }
     void KijiCompiler::finalize(MVMInstance* vm) {
-      MVMThreadContext *tc = tc; // remove me
+      MVMThreadContext *tc = tc_; // remove me
       MVMInstance *vm_ = vm; // remove me
 
       // finalize frame
@@ -1869,7 +1869,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         char buf[1023+1];
         int len = snprintf(buf, 1023, "frame_cuuid_%d", i);
-        frame->cuuid = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
+        frame->cuuid = MVM_string_utf8_decode(tc_, tc_->instance->VMString, buf, len);
       }
 
       cu->main_frame = cu->frames[0];
@@ -1911,7 +1911,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       // TODO I should wrap it to any object. And set WHO.
       // $?PACKAGE.WHO<bar> should work.
       {
-        MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, "$?PACKAGE", strlen("$?PACKAGE"));
+        MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "$?PACKAGE", strlen("$?PACKAGE"));
         auto lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
         auto package = REG_OBJ();
         auto hash_type = REG_OBJ();
@@ -1942,7 +1942,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       ASM_RETURN_O(reg);
 
       // setup hllconfig
-      MVMThreadContext * tc = tc;
+      MVMThreadContext * tc = tc_;
       {
         MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
         CU->hll_config = MVM_hll_get_config_for(tc, hll_name);
@@ -2007,30 +2007,30 @@ KijiLoopGuard::~KijiLoopGuard() {
       {
         // Create new class.
         MVMObject * type = MVM_6model_find_method(
-          tc,
-          STABLE(tc->instance->KnowHOW)->HOW,
-          MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"new_type")
+          tc_,
+          STABLE(tc_->instance->KnowHOW)->HOW,
+          MVM_string_ascii_decode_nt(tc_, tc_->instance->VMString, (char*)"new_type")
         );
         MVMObject * how = STABLE(type)->HOW;
 
         // Add "new" method
         {
-          MVMString * name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"new");
+          MVMString * name = MVM_string_ascii_decode_nt(tc_, tc_->instance->VMString, (char*)"new");
           // self, type_obj, name, method
-          MVMObject * method_cache = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
-          // MVMObject * method_cache = REPR(type)->allocate(tc, STABLE(type));
+          MVMObject * method_cache = REPR(tc_->instance->boot_types->BOOTHash)->allocate(tc_, STABLE(tc_->instance->boot_types->BOOTHash));
+          // MVMObject * method_cache = REPR(type)->allocate(tc_, STABLE(type));
           // MVMObject * method_table = ((MVMKnowHOWREPR *)type)->body.methods;
-          MVMObject * BOOTCCode = tc->instance->boot_types->BOOTCCode;
-          MVMObject * method = REPR(BOOTCCode)->allocate(tc, STABLE(BOOTCCode));
+          MVMObject * BOOTCCode = tc_->instance->boot_types->BOOTCCode;
+          MVMObject * method = REPR(BOOTCCode)->allocate(tc_, STABLE(BOOTCCode));
           ((MVMCFunction *)method)->body.func = Mu_new;
           REPR(method_cache)->ass_funcs->bind_key_boxed(
-              tc,
+              tc_,
               STABLE(method_cache),
               method_cache,
               OBJECT_BODY(method_cache),
               (MVMObject*)name,
               method);
-          // REPR(method_table)->ass_funcs->bind_key_boxed(tc, STABLE(method_table),
+          // REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
               // method_table, OBJECT_BODY(method_table), (MVMObject *)name, method);
           STABLE(type)->method_cache = method_cache;
         }
@@ -2053,7 +2053,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       // Bind class object to lexical variable
       auto name_node = node->children.nodes[0];
       if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STRING) {
-        MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_node->pv->buf, name_node->pv->len);
+        MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_node->pv->buf, name_node->pv->len);
         auto lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
         ASM_BINDLEX(
           lex,
@@ -2065,11 +2065,11 @@ KijiLoopGuard::~KijiLoopGuard() {
       return retval;
     }
     bool KijiCompiler::find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
-      MVMString* name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_cc.c_str(), name_cc.size());
-      return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc, name, lex_no, outer) == KIJI_TRUE;
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+      return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc_, name, lex_no, outer) == KIJI_TRUE;
     }
     Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer) {
-      return Kiji_find_variable_by_name(Kiji_compiler_top_frame(self), self->tc, name, lex_no, outer);
+      return Kiji_find_variable_by_name(Kiji_compiler_top_frame(self), self->tc_, name, lex_no, outer);
     }
     int KijiCompiler::push_string(MVMString *str) {
       CU->num_strings++;
@@ -2093,7 +2093,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       KijiCompiler *self = this;
       int lex_no = -1;
       int outer = -1;
-      MVMString* name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_cc.c_str(), name_cc.size());
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       Kiji_variable_type_t vartype = Kiji_compiler_find_variable_by_name(self, name, &lex_no, &outer);
       if (vartype==KIJI_VARIABLE_TYPE_MY) {
         ASM_BINDLEX(

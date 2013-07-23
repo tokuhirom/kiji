@@ -109,7 +109,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     std::vector<KijiFrame*> frames_;
   public:
     MVMCompUnit* cu;
-    MVMThreadContext *tc;
+    MVMThreadContext *tc_;
     int frame_no_;
     MVMObject* current_class_how_;
 
