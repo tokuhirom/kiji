@@ -2059,8 +2059,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc_, name, lex_no, outer) == KIJI_TRUE;
     }
-    Kiji_variable_type_t KijiCompiler::find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
-      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+    Kiji_variable_type_t KijiCompiler::find_variable_by_name(MVMString *name, int &lex_no, int &outer) {
       return Kiji_find_variable_by_name(frames_.back(), tc_, name, &lex_no, &outer);
     }
     int KijiCompiler::push_string(const char*string, int length) {
@@ -2082,10 +2081,11 @@ KijiLoopGuard::~KijiLoopGuard() {
       return reg;
     }
 
-    void KijiCompiler::set_variable(const std::string &name, uint16_t val_reg) {
+    void KijiCompiler::set_variable(const std::string &name_cc, uint16_t val_reg) {
       KijiCompiler *self = this;
       int lex_no = -1;
       int outer = -1;
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==KIJI_VARIABLE_TYPE_MY) {
         ASM_BINDLEX(
@@ -2099,7 +2099,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
         auto reg = REG_OBJ();
-        auto varname = push_string(name);
+        auto varname = push_string(name_cc);
         auto varname_s = REG_STR();
         ASM_GETLEX(
           reg,
@@ -2118,10 +2118,11 @@ KijiLoopGuard::~KijiLoopGuard() {
         );
       }
     }
-    uint16_t KijiCompiler::get_variable(const std::string &name) {
+    uint16_t KijiCompiler::get_variable(const std::string &name_cc) {
       KijiCompiler *self = this;
       int outer = 0;
       int lex_no = 0;
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==KIJI_VARIABLE_TYPE_MY) {
         auto reg_no = REG_OBJ();
@@ -2137,7 +2138,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
         auto reg = REG_OBJ();
-        auto varname = push_string(name);
+        auto varname = push_string(name_cc);
         auto varname_s = REG_STR();
         ASM_GETLEX(
           reg,

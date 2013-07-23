@@ -143,7 +143,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
       return push_string(str.c_str(), str.size());
     }
     int push_string(const char*string, int length);
-    Kiji_variable_type_t find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer);
+    Kiji_variable_type_t find_variable_by_name(MVMString *name, int &lex_no, int &outer);
     // lexical variable number by name
     bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer);
     void compile_array(uint16_t array_reg, const PVIPNode* node);
