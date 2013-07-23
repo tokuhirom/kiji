@@ -40,10 +40,10 @@
 #define MEMORY_ERROR() \
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
 
-#define REG_OBJ() Kiji_compiler_push_local_type(this, MVM_reg_obj)
-#define REG_STR() Kiji_compiler_push_local_type(this, MVM_reg_str)
-#define REG_INT64() Kiji_compiler_push_local_type(this, MVM_reg_int64)
-#define REG_NUM64() Kiji_compiler_push_local_type(this, MVM_reg_num64)
+#define REG_OBJ() Kiji_compiler_push_local_type(self, MVM_reg_obj)
+#define REG_STR() Kiji_compiler_push_local_type(self, MVM_reg_str)
+#define REG_INT64() Kiji_compiler_push_local_type(self, MVM_reg_int64)
+#define REG_NUM64() Kiji_compiler_push_local_type(self, MVM_reg_num64)
 
 
 KIJI_STATIC_INLINE void dump_object(MVMThreadContext*tc, MVMObject* obj) {
@@ -125,7 +125,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 
     int compile_class(const PVIPNode* node);
 
-    uint16_t get_variable(MVMString *name);
     void set_variable(MVMString *name, uint16_t val_reg);
 
     // This reg returns register number contains true value.
@@ -173,4 +172,5 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n) {
     return Kiji_frame_get_local_type(Kiji_compiler_top_frame(self), n);
   }
+    uint16_t Kiji_compiler_get_variable(KijiCompiler *self, MVMString *name);
 
