@@ -126,12 +126,8 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     void set_variable(MVMString *name, uint16_t val_reg);
 
     // This reg returns register number contains true value.
-    int const_true();
-
-    int push_string(MVMString *name);
-    void compile_array(uint16_t array_reg, const PVIPNode* node);
     int do_compile(const PVIPNode*node);
-  private:
+  public:
     // objectify the register.
     int to_o(int reg_num);
     int to_n(int reg_num);
@@ -143,7 +139,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int binary_inplace(const PVIPNode* node, uint16_t op);
     int str_inplace(const PVIPNode* node, uint16_t op, uint16_t rhs_type);
     int numeric_binop(const PVIPNode* node, uint16_t op_i, uint16_t op_n);
-    uint16_t unless_op(uint16_t cond_reg);
     void compile_statements(const PVIPNode*node, int dst_reg);
     uint16_t compile_chained_comparisions(const PVIPNode* node);
     int num_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
@@ -177,4 +172,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel &label);
     void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel &label);
     uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
+    int Kiji_compiler_const_true(KijiCompiler *self);
+    void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node);
 

@@ -299,15 +299,14 @@ KijiLoopGuard::~KijiLoopGuard() {
       KijiLoopGuard::KijiLoopGuard(KijiCompiler *compiler) :compiler_(compiler) {
         start_offset_ = Kiji_compiler_bytecode_size(compiler_)-1;
       }
-    void KijiCompiler::compile_array(uint16_t array_reg, const PVIPNode* node) {
-      KijiCompiler *self = this;
+    void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node) {
       if (node->type==PVIP_NODE_LIST) {
         for (int i=0; i<node->children.size; i++) {
           PVIPNode* m = node->children.nodes[i];
-          compile_array(array_reg, m);
+          Kiji_compiler_compile_array(self, array_reg, m);
         }
       } else {
-        auto reg = this->to_o(do_compile(node));
+        auto reg = self->to_o(self->do_compile(node));
         ASM_PUSH_O(array_reg, reg);
       }
     }
@@ -1068,7 +1067,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         // push elements
         for (int i=0; i<node->children.size; i++) {
           PVIPNode*n = node->children.nodes[i];
-          compile_array(array_reg, n);
+          Kiji_compiler_compile_array(self, array_reg, n);
         }
         return array_reg;
       }
@@ -1390,14 +1389,14 @@ KijiLoopGuard::~KijiLoopGuard() {
                 ASM_PRINT(reg_num);
               }
             }
-            return const_true();
+            return Kiji_compiler_const_true(self);
           } else if (std::string(ident->pv->buf, ident->pv->len) == "print") {
             for (int i=0; i<args->children.size; i++) {
               PVIPNode* a = args->children.nodes[i];
               uint16_t reg_num = to_s(do_compile(a));
               ASM_PRINT(reg_num);
             }
-            return const_true();
+            return Kiji_compiler_const_true(self);
           } else if (std::string(ident->pv->buf, ident->pv->len) == "open") {
             // TODO support arguments
             assert(args->children.size == 1);
@@ -2082,8 +2081,7 @@ KijiLoopGuard::~KijiLoopGuard() {
     }
 
     // This reg returns register number contains true value.
-    int KijiCompiler::const_true() {
-      KijiCompiler *self = this;
+    int Kiji_compiler_const_true(KijiCompiler *self) {
       auto reg = REG_INT64();
       ASM_CONST_I64(reg, 1);
       return reg;
