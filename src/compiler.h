@@ -17,16 +17,16 @@
 #include "asm.h"
 
 #define ASM_OP_U16_U16_U16(a,b,c,d,e) \
-  Kiji_asm_op_u16_u16_u16(&(*(frames_.back())), a,b,c,d,e)
+  Kiji_asm_op_u16_u16_u16(Kiji_compiler_top_frame(self), a,b,c,d,e)
 
 #define ASM_OP_U16_U16(a,b,c,d) \
-  Kiji_asm_op_u16_u16(&(*(frames_.back())), a,b,c,d)
+  Kiji_asm_op_u16_u16(Kiji_compiler_top_frame(self), a,b,c,d)
 
 #define ASM_WRITE_UINT16_T(a,b) \
-  Kiji_asm_write_uint16_t_for(&(*(frames_.back())), a,b)
+  Kiji_asm_write_uint16_t_for(Kiji_compiler_top_frame(self), a,b)
 
 #define ASM_OP_U16_U32(a,b, c, d) \
-  Kiji_asm_op_u16_u32(&(*(frames_.back())), a,b, c,d)
+  Kiji_asm_op_u16_u32(Kiji_compiler_top_frame(self), a,b, c,d)
 
 #define MVM_ASSIGN_REF2(tc, update_root, update_addr, referenced) \
     { \
@@ -118,7 +118,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
     KijiLabel label_unsolved() { return KijiLabel(this); }
 
-    void return_any(uint16_t reg);
     void if_any(uint16_t reg, KijiLabel &label);
     void unless_any(uint16_t reg, KijiLabel &label);
 
@@ -175,4 +174,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str);
     void Kiji_compiler_goto(KijiCompiler*self, KijiLabel &label);
     void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg);
+    void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel &label);
+    void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel &label);
+    uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
 

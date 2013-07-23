@@ -7,7 +7,7 @@ extern "C" {
 #include "compiler.h"
 
 #define ASM_BYTECODE_SIZE() \
-    frames_.back()->frame.bytecode_size
+  Kiji_compiler_bytecode_size(self)
 
 #define newMVMString(str, len) \
   MVM_string_utf8_decode(self->tc_, self->tc_->instance->VMString, str, len)
@@ -20,6 +20,10 @@ extern "C" {
 
 #define newMVMStringFromSTDSTRING(p) \
   MVM_string_utf8_decode(self->tc_, self->tc_->instance->VMString, (p).c_str(), (p).size())
+
+    size_t Kiji_compiler_bytecode_size(KijiCompiler*self) {
+      return Kiji_compiler_top_frame(self)->frame.bytecode_size;
+    }
 
 // lexical variable number by name
 bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int *lex_no, int *outer) {
@@ -254,16 +258,16 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
 
       // fixme: `put` is not the best verb in English here.
       void KijiLoopGuard::put_last() {
-        last_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
+        last_offset_ = Kiji_compiler_bytecode_size(compiler_)-1+1;
       }
       void KijiLoopGuard::put_redo() {
-        redo_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
+        redo_offset_ = Kiji_compiler_bytecode_size(compiler_)-1+1;
       }
       void KijiLoopGuard::put_next() {
-        next_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
+        next_offset_ = Kiji_compiler_bytecode_size(compiler_)-1+1;
       }
 KijiLoopGuard::~KijiLoopGuard() {
-        MVMuint32 end_offset = compiler_->ASM_BYTECODE_SIZE()-1;
+        MVMuint32 end_offset = Kiji_compiler_bytecode_size(compiler_)-1;
 
         MVMFrameHandler *last_handler = new MVMFrameHandler;
         last_handler->start_offset = start_offset_;
@@ -293,7 +297,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         Kiji_frame_push_handler(compiler_->frames_.back(), redo_handler);
       }
       KijiLoopGuard::KijiLoopGuard(KijiCompiler *compiler) :compiler_(compiler) {
-        start_offset_ = compiler_->ASM_BYTECODE_SIZE()-1;
+        start_offset_ = Kiji_compiler_bytecode_size(compiler_)-1;
       }
     void KijiCompiler::compile_array(uint16_t array_reg, const PVIPNode* node) {
       KijiCompiler *self = this;
@@ -498,7 +502,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           int reg = do_compile(node->children.nodes[0]);
           assert(reg != UNKNOWN_REG);
           auto label_end = label_unsolved();
-          unless_any(reg, label_end);
+          Kiji_compiler_unless_any(self, reg, label_end);
           do_compile(node->children.nodes[1]);
           Kiji_compiler_goto(self, label_while);
         label_end.put();
@@ -834,7 +838,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           auto iter_reg = REG_OBJ();
           auto label_end = label_unsolved();
           ASM_ITER(iter_reg, src_reg);
-          unless_any(iter_reg, label_end);
+          Kiji_compiler_unless_any(self, iter_reg, label_end);
 
         auto label_for = label();
         loop.put_next();
@@ -861,7 +865,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             do_compile(node->children.nodes[1]);
           }
 
-          if_any(iter_reg, label_for);
+          Kiji_compiler_if_any(self, iter_reg, label_for);
 
         label_end.put();
         loop.put_last();
@@ -903,7 +907,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         // label_end:
         auto cond_reg = do_compile(node->children.nodes[0]);
         auto label_end = label_unsolved();
-        if_any(cond_reg, label_end);
+        Kiji_compiler_if_any(self, cond_reg, label_end);
         auto dst_reg = do_compile(node->children.nodes[1]);
         label_end.put();
         return dst_reg;
@@ -934,7 +938,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto dst_reg = REG_OBJ();
 
         auto label_if = label_unsolved();
-        if_any(if_cond_reg, label_if);
+        Kiji_compiler_if_any(self, if_cond_reg, label_if);
 
         // put else if conditions
         std::list<KijiLabel> elsif_poses;
@@ -945,7 +949,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           }
           auto reg = do_compile(n->children.nodes[0]);
           elsif_poses.emplace_back(this);
-          if_any(reg, elsif_poses.back());
+          Kiji_compiler_if_any(self, reg, elsif_poses.back());
         }
 
         // compile else clause
@@ -1144,7 +1148,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto dst_reg = REG_OBJ();
 
           auto cond_reg = do_compile(node->children.nodes[0]);
-          unless_any(cond_reg, label_else);
+          Kiji_compiler_unless_any(self, cond_reg, label_else);
 
           auto if_reg = do_compile(node->children.nodes[1]);
           ASM_SET(dst_reg, to_o(if_reg));
@@ -1286,15 +1290,15 @@ KijiLoopGuard::~KijiLoopGuard() {
 
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
-          if_any(arg1, label_a1_true);
-          unless_any(arg2, label_both_false);
+          Kiji_compiler_if_any(self, arg1, label_a1_true);
+          Kiji_compiler_unless_any(self, arg2, label_both_false);
           ASM_SET(dst_reg, arg2);
           Kiji_compiler_goto(self, label_end);
         label_both_false.put();
           ASM_SET(dst_reg, arg1);
           Kiji_compiler_goto(self, label_end);
         label_a1_true.put(); // a1:true, a2:unknown
-          if_any(arg2, label_both_true);
+          Kiji_compiler_if_any(self, arg2, label_both_true);
           ASM_SET(dst_reg, arg1);
           Kiji_compiler_goto(self, label_end);
         label_both_true.put();
@@ -1317,7 +1321,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto label_a1  = label_unsolved();
         auto dst_reg = REG_OBJ();
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
-          if_any(arg1, label_a1);
+          Kiji_compiler_if_any(self, arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
           Kiji_compiler_goto(self, label_end);
@@ -1340,7 +1344,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto label_a1  = label_unsolved();
         auto dst_reg = REG_OBJ();
           auto arg1 = to_o(do_compile(node->children.nodes[0]));
-          unless_any(arg1, label_a1);
+          Kiji_compiler_unless_any(self, arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
           Kiji_compiler_goto(self, label_end);
@@ -1727,8 +1731,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         }
     }
 
-    uint16_t KijiCompiler::unless_op(uint16_t cond_reg) {
-      switch (Kiji_compiler_get_local_type(this, cond_reg)) {
+    uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg) {
+      switch (Kiji_compiler_get_local_type(self, cond_reg)) {
       case MVM_reg_int64:
         return MVM_OP_unless_i;
       case MVM_reg_num64:
@@ -1771,7 +1775,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto rhs = do_compile(iter->children.nodes[0]);
         // result will store to lhs.
         uint16_t ret = do_compare(iter->type, lhs, rhs);
-        unless_any(ret, label_false);
+        Kiji_compiler_unless_any(self, ret, label_false);
         lhs = rhs;
       }
       ASM_CONST_I64(dst_reg, 1);
@@ -2159,19 +2163,17 @@ KijiLoopGuard::~KijiLoopGuard() {
         return reg;
       }
     }
-    void KijiCompiler::unless_any(uint16_t reg, KijiLabel &label) {
-      KijiCompiler *self = this;
+    void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel &label) {
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
-      ASM_OP_U16_U32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_unless_op(self, reg), reg, label.address());
     }
-    void KijiCompiler::if_any(uint16_t reg, KijiLabel &label) {
-      KijiCompiler *self = this;
+    void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel &label) {
       if (!label.is_solved()) {
         label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
-      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_if_op(this, reg), reg, label.address());
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_if_op(self, reg), reg, label.address());
     }
     void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg) {
       switch (Kiji_compiler_get_local_type(self, reg)) {
@@ -2189,9 +2191,6 @@ KijiLoopGuard::~KijiLoopGuard() {
         break;
       default: abort();
       }
-    }
-    size_t Kiji_compiler_bytecode_size(KijiCompiler*self) {
-      return Kiji_compiler_top_frame(self)->frame.bytecode_size;
     }
     void Kiji_compiler_goto(KijiCompiler*self, KijiLabel &label) {
       if (!label.is_solved()) {
