@@ -36,7 +36,7 @@
     }
 
 #define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
-#define CU cu_
+#define CU cu
 
 #define MEMORY_ERROR() \
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
@@ -108,7 +108,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   public:
     std::vector<KijiFrame*> frames_;
   public:
-    MVMCompUnit* cu_;
+    MVMCompUnit* cu;
     MVMThreadContext *tc_;
     int frame_no_;
     MVMObject* current_class_how_;

@@ -191,19 +191,19 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
 
     KIJI_STATIC_INLINE size_t Kiji_compiler_push_callsite(KijiCompiler *self, MVMCallsite *callsite) {
       int i=0;
-      for (i=0; i<self->cu_->num_callsites; i++) {
-        if (callsite_eq(self->cu_->callsites[i], callsite)) {
+      for (i=0; i<self->cu->num_callsites; i++) {
+        if (callsite_eq(self->cu->callsites[i], callsite)) {
           delete callsite; // free memory
           return i;
         }
       }
-      self->cu_->num_callsites++;
-      self->cu_->callsites = (MVMCallsite**)realloc(self->cu_->callsites, sizeof(MVMCallsite*)*self->cu_->num_callsites);
-      if (!self->cu_->callsites) {
+      self->cu->num_callsites++;
+      self->cu->callsites = (MVMCallsite**)realloc(self->cu->callsites, sizeof(MVMCallsite*)*self->cu->num_callsites);
+      if (!self->cu->callsites) {
         MEMORY_ERROR();
       }
-      self->cu_->callsites[self->cu_->num_callsites-1] = callsite;
-      return self->cu_->num_callsites-1;
+      self->cu->callsites[self->cu->num_callsites-1] = callsite;
+      return self->cu->num_callsites-1;
     }
 
     KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
@@ -212,7 +212,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
 
     int Kiji_compiler_push_frame(KijiCompiler* self, const std::string & name) {
       MVMThreadContext *tc_ = self->tc_;
-      MVMCompUnit *cu_ = self->cu_;
       assert(tc_);
       char *buf = (char*)malloc((name.size()+32)*sizeof(char));
       int len = snprintf(buf, name.size()+31, "%s%d", name.c_str(), self->frame_no_++);
@@ -225,12 +224,13 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
         Kiji_frame_set_outer(frame, self->frames_.back());
       }
       self->frames_.push_back(frame);
-      cu_->num_frames++;
-      Renew(cu_->frames, cu_->num_frames, MVMStaticFrame*);
-      cu_->frames[cu_->num_frames-1] = &(self->frames_.back()->frame);
-      cu_->frames[cu_->num_frames-1]->cu = cu_;
-      cu_->frames[cu_->num_frames-1]->work_size = 0;
-      return cu_->num_frames-1;
+      MVMCompUnit *cu = self->cu;
+      cu->num_frames++;
+      Renew(cu->frames, cu->num_frames, MVMStaticFrame*);
+      cu->frames[cu->num_frames-1] = &(self->frames_.back()->frame);
+      cu->frames[cu->num_frames-1]->cu = cu;
+      cu->frames[cu->num_frames-1]->work_size = 0;
+      return cu->num_frames-1;
     }
 
   void KijiLabel::put() {
@@ -714,7 +714,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           MVMObject * method_table = ((MVMKnowHOWREPR *)current_class_how_)->body.methods;
           MVMObject* code_type = tc_->instance->boot_types->BOOTCode;
           MVMCode *coderef = (MVMCode*)REPR(code_type)->allocate(tc_, STABLE(code_type));
-          coderef->body.sf = this->cu_->frames[frame_no];
+          coderef->body.sf = this->cu->frames[frame_no];
           REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
               method_table, OBJECT_BODY(method_table), (MVMObject *)methname, (MVMObject*)coderef);
         }
@@ -1832,7 +1832,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
 
-    KijiCompiler::KijiCompiler(MVMCompUnit * cu, MVMThreadContext * tc): cu_(cu), frame_no_(0), tc_(tc) {
+    KijiCompiler::KijiCompiler(MVMCompUnit * cu__, MVMThreadContext * tc): cu(cu__), frame_no_(0), tc_(tc) {
       initialize();
 
       current_class_how_ = NULL;
@@ -1852,7 +1852,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
         MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
       }
-      cu_->pool       = pool;
+      cu->pool       = pool;
       assert(tc_);
       Kiji_compiler_push_frame(this, std::string("frame_name_0"));
     }
@@ -1861,8 +1861,8 @@ KijiLoopGuard::~KijiLoopGuard() {
       MVMInstance *vm_ = vm; // remove me
 
       // finalize frame
-      for (int i=0; i<cu_->num_frames; i++) {
-        MVMStaticFrame *frame = cu_->frames[i];
+      for (int i=0; i<cu->num_frames; i++) {
+        MVMStaticFrame *frame = cu->frames[i];
         // XXX Should I need to time sizeof(MVMRegister)??
         frame->env_size = frame->num_lexicals * sizeof(MVMRegister);
         Newxz(frame->static_env, frame->env_size, MVMRegister);
@@ -1872,18 +1872,18 @@ KijiLoopGuard::~KijiLoopGuard() {
         frame->cuuid = MVM_string_utf8_decode(tc_, tc_->instance->VMString, buf, len);
       }
 
-      cu_->main_frame = cu_->frames[0];
-      assert(cu_->main_frame->cuuid);
+      cu->main_frame = cu->frames[0];
+      assert(cu->main_frame->cuuid);
 
       // Creates code objects to go with each of the static frames.
       // ref create_code_objects in src/core/bytecode.c
-      Newxz(cu_->coderefs, cu_->num_frames, MVMObject*);
+      Newxz(cu->coderefs, cu->num_frames, MVMObject*);
 
       MVMObject* code_type = tc->instance->boot_types->BOOTCode;
 
-      for (int i = 0; i < cu_->num_frames; i++) {
-        cu_->coderefs[i] = REPR(code_type)->allocate(tc, STABLE(code_type));
-        ((MVMCode *)cu_->coderefs[i])->body.sf = cu_->frames[i];
+      for (int i = 0; i < cu->num_frames; i++) {
+        cu->coderefs[i] = REPR(code_type)->allocate(tc, STABLE(code_type));
+        ((MVMCode *)cu->coderefs[i])->body.sf = cu->frames[i];
       }
     }
 
