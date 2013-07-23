@@ -41,10 +41,10 @@
 #define MEMORY_ERROR() \
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
 
-#define REG_OBJ() push_local_type(MVM_reg_obj)
-#define REG_STR() push_local_type(MVM_reg_str)
-#define REG_INT64() push_local_type(MVM_reg_int64)
-#define REG_NUM64() push_local_type(MVM_reg_num64)
+#define REG_OBJ() Kiji_compiler_push_local_type(this, MVM_reg_obj)
+#define REG_STR() Kiji_compiler_push_local_type(this, MVM_reg_str)
+#define REG_INT64() Kiji_compiler_push_local_type(this, MVM_reg_int64)
+#define REG_NUM64() Kiji_compiler_push_local_type(this, MVM_reg_num64)
 
 
 // taken from 'compose' function in 6model/bootstrap.c.
@@ -212,6 +212,7 @@ struct KijiCompiler;
 
   KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n);
 uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
+    KIJI_STATIC_INLINE int Kiji_compiler_push_local_type(KijiCompiler* self, MVMuint16 reg_type);
 
 
   /**
@@ -280,11 +281,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
         label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
       }
       ASM_OP_U16_U32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
-    }
-
-    // reserve register
-    int push_local_type(MVMuint16 reg_type) {
-      return Kiji_frame_push_local_type(frames_.back(), reg_type);
     }
 
     int compile_class(const PVIPNode* node) {
@@ -2233,6 +2229,11 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
     return self->frames_.back();
   }
+
+    // reserve register
+    KIJI_STATIC_INLINE int Kiji_compiler_push_local_type(KijiCompiler* self, MVMuint16 reg_type) {
+      return Kiji_frame_push_local_type(Kiji_compiler_top_frame(self), reg_type);
+    }
 
   // Get register type at 'n'
   KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n) {

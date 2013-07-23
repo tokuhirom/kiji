@@ -21,6 +21,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
     }
 }
 
+
   void KijiLabel::put() {
     assert(address_ == -1);
     address_ = compiler_->frames_.back()->frame.bytecode_size;
