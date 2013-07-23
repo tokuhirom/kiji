@@ -476,11 +476,11 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
          *  label_end:
          */
 
-        KijiLoopGuard loop(self);
+        LOOP_ENTER;
 
         LABEL(label_while); label_while.put();
 
-        loop.put_next();
+        LOOP_NEXT;
           int reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
           assert(reg != UNKNOWN_REG);
           LABEL(label_end);
@@ -489,7 +489,9 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
           Kiji_compiler_goto(self, label_while);
         label_end.put();
 
-        loop.put_last();
+        LOOP_LAST;
+
+        LOOP_LEAVE;
 
         return UNKNOWN_REG;
       }
@@ -815,7 +817,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         //   if_o label_for
         // label_end:
 
-        KijiLoopGuard loop(self);
+        LOOP_ENTER;
           auto src_reg = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
           auto iter_reg = REG_OBJ();
           LABEL(label_end);
@@ -823,7 +825,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
           Kiji_compiler_unless_any(self, iter_reg, label_end);
 
         LABEL(label_for); label_for.put();
-        loop.put_next();
+        LOOP_NEXT;
 
           auto val = REG_OBJ();
           ASM_SHIFT_O(val, iter_reg);
@@ -850,7 +852,9 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
           Kiji_compiler_if_any(self, iter_reg, label_for);
 
         label_end.put();
-        loop.put_last();
+        LOOP_LAST;
+
+        LOOP_LEAVE;
 
         return UNKNOWN_REG;
       }
