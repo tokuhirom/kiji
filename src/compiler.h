@@ -132,8 +132,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int const_true();
 
     int push_string(MVMString *name);
-    // lexical variable number by name
-    bool find_lexical_by_name(MVMString *name_cc, int *lex_no, int *outer);
     void compile_array(uint16_t array_reg, const PVIPNode* node);
     int do_compile(const PVIPNode*node);
   private:

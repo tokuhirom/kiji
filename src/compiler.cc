@@ -21,6 +21,11 @@ extern "C" {
 #define newMVMStringFromSTDSTRING(p) \
   MVM_string_utf8_decode(self->tc_, self->tc_->instance->VMString, (p).c_str(), (p).size())
 
+// lexical variable number by name
+bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int *lex_no, int *outer) {
+  return Kiji_frame_find_lexical_by_name(Kiji_compiler_top_frame(self), self->tc_, name, lex_no, outer) == KIJI_TRUE;
+}
+
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
     MVMObject *method_table, *attributes, *BOOTArray, *BOOTHash,
@@ -595,7 +600,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           int val    = to_o(do_compile(rhs));
           int outer = 0;
           int lex_no = 0;
-          if (!find_lexical_by_name(newMVMString_nolen("$?PACKAGE"), &lex_no, &outer)) {
+          if (!Kiji_compiler_find_lexical_by_name(self, newMVMString_nolen("$?PACKAGE"), &lex_no, &outer)) {
             MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
           }
           auto package = REG_OBJ();
@@ -982,7 +987,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         int lex_no, outer;
         // auto lex_no = find_lexical_by_name(std::string(node->pv->buf, node->pv->len), outer);
         // class Foo { }; Foo;
-        if (find_lexical_by_name(newMVMStringFromPVIP(node->pv), &lex_no, &outer)) {
+        if (Kiji_compiler_find_lexical_by_name(self, newMVMStringFromPVIP(node->pv), &lex_no, &outer)) {
           auto reg_no = REG_OBJ();
           ASM_GETLEX(
             reg_no,
@@ -991,7 +996,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           );
           return reg_no;
         // sub fooo { }; foooo;
-        } else if (find_lexical_by_name(newMVMStringFromSTDSTRING(std::string("&") + std::string(node->pv->buf, node->pv->len)), &lex_no, &outer)) {
+        } else if (Kiji_compiler_find_lexical_by_name(self, newMVMStringFromSTDSTRING(std::string("&") + std::string(node->pv->buf, node->pv->len)), &lex_no, &outer)) {
           auto func_reg_no = REG_OBJ();
           ASM_GETLEX(
             func_reg_no,
@@ -1417,7 +1422,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           if (node->children.nodes[0]->type == PVIP_NODE_IDENT) {
             func_reg_no = REG_OBJ();
             int lex_no, outer;
-            if (!find_lexical_by_name(newMVMStringFromSTDSTRING(std::string("&") + std::string(ident->pv->buf, ident->pv->len)), &lex_no, &outer)) {
+            if (!Kiji_compiler_find_lexical_by_name(self, newMVMStringFromSTDSTRING(std::string("&") + std::string(ident->pv->buf, ident->pv->len)), &lex_no, &outer)) {
               MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", (std::string("&") + std::string(ident->pv->buf, ident->pv->len)).c_str());
             }
             ASM_GETLEX(
@@ -2069,9 +2074,6 @@ KijiLoopGuard::~KijiLoopGuard() {
 
       return retval;
     }
-    bool KijiCompiler::find_lexical_by_name(MVMString *name, int *lex_no, int *outer) {
-      return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc_, name, lex_no, outer) == KIJI_TRUE;
-    }
     Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer) {
       return Kiji_find_variable_by_name(Kiji_compiler_top_frame(self), self->tc_, name, lex_no, outer);
     }
@@ -2106,7 +2108,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         );
       } else {
         int lex_no;
-        if (!find_lexical_by_name(newMVMString_nolen("$?PACKAGE"), &lex_no, &outer)) {
+        if (!Kiji_compiler_find_lexical_by_name(self, newMVMString_nolen("$?PACKAGE"), &lex_no, &outer)) {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
         auto reg = REG_OBJ();
@@ -2144,7 +2146,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return reg_no;
       } else {
         int lex_no;
-        if (!find_lexical_by_name(newMVMString_nolen("$?PACKAGE"), &lex_no, &outer)) {
+        if (!Kiji_compiler_find_lexical_by_name(self, newMVMString_nolen("$?PACKAGE"), &lex_no, &outer)) {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
         auto reg = REG_OBJ();
