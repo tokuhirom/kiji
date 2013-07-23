@@ -78,8 +78,7 @@ public:
 * interp code is 3rd/MoarVM/src/core/interp.c
 */
 enum { UNKNOWN_REG = -1 };
-class KijiCompiler {
-public:
+struct KijiCompiler {
   std::vector<KijiFrame*> frames_;
   MVMCompUnit* cu;
   MVMThreadContext *tc;
