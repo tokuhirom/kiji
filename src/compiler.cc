@@ -6,6 +6,10 @@ extern "C" {
 }
 #include "compiler.h"
 
+#define ASM_BYTECODE_SIZE() \
+    frames_.back()->frame.bytecode_size
+
+
 uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
     switch (Kiji_compiler_get_local_type(self, cond_reg)) {
     case MVM_reg_int64:
@@ -1934,4 +1938,120 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
       CU->strings[CU->num_strings-1] = str;
       return CU->num_strings-1;
+    }
+
+    // This reg returns register number contains true value.
+    int KijiCompiler::const_true() {
+      auto reg = REG_INT64();
+      ASM_CONST_I64(reg, 1);
+      return reg;
+    }
+
+    void KijiCompiler::set_variable(const std::string &name, uint16_t val_reg) {
+      int lex_no = -1;
+      int outer = -1;
+      Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
+      if (vartype==KIJI_VARIABLE_TYPE_MY) {
+        ASM_BINDLEX(
+          lex_no,
+          outer,
+          val_reg
+        );
+      } else {
+        int lex_no;
+        if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+        }
+        auto reg = REG_OBJ();
+        auto varname = push_string(name);
+        auto varname_s = REG_STR();
+        ASM_GETLEX(
+          reg,
+          lex_no,
+          outer // outer frame
+        );
+        ASM_CONST_S(
+          varname_s,
+          varname
+        );
+        // TODO getwho
+        ASM_BINDKEY_O(
+          reg,
+          varname_s,
+          val_reg
+        );
+      }
+    }
+    uint16_t KijiCompiler::get_variable(const std::string &name) {
+      int outer = 0;
+      int lex_no = 0;
+      Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
+      if (vartype==KIJI_VARIABLE_TYPE_MY) {
+        auto reg_no = REG_OBJ();
+        ASM_GETLEX(
+          reg_no,
+          lex_no,
+          outer // outer frame
+        );
+        return reg_no;
+      } else {
+        int lex_no;
+        if (!find_lexical_by_name("$?PACKAGE", &lex_no, &outer)) {
+          MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
+        }
+        auto reg = REG_OBJ();
+        auto varname = push_string(name);
+        auto varname_s = REG_STR();
+        ASM_GETLEX(
+          reg,
+          lex_no,
+          outer // outer frame
+        );
+        ASM_CONST_S(
+          varname_s,
+          varname
+        );
+        // TODO getwho
+        ASM_ATKEY_O(
+          reg,
+          reg,
+          varname_s
+        );
+        return reg;
+      }
+    }
+    void KijiCompiler::unless_any(uint16_t reg, KijiLabel &label) {
+      if (!label.is_solved()) {
+        label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
+      }
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, unless_op(reg), reg, label.address());
+    }
+    void KijiCompiler::if_any(uint16_t reg, KijiLabel &label) {
+      if (!label.is_solved()) {
+        label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
+      }
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_if_op(this, reg), reg, label.address());
+    }
+    void KijiCompiler::return_any(uint16_t reg) {
+      switch (Kiji_compiler_get_local_type(this, reg)) {
+      case MVM_reg_int64:
+        ASM_RETURN_I(reg);
+        break;
+      case MVM_reg_str:
+        ASM_RETURN_S(reg);
+        break;
+      case MVM_reg_obj:
+        ASM_RETURN_O(reg);
+        break;
+      case MVM_reg_num64:
+        ASM_RETURN_N(reg);
+        break;
+      default: abort();
+      }
+    }
+    void KijiCompiler::goto_(KijiLabel &label) {
+      if (!label.is_solved()) {
+        label.reserve(ASM_BYTECODE_SIZE() + 2);
+      }
+      ASM_GOTO(label.address());
     }
