@@ -163,4 +163,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int Kiji_compiler_to_n(KijiCompiler *self, int reg_num);
     int Kiji_compiler_to_i(KijiCompiler *self, int reg_num);
     int Kiji_compiler_to_s(KijiCompiler *self, int reg_num);
+    int Kiji_compiler_str_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op);
+    int Kiji_compiler_binary_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op_i);
 

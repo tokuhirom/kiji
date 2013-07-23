@@ -1172,13 +1172,13 @@ KijiLoopGuard::~KijiLoopGuard() {
         return dst_reg;
       }
       case PVIP_NODE_BIN_AND: {
-        return this->binary_binop(node, MVM_OP_band_i);
+        return Kiji_compiler_binary_binop(self, node, MVM_OP_band_i);
       }
       case PVIP_NODE_BIN_OR: {
-        return this->binary_binop(node, MVM_OP_bor_i);
+        return Kiji_compiler_binary_binop(self, node, MVM_OP_bor_i);
       }
       case PVIP_NODE_BIN_XOR: {
-        return this->binary_binop(node, MVM_OP_bxor_i);
+        return Kiji_compiler_binary_binop(self, node, MVM_OP_bxor_i);
       }
       case PVIP_NODE_MUL: {
         return this->numeric_binop(node, MVM_OP_mul_i, MVM_OP_mul_n);
@@ -1640,8 +1640,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
     }
-    int KijiCompiler::binary_binop(const PVIPNode* node, uint16_t op_i) {
-      KijiCompiler *self = this;
+    int Kiji_compiler_binary_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op_i) {
         assert(node->children.size == 2);
 
         int reg_num1 = Kiji_compiler_to_i(self, self->do_compile(node->children.nodes[0]));
