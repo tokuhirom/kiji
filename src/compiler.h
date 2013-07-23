@@ -117,8 +117,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int do_compile(const PVIPNode*node);
   public:
     // objectify the register.
-    void compile_statements(const PVIPNode*node, int dst_reg);
-    uint16_t compile_chained_comparisions(const PVIPNode* node);
     int num_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
     int str_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op);
     uint16_t do_compare(PVIP_node_type_t type, uint16_t lhs, uint16_t rhs);
@@ -165,3 +163,4 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int Kiji_compiler_str_inplace(KijiCompiler *self, const PVIPNode* node, uint16_t op, uint16_t rhs_type);
     int Kiji_compiler_numeric_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op_i, uint16_t op_n);
     void Kiji_compiler_compile_statements(KijiCompiler *self, const PVIPNode*node, int dst_reg);
+    uint16_t Kiji_compiler_compile_chained_comparisions(KijiCompiler *self, const PVIPNode* node);

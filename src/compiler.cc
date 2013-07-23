@@ -1374,7 +1374,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         if (node->children.size==1) {
           return do_compile(node->children.nodes[0]);
         } else {
-          return this->compile_chained_comparisions(node);
+          return Kiji_compiler_compile_chained_comparisions(self, node);
         }
       case PVIP_NODE_FUNCALL: {
         assert(node->children.size == 2);
@@ -1756,17 +1756,16 @@ KijiLoopGuard::~KijiLoopGuard() {
 
     // Compile chained comparisions like `1 < $n < 3`.
     // TODO: optimize simple case like `1 < $n`
-    uint16_t KijiCompiler::compile_chained_comparisions(const PVIPNode* node) {
-      KijiCompiler *self = this;
-      auto lhs = do_compile(node->children.nodes[0]);
+    uint16_t Kiji_compiler_compile_chained_comparisions(KijiCompiler *self, const PVIPNode* node) {
+      auto lhs = self->do_compile(node->children.nodes[0]);
       auto dst_reg = REG_INT64();
-      auto label_end = label_unsolved();
-      auto label_false = label_unsolved();
+      KijiLabel label_end(self);
+      KijiLabel label_false(self);
       for (int i=1; i<node->children.size; i++) {
         PVIPNode *iter = node->children.nodes[i];
-        auto rhs = do_compile(iter->children.nodes[0]);
+        auto rhs = self->do_compile(iter->children.nodes[0]);
         // result will store to lhs.
-        uint16_t ret = do_compare(iter->type, lhs, rhs);
+        uint16_t ret = self->do_compare(iter->type, lhs, rhs);
         Kiji_compiler_unless_any(self, ret, label_false);
         lhs = rhs;
       }
