@@ -6,6 +6,10 @@ extern "C" {
 }
 #include "compiler.h"
 
+#define MEMORY_ERROR() \
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
+
+
 #define ASM_BYTECODE_SIZE() \
   Kiji_compiler_bytecode_size(self)
 
@@ -1944,24 +1948,24 @@ KijiLoopGuard::~KijiLoopGuard() {
       MVMThreadContext * tc = tc_;
       {
         MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
-        CU->hll_config = MVM_hll_get_config_for(tc, hll_name);
+        cu->hll_config = MVM_hll_get_config_for(tc, hll_name);
 
         MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
         MVM_hll_set_config(tc, hll_name, config);
       }
 
       // hacking hll
-      Kiji_bootstrap_Array(CU, tc);
-      Kiji_bootstrap_Str(CU,   tc);
-      Kiji_bootstrap_Hash(CU,  tc);
-      Kiji_bootstrap_File(CU,  tc);
-      Kiji_bootstrap_Int(CU,   tc);
+      Kiji_bootstrap_Array(cu, tc);
+      Kiji_bootstrap_Str(cu,   tc);
+      Kiji_bootstrap_Hash(cu,  tc);
+      Kiji_bootstrap_File(cu,  tc);
+      Kiji_bootstrap_Int(cu,   tc);
 
       // finalize callsite
-      CU->max_callsite_size = 0;
-      for (int i=0; i<CU->num_callsites; i++) {
-        auto callsite = CU->callsites[i];
-        CU->max_callsite_size = std::max(CU->max_callsite_size, callsite->arg_count);
+      cu->max_callsite_size = 0;
+      for (int i=0; i<cu->num_callsites; i++) {
+        auto callsite = cu->callsites[i];
+        cu->max_callsite_size = std::max(cu->max_callsite_size, callsite->arg_count);
       }
 
       // Initialize @*ARGS
@@ -1977,7 +1981,7 @@ KijiLoopGuard::~KijiLoopGuard() {
               tc->instance->VMString,
               vm->raw_clargs[count], strlen(vm->raw_clargs[count])
             );
-            MVMObject*type = CU->hll_config->str_box_type;
+            MVMObject*type = cu->hll_config->str_box_type;
             MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
             MVMROOT(tc, box, {
                 if (REPR(box)->initialize)
@@ -1991,13 +1995,13 @@ KijiLoopGuard::~KijiLoopGuard() {
         });
       });
 
-      CU->num_scs = 2;
-      CU->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
-      CU->scs[0] = sc;
-      CU->scs[1] = self->sc_classes;
-      CU->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
-      CU->scs_to_resolve[0] = NULL;
-      CU->scs_to_resolve[1] = NULL;
+      cu->num_scs = 2;
+      cu->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
+      cu->scs[0] = sc;
+      cu->scs[1] = self->sc_classes;
+      cu->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
+      cu->scs_to_resolve[0] = NULL;
+      cu->scs_to_resolve[1] = NULL;
     }
 
     int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node) {

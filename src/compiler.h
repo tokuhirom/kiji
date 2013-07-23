@@ -35,11 +35,6 @@
         update_addr = (MVMObject*)_r; \
     }
 
-#define CU cu
-
-#define MEMORY_ERROR() \
-          MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
-
 #define REG_OBJ() Kiji_compiler_push_local_type(self, MVM_reg_obj)
 #define REG_STR() Kiji_compiler_push_local_type(self, MVM_reg_str)
 #define REG_INT64() Kiji_compiler_push_local_type(self, MVM_reg_int64)
