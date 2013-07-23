@@ -1,5 +1,6 @@
 #pragma once
-// vim:ts=2:sw=2:tw=0:
+/* vim:ts=2:sw=2:tw=0:
+ */
 
 #include <iostream>
 #include <string>
@@ -193,6 +194,22 @@ struct KijiCompiler;
       bool is_solved() const { return address_!=-1; }
     };
 
+    class KijiLoopGuard {
+    private:
+      KijiCompiler *compiler_;
+      MVMuint32 start_offset_;
+      MVMuint32 last_offset_;
+      MVMuint32 next_offset_;
+      MVMuint32 redo_offset_;
+    public:
+      KijiLoopGuard(KijiCompiler *compiler);
+      ~KijiLoopGuard();
+      // fixme: `put` is not the best verb in English here.
+      void put_last();
+      void put_redo();
+      void put_next();
+    };
+
   KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n);
 
 
@@ -204,7 +221,7 @@ struct KijiCompiler;
   class KijiCompiler {
   public:
     std::vector<KijiFrame*> frames_;
-  private:
+  public:
     MVMCompUnit* cu_;
     MVMThreadContext *tc_;
     int frame_no_;
@@ -538,59 +555,6 @@ struct KijiCompiler;
       }
     }
 
-    class LoopGuard {
-    private:
-      KijiCompiler *compiler_;
-      MVMuint32 start_offset_;
-      MVMuint32 last_offset_;
-      MVMuint32 next_offset_;
-      MVMuint32 redo_offset_;
-    public:
-      LoopGuard(KijiCompiler *compiler) :compiler_(compiler) {
-        start_offset_ = compiler_->ASM_BYTECODE_SIZE()-1;
-      }
-      ~LoopGuard() {
-        MVMuint32 end_offset = compiler_->ASM_BYTECODE_SIZE()-1;
-
-        MVMFrameHandler *last_handler = new MVMFrameHandler;
-        last_handler->start_offset = start_offset_;
-        last_handler->end_offset = end_offset;
-        last_handler->category_mask = MVM_EX_CAT_LAST;
-        last_handler->action = MVM_EX_ACTION_GOTO;
-        last_handler->block_reg = 0;
-        last_handler->goto_offset = last_offset_;
-        compiler_->push_handler(last_handler);
-
-        MVMFrameHandler *next_handler = new MVMFrameHandler;
-        next_handler->start_offset = start_offset_;
-        next_handler->end_offset = end_offset;
-        next_handler->category_mask = MVM_EX_CAT_NEXT;
-        next_handler->action = MVM_EX_ACTION_GOTO;
-        next_handler->block_reg = 0;
-        next_handler->goto_offset = next_offset_;
-        compiler_->push_handler(next_handler);
-
-        MVMFrameHandler *redo_handler = new MVMFrameHandler;
-        redo_handler->start_offset = start_offset_;
-        redo_handler->end_offset = end_offset;
-        redo_handler->category_mask = MVM_EX_CAT_REDO;
-        redo_handler->action = MVM_EX_ACTION_GOTO;
-        redo_handler->block_reg = 0;
-        redo_handler->goto_offset = redo_offset_;
-        compiler_->push_handler(redo_handler);
-      }
-      // fixme: `put` is not the best verb in English here.
-      void put_last() {
-        last_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
-      }
-      void put_redo() {
-        redo_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
-      }
-      void put_next() {
-        next_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
-      }
-    };
-
     int do_compile(const PVIPNode*node) {
       // printf("node: %s\n", node.type_name());
       switch (node->type) {
@@ -772,7 +736,7 @@ struct KijiCompiler;
          *  label_end:
          */
 
-        LoopGuard loop(this);
+        KijiLoopGuard loop(this);
 
         auto label_while = label();
         loop.put_next();
@@ -1101,7 +1065,7 @@ struct KijiCompiler;
         //   if_o label_for
         // label_end:
 
-        LoopGuard loop(this);
+        KijiLoopGuard loop(this);
           auto src_reg = box(do_compile(node->children.nodes[0]));
           auto iter_reg = REG_OBJ();
           auto label_end = label_unsolved();
@@ -2298,4 +2262,48 @@ struct KijiCompiler;
     }
     reserved_addresses_.empty();
   }
+
+      // fixme: `put` is not the best verb in English here.
+      void KijiLoopGuard::put_last() {
+        last_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
+      }
+      void KijiLoopGuard::put_redo() {
+        redo_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
+      }
+      void KijiLoopGuard::put_next() {
+        next_offset_ = compiler_->ASM_BYTECODE_SIZE()-1+1;
+      }
+KijiLoopGuard::~KijiLoopGuard() {
+        MVMuint32 end_offset = compiler_->ASM_BYTECODE_SIZE()-1;
+
+        MVMFrameHandler *last_handler = new MVMFrameHandler;
+        last_handler->start_offset = start_offset_;
+        last_handler->end_offset = end_offset;
+        last_handler->category_mask = MVM_EX_CAT_LAST;
+        last_handler->action = MVM_EX_ACTION_GOTO;
+        last_handler->block_reg = 0;
+        last_handler->goto_offset = last_offset_;
+        compiler_->push_handler(last_handler);
+
+        MVMFrameHandler *next_handler = new MVMFrameHandler;
+        next_handler->start_offset = start_offset_;
+        next_handler->end_offset = end_offset;
+        next_handler->category_mask = MVM_EX_CAT_NEXT;
+        next_handler->action = MVM_EX_ACTION_GOTO;
+        next_handler->block_reg = 0;
+        next_handler->goto_offset = next_offset_;
+        compiler_->push_handler(next_handler);
+
+        MVMFrameHandler *redo_handler = new MVMFrameHandler;
+        redo_handler->start_offset = start_offset_;
+        redo_handler->end_offset = end_offset;
+        redo_handler->category_mask = MVM_EX_CAT_REDO;
+        redo_handler->action = MVM_EX_ACTION_GOTO;
+        redo_handler->block_reg = 0;
+        redo_handler->goto_offset = redo_offset_;
+        compiler_->push_handler(redo_handler);
+      }
+      KijiLoopGuard::KijiLoopGuard(KijiCompiler *compiler) :compiler_(compiler) {
+        start_offset_ = compiler_->ASM_BYTECODE_SIZE()-1;
+      }
 
