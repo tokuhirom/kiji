@@ -1199,22 +1199,22 @@ KijiLoopGuard::~KijiLoopGuard() {
         return this->numeric_binop(node, MVM_OP_pow_i, MVM_OP_pow_n);
       }
       case PVIP_NODE_INPLACE_ADD: {
-        return this->numeric_inplace(node, MVM_OP_add_i, MVM_OP_add_n);
+        return Kiji_compiler_numeric_inplace(self, node, MVM_OP_add_i, MVM_OP_add_n);
       }
       case PVIP_NODE_INPLACE_SUB: {
-        return this->numeric_inplace(node, MVM_OP_sub_i, MVM_OP_sub_n);
+        return Kiji_compiler_numeric_inplace(self, node, MVM_OP_sub_i, MVM_OP_sub_n);
       }
       case PVIP_NODE_INPLACE_MUL: {
-        return this->numeric_inplace(node, MVM_OP_mul_i, MVM_OP_mul_n);
+        return Kiji_compiler_numeric_inplace(self, node, MVM_OP_mul_i, MVM_OP_mul_n);
       }
       case PVIP_NODE_INPLACE_DIV: {
-        return this->numeric_inplace(node, MVM_OP_div_i, MVM_OP_div_n);
+        return Kiji_compiler_numeric_inplace(self, node, MVM_OP_div_i, MVM_OP_div_n);
       }
       case PVIP_NODE_INPLACE_POW: { // **=
-        return this->numeric_inplace(node, MVM_OP_pow_i, MVM_OP_pow_n);
+        return Kiji_compiler_numeric_inplace(self, node, MVM_OP_pow_i, MVM_OP_pow_n);
       }
       case PVIP_NODE_INPLACE_MOD: { // %=
-        return this->numeric_inplace(node, MVM_OP_mod_i, MVM_OP_mod_n);
+        return Kiji_compiler_numeric_inplace(self, node, MVM_OP_mod_i, MVM_OP_mod_n);
       }
       case PVIP_NODE_INPLACE_BIN_OR: { // +|=
         return this->binary_inplace(node, MVM_OP_bor_i);
@@ -1649,13 +1649,12 @@ KijiLoopGuard::~KijiLoopGuard() {
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
         return dst_reg;
     }
-    int KijiCompiler::numeric_inplace(const PVIPNode* node, uint16_t op_i, uint16_t op_n) {
-      KijiCompiler *self = this;
+    int Kiji_compiler_numeric_inplace(KijiCompiler *self, const PVIPNode* node, uint16_t op_i, uint16_t op_n) {
         assert(node->children.size == 2);
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
         auto lhs = Kiji_compiler_get_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv));
-        auto rhs = do_compile(node->children.nodes[1]);
+        auto rhs = self->do_compile(node->children.nodes[1]);
         auto tmp = REG_NUM64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, tmp, Kiji_compiler_to_n(self, lhs), Kiji_compiler_to_n(self, rhs));
         Kiji_compiler_set_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv), Kiji_compiler_to_o(self, tmp));
