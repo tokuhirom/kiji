@@ -1631,12 +1631,11 @@ KijiLoopGuard::~KijiLoopGuard() {
         break;
       }
     }
-    int KijiCompiler::str_binop(const PVIPNode* node, uint16_t op) {
-      KijiCompiler *self = this;
+    int Kiji_compiler_str_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op) {
         assert(node->children.size == 2);
 
-        int reg_num1 = Kiji_compiler_to_s(self, do_compile(node->children.nodes[0]));
-        int reg_num2 = Kiji_compiler_to_s(self, do_compile(node->children.nodes[1]));
+        int reg_num1 = Kiji_compiler_to_s(self, self->do_compile(node->children.nodes[0]));
+        int reg_num2 = Kiji_compiler_to_s(self, self->do_compile(node->children.nodes[1]));
         int reg_num_dst = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
@@ -1645,8 +1644,8 @@ KijiLoopGuard::~KijiLoopGuard() {
       KijiCompiler *self = this;
         assert(node->children.size == 2);
 
-        int reg_num1 = Kiji_compiler_to_i(self, do_compile(node->children.nodes[0]));
-        int reg_num2 = Kiji_compiler_to_i(self, do_compile(node->children.nodes[1]));
+        int reg_num1 = Kiji_compiler_to_i(self, self->do_compile(node->children.nodes[0]));
+        int reg_num2 = Kiji_compiler_to_i(self, self->do_compile(node->children.nodes[1]));
         auto dst_reg = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
         return dst_reg;

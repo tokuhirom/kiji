@@ -117,7 +117,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int do_compile(const PVIPNode*node);
   public:
     // objectify the register.
-    int str_binop(const PVIPNode* node, uint16_t op);
     int binary_binop(const PVIPNode* node, uint16_t op_i);
     int numeric_inplace(const PVIPNode* node, uint16_t op_i, uint16_t op_n);
     int binary_inplace(const PVIPNode* node, uint16_t op);
