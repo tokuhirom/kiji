@@ -170,17 +170,22 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
   MVM_string_say(tc, REPR(obj)->name);
 }
 
+struct KijiCompiler;
+
+  KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n);
+
   /**
    * OP map is 3rd/MoarVM/src/core/oplist
    * interp code is 3rd/MoarVM/src/core/interp.c
    */
   enum { UNKNOWN_REG = -1 };
   class KijiCompiler {
+  public:
+    std::vector<KijiFrame*> frames_;
   private:
     MVMCompUnit* cu_;
     MVMThreadContext *tc_;
     int frame_no_;
-    std::vector<KijiFrame*> frames_;
     MVMObject* current_class_how_;
 
     MVMSerializationContext * sc_classes_;
@@ -238,7 +243,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       ASM_GOTO(label.address());
     }
     void return_any(uint16_t reg) {
-      switch (get_local_type(reg)) {
+      switch (Kiji_compiler_get_local_type(this, reg)) {
       case MVM_reg_int64:
         ASM_RETURN_I(reg);
         break;
@@ -422,10 +427,6 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       return reg;
     }
 
-    // Get register type at 'n'
-    uint16_t get_local_type(int n) {
-      return Kiji_frame_get_local_type(frames_.back(), n);
-    }
     int push_string(PVIPString* pv) {
       return push_string(pv->buf, pv->len);
     }
@@ -705,7 +706,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           MEMORY_ERROR();
         }
         // ASM_RETURN_O(this->box(reg));
-        switch (get_local_type(reg)) {
+        switch (Kiji_compiler_get_local_type(this, reg)) {
         case MVM_reg_int64:
           ASM_RETURN_I(reg);
           break;
@@ -719,7 +720,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           ASM_RETURN_N(reg);
           break;
         default:
-          MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", get_local_type(reg));
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", Kiji_compiler_get_local_type(this, reg));
         }
         return UNKNOWN_REG;
       }
@@ -966,7 +967,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
             PVIPNode * n=stmts->children.nodes[i];
             int reg = do_compile(n);
             if (i==stmts->children.size-1 && reg >= 0) {
-              switch (get_local_type(reg)) {
+              switch (Kiji_compiler_get_local_type(this, reg)) {
               case MVM_reg_int64:
                 ASM_RETURN_I(reg);
                 break;
@@ -1056,7 +1057,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
             PVIPNode * n=stmts->children.nodes[i];
             int reg = do_compile(n);
             if (i==stmts->children.size-1 && reg >= 0) {
-              switch (get_local_type(reg)) {
+              switch (Kiji_compiler_get_local_type(this, reg)) {
               case MVM_reg_int64:
                 ASM_RETURN_I(reg);
                 break;
@@ -1630,7 +1631,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       case PVIP_NODE_UNARY_MINUS: {
         auto reg = do_compile(node->children.nodes[0]);
-        if (get_local_type(reg) == MVM_reg_int64) {
+        if (Kiji_compiler_get_local_type(this, reg) == MVM_reg_int64) {
           ASM_NEG_I(reg, reg);
           return reg;
         } else {
@@ -1727,7 +1728,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
                 MVM_panic(MVM_exitcode_compunit, "Compilation error. You should not pass void function as an argument: %s", PVIP_node_name(a->type));
               }
 
-              switch (get_local_type(reg)) {
+              switch (Kiji_compiler_get_local_type(this, reg)) {
               case MVM_reg_int64:
                 callsite->arg_flags[i] = MVM_CALLSITE_ARG_INT;
                 arg_regs.push_back(reg);
@@ -1754,7 +1755,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
             int i=0;
             for (auto reg:arg_regs) {
-              switch (get_local_type(reg)) {
+              switch (Kiji_compiler_get_local_type(this, reg)) {
               case MVM_reg_int64:
                 ASM_ARG_I(i, reg);
                 break;
@@ -1794,7 +1795,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     int to_o(int reg_num) { return box(reg_num); }
     int box(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      auto reg_type = get_local_type(reg_num);
+      auto reg_type = Kiji_compiler_get_local_type(this, reg_num);
       if (reg_type == MVM_reg_obj) {
         return reg_num;
       }
@@ -1815,13 +1816,13 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         ASM_BOX_N(dst_num, reg_num, boxtype_reg);
         return dst_num;
       default:
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, boxify %d", Kiji_compiler_get_local_type(this, reg_num));
         abort();
       }
     }
     int to_n(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      switch (get_local_type(reg_num)) {
+      switch (Kiji_compiler_get_local_type(this, reg_num)) {
       case MVM_reg_str: {
         int dst_num = REG_NUM64();
         ASM_COERCE_SN(dst_num, reg_num);
@@ -1842,13 +1843,13 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       default:
         // TODO
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", Kiji_compiler_get_local_type(this, reg_num));
         break;
       }
     }
     int to_i(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      switch (get_local_type(reg_num)) {
+      switch (Kiji_compiler_get_local_type(this, reg_num)) {
       case MVM_reg_str: {
         int dst_num = REG_INT64();
         ASM_COERCE_SI(dst_num, reg_num);
@@ -1872,14 +1873,14 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       default:
         // TODO
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, numify %d", Kiji_compiler_get_local_type(this, reg_num));
         break;
       }
     }
     int to_s(int reg_num) { return stringify(reg_num); }
     int stringify(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
-      switch (get_local_type(reg_num)) {
+      switch (Kiji_compiler_get_local_type(this, reg_num)) {
       case MVM_reg_str:
         // nop
         return reg_num;
@@ -1900,7 +1901,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
       default:
         // TODO
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, stringify %d", get_local_type(reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, stringify %d", Kiji_compiler_get_local_type(this, reg_num));
         break;
       }
     }
@@ -1959,20 +1960,20 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         assert(node->children.size == 2);
 
         int reg_num1 = do_compile(node->children.nodes[0]);
-        if (get_local_type(reg_num1) == MVM_reg_int64) {
+        if (Kiji_compiler_get_local_type(this, reg_num1) == MVM_reg_int64) {
           int reg_num_dst = REG_INT64();
           int reg_num2 = this->to_i(do_compile(node->children.nodes[1]));
-          assert(get_local_type(reg_num1) == MVM_reg_int64);
-          assert(get_local_type(reg_num2) == MVM_reg_int64);
+          assert(Kiji_compiler_get_local_type(this, reg_num1) == MVM_reg_int64);
+          assert(Kiji_compiler_get_local_type(this, reg_num2) == MVM_reg_int64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
-        } else if (get_local_type(reg_num1) == MVM_reg_num64) {
+        } else if (Kiji_compiler_get_local_type(this, reg_num1) == MVM_reg_num64) {
           int reg_num_dst = REG_NUM64();
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
-          assert(get_local_type(reg_num2) == MVM_reg_num64);
+          assert(Kiji_compiler_get_local_type(this, reg_num2) == MVM_reg_num64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
-        } else if (get_local_type(reg_num1) == MVM_reg_obj) {
+        } else if (Kiji_compiler_get_local_type(this, reg_num1) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
           int reg_num_dst = REG_NUM64();
 
@@ -1980,10 +1981,10 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
           ASM_OP_U16_U16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
 
           int reg_num2 = this->to_n(do_compile(node->children.nodes[1]));
-          assert(get_local_type(reg_num2) == MVM_reg_num64);
+          assert(Kiji_compiler_get_local_type(this, reg_num2) == MVM_reg_num64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
           return reg_num_dst;
-        } else if (get_local_type(reg_num1) == MVM_reg_str) {
+        } else if (Kiji_compiler_get_local_type(this, reg_num1) == MVM_reg_str) {
           int dst_num = REG_NUM64();
           ASM_COERCE_SN(dst_num, reg_num1);
 
@@ -1997,7 +1998,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
         }
     }
     uint16_t unless_op(uint16_t cond_reg) {
-      switch (get_local_type(cond_reg)) {
+      switch (Kiji_compiler_get_local_type(this, cond_reg)) {
       case MVM_reg_int64:
         return MVM_OP_unless_i;
       case MVM_reg_num64:
@@ -2011,7 +2012,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       }
     }
     uint16_t if_op(uint16_t cond_reg) {
-      switch (get_local_type(cond_reg)) {
+      switch (Kiji_compiler_get_local_type(this, cond_reg)) {
       case MVM_reg_int64:
         return MVM_OP_if_i;
       case MVM_reg_num64:
@@ -2064,15 +2065,15 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     }
     int num_cmp_binop(uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n) {
         int reg_num_dst = REG_INT64();
-        if (get_local_type(lhs) == MVM_reg_int64) {
-          assert(get_local_type(lhs) == MVM_reg_int64);
-          // assert(get_local_type(rhs) == MVM_reg_int64);
+        if (Kiji_compiler_get_local_type(this, lhs) == MVM_reg_int64) {
+          assert(Kiji_compiler_get_local_type(this, lhs) == MVM_reg_int64);
+          // assert(Kiji_compiler_get_local_type(this, rhs) == MVM_reg_int64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, reg_num_dst, lhs, to_i(rhs));
           return reg_num_dst;
-        } else if (get_local_type(lhs) == MVM_reg_num64) {
+        } else if (Kiji_compiler_get_local_type(this, lhs) == MVM_reg_num64) {
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, lhs, to_n(rhs));
           return reg_num_dst;
-        } else if (get_local_type(lhs) == MVM_reg_obj) {
+        } else if (Kiji_compiler_get_local_type(this, lhs) == MVM_reg_obj) {
           // TODO should I use intify instead if the object is int?
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, to_n(lhs), to_n(rhs));
           return reg_num_dst;
@@ -2285,4 +2286,13 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       CU->scs_to_resolve[1] = NULL;
     }
   };
+
+  KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
+    return self->frames_.back();
+  }
+
+  // Get register type at 'n'
+  KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n) {
+    return Kiji_frame_get_local_type(Kiji_compiler_top_frame(self), n);
+  }
 
