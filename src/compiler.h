@@ -47,122 +47,6 @@
 #define REG_NUM64() Kiji_compiler_push_local_type(this, MVM_reg_num64)
 
 
-// taken from 'compose' function in 6model/bootstrap.c.
-static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
-    MVMObject *method_table, *attributes, *BOOTArray, *BOOTHash,
-              *repr_info_hash, *repr_info, *type_info, *attr_info_list, *parent_info;
-    MVMint64   num_attrs, i;
-
-    MVMString *str_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"name");
-    MVMString * str_type     = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"type");
-    MVMString * str_box_target = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"box_target");
-    MVMString* str_attribute = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"attribute");
-    
-    /* Get arguments. */
-    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
-    if (!self || !IS_CONCRETE(self) || REPR(self)->ID != MVM_REPR_ID_KnowHOWREPR)
-        MVM_exception_throw_adhoc(tc, "KnowHOW methods must be called on object instance with REPR KnowHOWREPR");
-    
-    /* Fill out STable. */
-    method_table = ((MVMKnowHOWREPR *)self)->body.methods;
-    MVM_ASSIGN_REF2(tc, STABLE(type_obj), STABLE(type_obj)->method_cache, (void*)method_table);
-    STABLE(type_obj)->mode_flags              = MVM_METHOD_CACHE_AUTHORITATIVE;
-    STABLE(type_obj)->type_check_cache_length = 1;
-    STABLE(type_obj)->type_check_cache        = (MVMObject **)malloc(sizeof(MVMObject *));
-    MVM_ASSIGN_REF2(tc, STABLE(type_obj), STABLE(type_obj)->type_check_cache[0], type_obj);
-    
-    /* Use any attribute information to produce attribute protocol
-     * data. The protocol consists of an array... */
-    BOOTArray = tc->instance->boot_types->BOOTArray;
-    BOOTHash = tc->instance->boot_types->BOOTHash;
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&BOOTArray);
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&BOOTHash);
-    repr_info = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&repr_info);
-    REPR(repr_info)->initialize(tc, STABLE(repr_info), repr_info, OBJECT_BODY(repr_info));
-    
-    /* ...which contains an array per MRO entry (just us)... */
-    type_info = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&type_info);
-    REPR(type_info)->initialize(tc, STABLE(type_info), type_info, OBJECT_BODY(type_info));
-    MVM_repr_push_o(tc, repr_info, type_info);
-        
-    /* ...which in turn contains this type... */
-    MVM_repr_push_o(tc, type_info, type_obj);
-    
-    /* ...then an array of hashes per attribute... */
-    attr_info_list = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&attr_info_list);
-    REPR(attr_info_list)->initialize(tc, STABLE(attr_info_list), attr_info_list,
-        OBJECT_BODY(attr_info_list));
-    MVM_repr_push_o(tc, type_info, attr_info_list);
-    attributes = ((MVMKnowHOWREPR *)self)->body.attributes;
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&attributes);
-    num_attrs = REPR(attributes)->elems(tc, STABLE(attributes),
-        attributes, OBJECT_BODY(attributes));
-    for (i = 0; i < num_attrs; i++) {
-        MVMObject *attr_info = REPR(BOOTHash)->allocate(tc, STABLE(BOOTHash));
-        MVMKnowHOWAttributeREPR *attribute = (MVMKnowHOWAttributeREPR *)
-            MVM_repr_at_pos_o(tc, attributes, i);
-        MVM_gc_root_temp_push(tc, (MVMCollectable **)&attr_info);
-        MVM_gc_root_temp_push(tc, (MVMCollectable **)&attribute);
-        if (REPR((MVMObject *)attribute)->ID != MVM_REPR_ID_KnowHOWAttributeREPR)
-            MVM_exception_throw_adhoc(tc, "KnowHOW attributes must use KnowHOWAttributeREPR");
-        
-        REPR(attr_info)->initialize(tc, STABLE(attr_info), attr_info,
-            OBJECT_BODY(attr_info));
-        REPR(attr_info)->ass_funcs->bind_key_boxed(tc, STABLE(attr_info),
-            attr_info, OBJECT_BODY(attr_info), (MVMObject *)str_name, (MVMObject *)attribute->body.name);
-        REPR(attr_info)->ass_funcs->bind_key_boxed(tc, STABLE(attr_info),
-            attr_info, OBJECT_BODY(attr_info), (MVMObject *)str_type, attribute->body.type);
-        if (attribute->body.box_target) {
-            /* Merely having the key serves as a "yes". */
-            REPR(attr_info)->ass_funcs->bind_key_boxed(tc, STABLE(attr_info),
-                attr_info, OBJECT_BODY(attr_info), (MVMObject *)str_box_target, attr_info);
-        }
-        
-        MVM_repr_push_o(tc, attr_info_list, attr_info);
-        MVM_gc_root_temp_pop_n(tc, 2);
-    }
-    
-    /* ...followed by a list of parents (none). */
-    parent_info = REPR(BOOTArray)->allocate(tc, STABLE(BOOTArray));
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&parent_info);
-    REPR(parent_info)->initialize(tc, STABLE(parent_info), parent_info,
-        OBJECT_BODY(parent_info));
-    MVM_repr_push_o(tc, type_info, parent_info);
-    
-    /* Finally, this all goes in a hash under the key 'attribute'. */
-    repr_info_hash = REPR(BOOTHash)->allocate(tc, STABLE(BOOTHash));
-    MVM_gc_root_temp_push(tc, (MVMCollectable **)&repr_info_hash);
-    REPR(repr_info_hash)->initialize(tc, STABLE(repr_info_hash), repr_info_hash, OBJECT_BODY(repr_info_hash));
-    REPR(repr_info_hash)->ass_funcs->bind_key_boxed(tc, STABLE(repr_info_hash),
-            repr_info_hash, OBJECT_BODY(repr_info_hash), (MVMObject *)str_attribute, repr_info);
-
-    /* Compose the representation using it. */
-    REPR(type_obj)->compose(tc, STABLE(type_obj), repr_info_hash);
-    
-    /* Clear temporary roots. */
-    MVM_gc_root_temp_pop_n(tc, 7);
-    
-    /* Return type object. */
-    return type_obj;
-}
-
-  static void Mu_new(MVMThreadContext *tc, MVMCallsite *callsite, MVMRegister *args) {
-    MVMArgProcContext arg_ctx; arg_ctx.named_used = NULL;
-    MVM_args_proc_init(tc, &arg_ctx, callsite, args);
-    MVMObject* self     = MVM_args_get_pos_obj(tc, &arg_ctx, 0, MVM_ARG_REQUIRED).arg.o;
-    MVM_args_proc_cleanup(tc, &arg_ctx);
-
-    MVMObject *obj = object_compose(tc, STABLE(self)->HOW, self);
-
-    MVM_args_set_result_obj(tc, obj, MVM_RETURN_CURRENT_FRAME);
-
-    MVM_gc_root_temp_pop_n(tc, 1);
-  }
-
-
 KIJI_STATIC_INLINE void dump_object(MVMThreadContext*tc, MVMObject* obj) {
   if (obj==NULL) {
     printf("(null)\n");
@@ -234,9 +118,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 
     KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
     KijiLabel label_unsolved() { return KijiLabel(this); }
-
-#define ASM_BYTECODE_SIZE() \
-    frames_.back()->frame.bytecode_size
 
     void goto_(KijiLabel &label);
     void return_any(uint16_t reg);
