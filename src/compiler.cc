@@ -21,9 +21,19 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
     }
 }
 
+    void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2) {
+      self->num_sc_classes_++;
+
+      *wval1 = 1;
+      *wval2 = self->num_sc_classes_-1;
+
+      MVM_sc_set_object(self->tc_, self->sc_classes_, self->num_sc_classes_-1, object);
+    }
+
+
     // Push lexical variable.
     int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type) {
-      return Kiji_frame_push_lexical(self->frames_.back(), self->tc_, name, type);
+      return Kiji_frame_push_lexical(Kiji_compiler_top_frame(self), self->tc_, name, type);
     }
 
     void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name) {
@@ -1878,7 +1888,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           STABLE(type)->method_cache = method_cache;
         }
 
-        this->push_sc_object(type, &wval1, &wval2);
+        Kiji_compiler_push_sc_object(this, type, &wval1, &wval2);
         current_class_how_ = how;
       }
 

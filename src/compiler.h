@@ -232,15 +232,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     MVMSerializationContext * sc_classes_;
     int num_sc_classes_;
 
-    void push_sc_object(MVMObject * object, int *wval1, int *wval2) {
-      num_sc_classes_++;
-
-      *wval1 = 1;
-      *wval2 = num_sc_classes_-1;
-
-      MVM_sc_set_object(tc_, sc_classes_, num_sc_classes_-1, object);
-    }
-
     KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
     KijiLabel label_unsolved() { return KijiLabel(this); }
 
