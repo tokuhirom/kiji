@@ -126,11 +126,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 
     int compile_class(const PVIPNode* node);
 
-    uint16_t get_variable(PVIPString * name) {
-      return get_variable(std::string(name->buf, name->len));
-    }
-
-    uint16_t get_variable(const std::string &name);
+    uint16_t get_variable(MVMString *name);
     void set_variable(const PVIPString *name, uint16_t val_reg) {
       set_variable(std::string(name->buf, name->len), val_reg);
     }

@@ -308,7 +308,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         if (node->children.nodes[0]->type != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = get_variable(node->children.nodes[0]->pv);
+        auto reg_no = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto i_tmp = to_i(reg_no);
         ASM_DEC_I(i_tmp);
         set_variable(node->children.nodes[0]->pv, to_o(i_tmp));
@@ -319,7 +319,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         if (node->children.nodes[0]->type != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = get_variable(node->children.nodes[0]->pv);
+        auto reg_no = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto i_tmp = to_i(reg_no);
         ASM_INC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
@@ -331,7 +331,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         if (node->children.nodes[0]->type != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = get_variable(node->children.nodes[0]->pv);
+        auto reg_no = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto i_tmp = to_i(reg_no);
         ASM_INC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
@@ -343,7 +343,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         if (node->children.nodes[0]->type != PVIP_NODE_VARIABLE) {
           MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
         }
-        auto reg_no = get_variable(PVIPSTRING2STDSTRING(node->children.nodes[0]->pv));
+        auto reg_no = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto i_tmp = to_i(reg_no);
         ASM_DEC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
@@ -801,7 +801,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
       case PVIP_NODE_VARIABLE: {
         // copy lexical variable to register
-        return get_variable(std::string(node->pv->buf, node->pv->len));
+        return get_variable(newMVMStringFromPVIP(node->pv));
       }
       case PVIP_NODE_CLARGS: { // @*ARGS
         auto retval = REG_OBJ();
@@ -1643,7 +1643,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         assert(node->children.size == 2);
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
-        auto lhs = get_variable(node->children.nodes[0]->pv);
+        auto lhs = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = REG_NUM64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, tmp, to_n(lhs), to_n(rhs));
@@ -1655,7 +1655,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         assert(node->children.size == 2);
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
-        auto lhs = get_variable(node->children.nodes[0]->pv);
+        auto lhs = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op, tmp, to_i(lhs), to_i(rhs));
@@ -1667,7 +1667,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         assert(node->children.size == 2);
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
-        auto lhs = get_variable(node->children.nodes[0]->pv);
+        auto lhs = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = REG_STR();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, tmp, to_s(lhs), rhs_type == MVM_reg_int64 ? to_i(rhs) : to_s(rhs));
@@ -2126,11 +2126,10 @@ KijiLoopGuard::~KijiLoopGuard() {
         );
       }
     }
-    uint16_t KijiCompiler::get_variable(const std::string &name_cc) {
+    uint16_t KijiCompiler::get_variable(MVMString *name) {
       KijiCompiler *self = this;
       int outer = 0;
       int lex_no = 0;
-      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       Kiji_variable_type_t vartype = find_variable_by_name(name, lex_no, outer);
       if (vartype==KIJI_VARIABLE_TYPE_MY) {
         auto reg_no = REG_OBJ();
