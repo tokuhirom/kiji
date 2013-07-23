@@ -25,6 +25,12 @@ extern "C" {
 #define newMVMStringFromSTDSTRING(p) \
   MVM_string_utf8_decode(self->tc_, self->tc_->instance->VMString, (p).c_str(), (p).size())
 
+#define LABEL_HERE(name) \
+  KijiCompiler name(self, Kiji_compiler_top_frame(self)->frame.bytecode_size);
+
+#define LABEL(name) \
+  KijiLabel name(self);
+
     size_t Kiji_compiler_bytecode_size(KijiCompiler*self) {
       return Kiji_compiler_top_frame(self)->frame.bytecode_size;
     }
@@ -500,11 +506,12 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         KijiLoopGuard loop(this);
 
-        auto label_while = label();
+        LABEL(label_while); label_while.put();
+
         loop.put_next();
           int reg = do_compile(node->children.nodes[0]);
           assert(reg != UNKNOWN_REG);
-          auto label_end = label_unsolved();
+          LABEL(label_end);
           Kiji_compiler_unless_any(self, reg, label_end);
           do_compile(node->children.nodes[1]);
           Kiji_compiler_goto(self, label_while);
@@ -839,11 +846,11 @@ KijiLoopGuard::~KijiLoopGuard() {
         KijiLoopGuard loop(this);
           auto src_reg = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
           auto iter_reg = REG_OBJ();
-          auto label_end = label_unsolved();
+          LABEL(label_end);
           ASM_ITER(iter_reg, src_reg);
           Kiji_compiler_unless_any(self, iter_reg, label_end);
 
-        auto label_for = label();
+        LABEL(label_for); label_for.put();
         loop.put_next();
 
           auto val = REG_OBJ();
@@ -909,7 +916,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         //   body
         // label_end:
         auto cond_reg = do_compile(node->children.nodes[0]);
-        auto label_end = label_unsolved();
+        LABEL(label_end);
         Kiji_compiler_if_any(self, cond_reg, label_end);
         auto dst_reg = do_compile(node->children.nodes[1]);
         label_end.put();
@@ -940,7 +947,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto if_body = node->children.nodes[1];
         auto dst_reg = REG_OBJ();
 
-        auto label_if = label_unsolved();
+        LABEL(label_if);
         Kiji_compiler_if_any(self, if_cond_reg, label_if);
 
         // put else if conditions
@@ -960,7 +967,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           Kiji_compiler_compile_statements(self, node->children.nodes[node->children.size-1], dst_reg);
         }
 
-        auto label_end = label_unsolved();
+        LABEL(label_end);
         Kiji_compiler_goto(self, label_end);
 
         // update if_label and compile if body
@@ -1146,8 +1153,8 @@ KijiLoopGuard::~KijiLoopGuard() {
          *   copy dst_reg, result
          * label_end:
          */
-        auto label_end  = label_unsolved();
-        auto label_else = label_unsolved();
+        LABEL(label_end);
+        LABEL(label_else);
         auto dst_reg = REG_OBJ();
 
           auto cond_reg = do_compile(node->children.nodes[0]);
@@ -1284,10 +1291,10 @@ KijiLoopGuard::~KijiLoopGuard() {
         //   set dst_reg, arg1
         //   goto label_end
         // label_end:
-        auto label_both_false = label_unsolved();
-        auto label_a1_true    = label_unsolved();
-        auto label_both_true  = label_unsolved();
-        auto label_end        = label_unsolved();
+        LABEL(label_both_false);
+        LABEL(label_a1_true);
+        LABEL(label_both_true);
+        LABEL(label_end);
 
         auto dst_reg = REG_OBJ();
 
@@ -1320,8 +1327,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         //   set dst_reg, arg1
         //   goto label_end // omit-able
         // label_end:
-        auto label_end = label_unsolved();
-        auto label_a1  = label_unsolved();
+        LABEL(label_end);
+        LABEL(label_a1);
         auto dst_reg = REG_OBJ();
           auto arg1 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
           Kiji_compiler_if_any(self, arg1, label_a1);
@@ -1343,8 +1350,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         //   set dst_reg, arg1
         //   goto label_end // omit-able
         // label_end:
-        auto label_end = label_unsolved();
-        auto label_a1  = label_unsolved();
+        LABEL(label_end);
+        LABEL(label_a1);
         auto dst_reg = REG_OBJ();
           auto arg1 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
           Kiji_compiler_unless_any(self, arg1, label_a1);

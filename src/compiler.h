@@ -110,9 +110,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     MVMSerializationContext * sc_classes;
     int num_sc_classes;
 
-    KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
-    KijiLabel label_unsolved() { return KijiLabel(this); }
-
     // This reg returns register number contains true value.
     int do_compile(const PVIPNode*node);
   public:
