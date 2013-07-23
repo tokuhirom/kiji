@@ -79,7 +79,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         last_handler->action = MVM_EX_ACTION_GOTO;
         last_handler->block_reg = 0;
         last_handler->goto_offset = last_offset_;
-        compiler_->push_handler(last_handler);
+        Kiji_frame_push_handler(compiler_->frames_.back(), last_handler);
 
         MVMFrameHandler *next_handler = new MVMFrameHandler;
         next_handler->start_offset = start_offset_;
@@ -88,7 +88,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         next_handler->action = MVM_EX_ACTION_GOTO;
         next_handler->block_reg = 0;
         next_handler->goto_offset = next_offset_;
-        compiler_->push_handler(next_handler);
+        Kiji_frame_push_handler(compiler_->frames_.back(), next_handler);
 
         MVMFrameHandler *redo_handler = new MVMFrameHandler;
         redo_handler->start_offset = start_offset_;
@@ -97,7 +97,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         redo_handler->action = MVM_EX_ACTION_GOTO;
         redo_handler->block_reg = 0;
         redo_handler->goto_offset = redo_offset_;
-        compiler_->push_handler(redo_handler);
+        Kiji_frame_push_handler(compiler_->frames_.back(), redo_handler);
       }
       KijiLoopGuard::KijiLoopGuard(KijiCompiler *compiler) :compiler_(compiler) {
         start_offset_ = compiler_->ASM_BYTECODE_SIZE()-1;

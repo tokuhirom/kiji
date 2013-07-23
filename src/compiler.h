@@ -506,9 +506,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
       CU->callsites[CU->num_callsites-1] = callsite;
       return CU->num_callsites-1;
     }
-    void push_handler(MVMFrameHandler *handler) {
-      return Kiji_frame_push_handler(frames_.back(), handler);
-    }
     void compile_array(uint16_t array_reg, const PVIPNode* node);
     int do_compile(const PVIPNode*node);
   private:
