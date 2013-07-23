@@ -547,7 +547,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
           compile_array(array_reg, m);
         }
       } else {
-        auto reg = this->box(do_compile(node));
+        auto reg = this->to_o(do_compile(node));
         ASM_PUSH_O(array_reg, reg);
       }
     }
@@ -658,7 +658,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
         if (reg < 0) {
           MEMORY_ERROR();
         }
-        // ASM_RETURN_O(this->box(reg));
+        // ASM_RETURN_O(this->to_o(reg));
         switch (Kiji_compiler_get_local_type(this, reg)) {
         case MVM_reg_int64:
           ASM_RETURN_I(reg);
@@ -667,7 +667,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
           ASM_RETURN_S(reg);
           break;
         case MVM_reg_obj:
-          ASM_RETURN_O(this->box(reg));
+          ASM_RETURN_O(this->to_o(reg));
           break;
         case MVM_reg_num64:
           ASM_RETURN_N(reg);
@@ -825,7 +825,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
         if (lhs->type == PVIP_NODE_MY) {
           // my $var := foo;
           int lex_no = do_compile(lhs);
-          int val    = this->box(do_compile(rhs));
+          int val    = this->to_o(do_compile(rhs));
           ASM_BINDLEX(
             lex_no, // lex number
             0,      // frame outer count
@@ -861,7 +861,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
           return val;
         } else if (lhs->type == PVIP_NODE_VARIABLE) {
           // $var := foo;
-          int val    = this->box(do_compile(rhs));
+          int val    = this->to_o(do_compile(rhs));
           set_variable(std::string(lhs->pv->buf, lhs->pv->len), val);
           return val;
         } else {
@@ -1063,7 +1063,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
         // label_end:
 
         KijiLoopGuard loop(this);
-          auto src_reg = box(do_compile(node->children.nodes[0]));
+          auto src_reg = to_o(do_compile(node->children.nodes[0]));
           auto iter_reg = REG_OBJ();
           auto label_end = label_unsolved();
           ASM_ITER(iter_reg, src_reg);
@@ -1264,8 +1264,8 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
         auto dst_reg = REG_STR();
         auto lhs = node->children.nodes[0];
         auto rhs = node->children.nodes[1];
-        auto l = stringify(do_compile(lhs));
-        auto r = stringify(do_compile(rhs));
+        auto l = to_s(do_compile(lhs));
+        auto r = to_s(do_compile(rhs));
         ASM_CONCAT_S(
           dst_reg,
           l,
@@ -1620,7 +1620,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
           } else if (std::string(ident->pv->buf, ident->pv->len) == "print") {
             for (int i=0; i<args->children.size; i++) {
               PVIPNode* a = args->children.nodes[i];
-              uint16_t reg_num = stringify(do_compile(a));
+              uint16_t reg_num = to_s(do_compile(a));
               ASM_PRINT(reg_num);
             }
             return const_true();
@@ -1745,8 +1745,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     }
   private:
     // objectify the register.
-    int to_o(int reg_num) { return box(reg_num); }
-    int box(int reg_num) {
+    int to_o(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
       auto reg_type = Kiji_compiler_get_local_type(this, reg_num);
       if (reg_type == MVM_reg_obj) {
@@ -1830,8 +1829,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
         break;
       }
     }
-    int to_s(int reg_num) { return stringify(reg_num); }
-    int stringify(int reg_num) {
+    int to_s(int reg_num) {
       assert(reg_num != UNKNOWN_REG);
       switch (Kiji_compiler_get_local_type(this, reg_num)) {
       case MVM_reg_str:
@@ -1854,7 +1852,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
       }
       default:
         // TODO
-        MVM_panic(MVM_exitcode_compunit, "Not implemented, stringify %d", Kiji_compiler_get_local_type(this, reg_num));
+        MVM_panic(MVM_exitcode_compunit, "Not implemented, to_s %d", Kiji_compiler_get_local_type(this, reg_num));
         break;
       }
     }
