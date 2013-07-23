@@ -21,6 +21,42 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
     }
 }
 
+    // Is a and b equivalent?
+    KIJI_STATIC_INLINE bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
+      if (a->arg_count != b->arg_count) {
+        return false;
+      }
+      if (a->num_pos != b->num_pos) {
+        return false;
+      }
+      // Should I use memcmp?
+      if (a->arg_count !=0) {
+        for (int i=0; i<a->arg_count; ++i) {
+          if (a->arg_flags[i] != b->arg_flags[i]) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    KIJI_STATIC_INLINE size_t Kiji_compiler_push_callsite(KijiCompiler *self, MVMCallsite *callsite) {
+      int i=0;
+      for (i=0; i<self->cu_->num_callsites; i++) {
+        if (callsite_eq(self->cu_->callsites[i], callsite)) {
+          delete callsite; // free memory
+          return i;
+        }
+      }
+      self->cu_->num_callsites++;
+      self->cu_->callsites = (MVMCallsite**)realloc(self->cu_->callsites, sizeof(MVMCallsite*)*self->cu_->num_callsites);
+      if (!self->cu_->callsites) {
+        MEMORY_ERROR();
+      }
+      self->cu_->callsites[self->cu_->num_callsites-1] = callsite;
+      return self->cu_->num_callsites-1;
+    }
+
     KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
       self->frames_.pop_back();
     }
@@ -272,7 +308,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         callsite->arg_count = 0;
         callsite->num_pos = 0;
         callsite->arg_flags = NULL;
-        auto callsite_no = push_callsite(callsite);
+        auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
         ASM_PREPARGS(callsite_no);
         ASM_INVOKE_V(code_reg);
 
@@ -355,7 +391,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         callsite->arg_count = 0;
         callsite->num_pos = 0;
         callsite->arg_flags = NULL;
-        auto callsite_no = push_callsite(callsite);
+        auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
         ASM_PREPARGS(callsite_no);
 
         ASM_INVOKE_V(frame_reg); // trash result
@@ -644,7 +680,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             callsite->num_pos = 1;
             callsite->arg_flags = new MVMCallsiteEntry[1];
             callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
-            auto callsite_no = push_callsite(callsite);
+            auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
             ASM_PREPARGS(callsite_no);
             ASM_ARG_O(0, val);
             ASM_INVOKE_V(body);
@@ -801,7 +837,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           callsite->num_pos = 0;
           callsite->arg_flags = new MVMCallsiteEntry[0];
 
-          auto callsite_no = push_callsite(callsite);
+          auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
           ASM_PREPARGS(callsite_no);
 
           auto dest_reg = REG_OBJ(); // ctx
@@ -902,7 +938,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             ASM_ARG_O(i, to_o(do_compile(a)));
             ++i;
           }
-          auto callsite_no = push_callsite(callsite);
+          auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
           ASM_PREPARGS(callsite_no);
         } else {
           MVMCallsite* callsite = new MVMCallsite;
@@ -911,7 +947,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           callsite->num_pos = 1;
           callsite->arg_flags = new MVMCallsiteEntry[1];
           callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
-          auto callsite_no = push_callsite(callsite);
+          auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
           ASM_PREPARGS(callsite_no);
         }
 
@@ -1264,7 +1300,7 @@ KijiLoopGuard::~KijiLoopGuard() {
               }
             }
 
-            auto callsite_no = push_callsite(callsite);
+            auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
             ASM_PREPARGS(callsite_no);
 
             int i=0;

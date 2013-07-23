@@ -471,41 +471,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
       MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       Kiji_frame_push_pkg_var(frames_.back(), name);
     }
-    // Is a and b equivalent?
-    bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
-      if (a->arg_count != b->arg_count) {
-        return false;
-      }
-      if (a->num_pos != b->num_pos) {
-        return false;
-      }
-      // Should I use memcmp?
-      if (a->arg_count !=0) {
-        for (int i=0; i<a->arg_count; ++i) {
-          if (a->arg_flags[i] != b->arg_flags[i]) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
 
-    size_t push_callsite(MVMCallsite *callsite) {
-      int i=0;
-      for (i=0; i<CU->num_callsites; i++) {
-        if (callsite_eq(CU->callsites[i], callsite)) {
-          delete callsite; // free memory
-          return i;
-        }
-      }
-      CU->num_callsites++;
-      CU->callsites = (MVMCallsite**)realloc(CU->callsites, sizeof(MVMCallsite*)*CU->num_callsites);
-      if (!CU->callsites) {
-        MEMORY_ERROR();
-      }
-      CU->callsites[CU->num_callsites-1] = callsite;
-      return CU->num_callsites-1;
-    }
     void compile_array(uint16_t array_reg, const PVIPNode* node);
     int do_compile(const PVIPNode*node);
   private:
