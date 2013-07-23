@@ -2,10 +2,7 @@ extern "C" {
 #include "moarvm.h"
 }
 #include "../compiler.h"
-#include <list>
-#include <string>
-#include "loop_guard.h"
-#include <vector>
+#include "loop.h"
 
 void Kiji_loop_finalize(KijiLoop *self, KijiCompiler *compiler) {
     MVMuint32 end_offset = Kiji_compiler_bytecode_size(compiler)-1;

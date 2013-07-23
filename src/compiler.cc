@@ -8,7 +8,7 @@ extern "C" {
 #include "builtin.h"
 #include <list>
 #include <string>
-#include "compiler/loop_guard.h"
+#include "compiler/loop.h"
 #include <vector>
 
 #define MEMORY_ERROR() \
