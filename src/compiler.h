@@ -169,4 +169,5 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node);
     void Kiji_compiler_set_variable(KijiCompiler *self, MVMString * name, uint16_t val_reg);
     int Kiji_compiler_to_o(KijiCompiler *self, int reg_num);
+    int Kiji_compiler_to_n(KijiCompiler *self, int reg_num);
 
