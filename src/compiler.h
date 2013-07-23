@@ -102,7 +102,7 @@ class KijiCompiler {
 public:
   std::vector<KijiFrame*> frames_;
   MVMCompUnit* cu;
-  MVMThreadContext *tc_;
+  MVMThreadContext *tc;
   int frame_no;
   MVMObject* current_class_how;
 
