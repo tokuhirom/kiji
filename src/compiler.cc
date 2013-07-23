@@ -9,6 +9,15 @@ extern "C" {
 #define ASM_BYTECODE_SIZE() \
     frames_.back()->frame.bytecode_size
 
+#define newMVMString(str, len) \
+  MVM_string_utf8_decode(tc_, tc_->instance->VMString, str, len)
+
+#define newMVMString_nolen(str) \
+  MVM_string_utf8_decode(tc_, tc_->instance->VMString, (str), strlen((str)))
+
+#define newMVMStringFromPVIP(p) \
+  MVM_string_utf8_decode(self->tc_, self->tc_->instance->VMString, (p)->buf, (p)->len)
+
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
     MVMObject *method_table, *attributes, *BOOTArray, *BOOTHash,
@@ -542,7 +551,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return UNKNOWN_REG;
       }
       case PVIP_NODE_STRING: {
-        int str_num = push_string(node->pv->buf, node->pv->len);
+        int str_num = push_string(newMVMStringFromPVIP(node->pv));
         int reg_num = REG_STR();
         ASM_CONST_S(reg_num, str_num);
         return reg_num;
@@ -577,7 +586,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           assert(lhs->children.nodes[0]->type == PVIP_NODE_VARIABLE);
           MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
           Kiji_compiler_push_pkg_var(this, name);
-          auto varname = push_string(lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
+          auto varname = push_string(newMVMStringFromPVIP(lhs->children.nodes[0]->pv));
           int val    = to_o(do_compile(rhs));
           int outer = 0;
           int lex_no = 0;
@@ -1069,7 +1078,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       case PVIP_NODE_METHODCALL: {
         assert(node->children.size == 3 || node->children.size==2);
         auto obj = to_o(do_compile(node->children.nodes[0]));
-        auto str = push_string(node->children.nodes[1]->pv->buf, node->children.nodes[1]->pv->len);
+        auto str = push_string(newMVMStringFromPVIP(node->children.nodes[1]->pv));
         auto meth = REG_OBJ();
         auto ret = REG_OBJ();
 
@@ -1381,7 +1390,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             auto fname_s = do_compile(args->children.nodes[0]);
             auto dst_reg_o = REG_OBJ();
             // TODO support latin1, etc.
-            auto mode = push_string("r");
+            auto mode = push_string(newMVMString_nolen("r"));
             auto mode_s = REG_STR();
             ASM_CONST_S(mode_s, mode);
             ASM_OPEN_FH(dst_reg_o, fname_s, mode_s);
@@ -1392,7 +1401,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             auto fname_s = do_compile(args->children.nodes[0]);
             auto dst_reg_s = REG_STR();
             auto encoding_s = REG_STR();
-            ASM_CONST_S(encoding_s, push_string("utf8")); // TODO support latin1, etc.
+            ASM_CONST_S(encoding_s, push_string(newMVMString_nolen("utf8"))); // TODO support latin1, etc.
             ASM_SLURP(dst_reg_s, fname_s, encoding_s);
             return dst_reg_s;
           }
@@ -2062,8 +2071,7 @@ KijiLoopGuard::~KijiLoopGuard() {
     Kiji_variable_type_t KijiCompiler::find_variable_by_name(MVMString *name, int &lex_no, int &outer) {
       return Kiji_find_variable_by_name(frames_.back(), tc_, name, &lex_no, &outer);
     }
-    int KijiCompiler::push_string(const char*string, int length) {
-      MVMString* str = MVM_string_utf8_decode(tc_, tc_->instance->VMString, string, length);
+    int KijiCompiler::push_string(MVMString *str) {
       CU->num_strings++;
       CU->strings = (MVMString**)realloc(CU->strings, sizeof(MVMString*)*CU->num_strings);
       if (!CU->strings) {
@@ -2099,7 +2107,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
         auto reg = REG_OBJ();
-        auto varname = push_string(name_cc);
+        auto varname = push_string(name);
         auto varname_s = REG_STR();
         ASM_GETLEX(
           reg,
@@ -2138,7 +2146,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", "$?PACKAGE");
         }
         auto reg = REG_OBJ();
-        auto varname = push_string(name_cc);
+        auto varname = push_string(name);
         auto varname_s = REG_STR();
         ASM_GETLEX(
           reg,
