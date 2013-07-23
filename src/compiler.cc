@@ -957,7 +957,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         // compile else clause
         if (node->children.nodes[node->children.size-1]->type == PVIP_NODE_ELSE) {
-          compile_statements(node->children.nodes[node->children.size-1], dst_reg);
+          Kiji_compiler_compile_statements(self, node->children.nodes[node->children.size-1], dst_reg);
         }
 
         auto label_end = label_unsolved();
@@ -965,7 +965,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         // update if_label and compile if body
         label_if.put();
-          compile_statements(if_body, dst_reg);
+          Kiji_compiler_compile_statements(self, if_body, dst_reg);
           Kiji_compiler_goto(self, label_end);
 
         // compile elsif body
@@ -977,7 +977,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
           elsif_poses.front().put();
           elsif_poses.pop_front();
-          compile_statements(n->children.nodes[1], dst_reg);
+          Kiji_compiler_compile_statements(self, n->children.nodes[1], dst_reg);
           Kiji_compiler_goto(self, label_end);
         }
         assert(elsif_poses.size() == 0);
@@ -1738,15 +1738,14 @@ KijiLoopGuard::~KijiLoopGuard() {
         abort();
       }
     }
-    void KijiCompiler::compile_statements(const PVIPNode*node, int dst_reg) {
-      KijiCompiler *self = this;
+    void Kiji_compiler_compile_statements(KijiCompiler *self, const PVIPNode*node, int dst_reg) {
       int reg = UNKNOWN_REG;
       if (node->type == PVIP_NODE_STATEMENTS || node->type == PVIP_NODE_ELSE) {
         for (int i=0, l=node->children.size; i<l; i++) {
-          reg = do_compile(node->children.nodes[i]);
+          reg = self->do_compile(node->children.nodes[i]);
         }
       } else {
-        reg = do_compile(node);
+        reg = self->do_compile(node);
       }
       if (reg == UNKNOWN_REG) {
         ASM_NULL(dst_reg);
