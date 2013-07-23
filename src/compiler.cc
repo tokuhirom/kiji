@@ -316,12 +316,14 @@ KijiLoopGuard::~KijiLoopGuard() {
           Kiji_compiler_compile_array(self, array_reg, m);
         }
       } else {
-        auto reg = Kiji_compiler_to_o(self, self->do_compile(node));
+        auto reg = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node));
         ASM_PUSH_O(array_reg, reg);
       }
     }
-    int KijiCompiler::do_compile(const PVIPNode*node) {
-      KijiCompiler *self = this;
+
+    // This reg returns register number contains true value.
+    int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
+      MVMThreadContext *tc_ = self->tc_;
       // printf("node: %s\n", node.type_name());
       switch (node->type) {
       case PVIP_NODE_POSTDEC: { // $i--
@@ -372,25 +374,25 @@ KijiLoopGuard::~KijiLoopGuard() {
         return dst_reg;
       }
       case PVIP_NODE_UNARY_BITWISE_NEGATION: { // +^1
-        auto reg = Kiji_compiler_to_i(self, do_compile(node->children.nodes[0]));
+        auto reg = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
         ASM_BNOT_I(reg, reg);
         return reg;
       }
       case PVIP_NODE_BRSHIFT: { // +>
-        auto l = Kiji_compiler_to_i(self, do_compile(node->children.nodes[0]));
-        auto r = Kiji_compiler_to_i(self, do_compile(node->children.nodes[1]));
+        auto l = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+        auto r = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
         ASM_BRSHIFT_I(r, l, r);
         return r;
       }
       case PVIP_NODE_BLSHIFT: { // +<
-        auto l = Kiji_compiler_to_i(self, do_compile(node->children.nodes[0]));
-        auto r = Kiji_compiler_to_i(self, do_compile(node->children.nodes[1]));
+        auto l = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+        auto r = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
         ASM_BLSHIFT_I(r, l, r);
         return r;
       }
       case PVIP_NODE_ABS: {
         // TODO support abs_n?
-        auto r = Kiji_compiler_to_i(self, do_compile(node->children.nodes[0]));
+        auto r = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
         ASM_ABS_I(r, r);
         return r;
       }
@@ -423,12 +425,12 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
       case PVIP_NODE_RETURN: {
         assert(node->children.size ==1);
-        auto reg = do_compile(node->children.nodes[0]);
+        auto reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
         if (reg < 0) {
           MEMORY_ERROR();
         }
         // ASM_RETURN_O(Kiji_compiler_to_o(self, reg));
-        switch (Kiji_compiler_get_local_type(this, reg)) {
+        switch (Kiji_compiler_get_local_type(self, reg)) {
         case MVM_reg_int64:
           ASM_RETURN_I(reg);
           break;
@@ -442,7 +444,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           ASM_RETURN_N(reg);
           break;
         default:
-          MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", Kiji_compiler_get_local_type(this, reg));
+          MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", Kiji_compiler_get_local_type(self, reg));
         }
         return UNKNOWN_REG;
       }
@@ -469,11 +471,11 @@ KijiLoopGuard::~KijiLoopGuard() {
           MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", error->buf);
         }
 
-        auto frame_no = Kiji_compiler_push_frame(this, path);
+        auto frame_no = Kiji_compiler_push_frame(self, path);
         ASM_CHECKARITY(0,0);
-        this->do_compile(root_node);
+        Kiji_compiler_do_compile(self, root_node);
         ASM_RETURN();
-        Kiji_compiler_pop_frame(this);
+        Kiji_compiler_pop_frame(self);
 
         auto code_reg = REG_OBJ();
         ASM_GETCODE(code_reg, frame_no);
@@ -482,14 +484,14 @@ KijiLoopGuard::~KijiLoopGuard() {
         callsite->arg_count = 0;
         callsite->num_pos = 0;
         callsite->arg_flags = NULL;
-        auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
+        auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
         ASM_PREPARGS(callsite_no);
         ASM_INVOKE_V(code_reg);
 
         return UNKNOWN_REG;
       }
       case PVIP_NODE_DIE: {
-        int msg_reg = Kiji_compiler_to_s(self, do_compile(node->children.nodes[0]));
+        int msg_reg = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
         int dst_reg = REG_OBJ();
         assert(msg_reg != UNKNOWN_REG);
         ASM_DIE(dst_reg, msg_reg);
@@ -504,16 +506,16 @@ KijiLoopGuard::~KijiLoopGuard() {
          *  label_end:
          */
 
-        KijiLoopGuard loop(this);
+        KijiLoopGuard loop(self);
 
         LABEL(label_while); label_while.put();
 
         loop.put_next();
-          int reg = do_compile(node->children.nodes[0]);
+          int reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
           assert(reg != UNKNOWN_REG);
           LABEL(label_end);
           Kiji_compiler_unless_any(self, reg, label_end);
-          do_compile(node->children.nodes[1]);
+          Kiji_compiler_do_compile(self, node->children.nodes[1]);
           Kiji_compiler_goto(self, label_while);
         label_end.put();
 
@@ -522,7 +524,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return UNKNOWN_REG;
       }
       case PVIP_NODE_LAMBDA: {
-        auto frame_no = Kiji_compiler_push_frame(this, "lambda");
+        auto frame_no = Kiji_compiler_push_frame(self, "lambda");
         ASM_CHECKARITY(
           node->children.nodes[0]->children.size,
           node->children.nodes[0]->children.size
@@ -531,17 +533,17 @@ KijiLoopGuard::~KijiLoopGuard() {
           PVIPNode *n = node->children.nodes[0]->children.nodes[i];
           int reg = REG_OBJ();
           MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
-          int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+          int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
           ASM_PARAM_RP_O(reg, i);
           ASM_BINDLEX(lex, 0, reg);
         }
-        auto retval = do_compile(node->children.nodes[1]);
+        auto retval = Kiji_compiler_do_compile(self, node->children.nodes[1]);
         if (retval == UNKNOWN_REG) {
           retval = REG_OBJ();
           ASM_NULL(retval);
         }
         Kiji_compiler_return_any(self, retval);
-        Kiji_compiler_pop_frame(this);
+        Kiji_compiler_pop_frame(self);
 
         // warn if void context.
         auto dst_reg = REG_OBJ();
@@ -550,14 +552,14 @@ KijiLoopGuard::~KijiLoopGuard() {
         return dst_reg;
       }
       case PVIP_NODE_BLOCK: {
-        auto frame_no = Kiji_compiler_push_frame(this, "block");
+        auto frame_no = Kiji_compiler_push_frame(self, "block");
         ASM_CHECKARITY(0,0);
         for (int i=0; i<node->children.size; i++) {
           PVIPNode *n = node->children.nodes[i];
-          (void)do_compile(n);
+          (void)Kiji_compiler_do_compile(self, n);
         }
         ASM_RETURN();
-        Kiji_compiler_pop_frame(this);
+        Kiji_compiler_pop_frame(self);
 
         auto frame_reg = REG_OBJ();
         ASM_GETCODE(frame_reg, frame_no);
@@ -567,7 +569,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         callsite->arg_count = 0;
         callsite->num_pos = 0;
         callsite->arg_flags = NULL;
-        auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
+        auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
         ASM_PREPARGS(callsite_no);
 
         ASM_INVOKE_V(frame_reg); // trash result
@@ -597,8 +599,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto rhs = node->children.nodes[1];
         if (lhs->type == PVIP_NODE_MY) {
           // my $var := foo;
-          int lex_no = do_compile(lhs);
-          int val    = Kiji_compiler_to_o(self, do_compile(rhs));
+          int lex_no = Kiji_compiler_do_compile(self, lhs);
+          int val    = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, rhs));
           ASM_BINDLEX(
             lex_no, // lex number
             0,      // frame outer count
@@ -609,9 +611,9 @@ KijiLoopGuard::~KijiLoopGuard() {
           // our $var := foo;
           assert(lhs->children.nodes[0]->type == PVIP_NODE_VARIABLE);
           MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
-          Kiji_compiler_push_pkg_var(this, name);
+          Kiji_compiler_push_pkg_var(self, name);
           auto varname = Kiji_compiler_push_string(self, newMVMStringFromPVIP(lhs->children.nodes[0]->pv));
-          int val    = Kiji_compiler_to_o(self, do_compile(rhs));
+          int val    = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, rhs));
           int outer = 0;
           int lex_no = 0;
           if (!Kiji_compiler_find_lexical_by_name(self, newMVMString_nolen("$?PACKAGE"), &lex_no, &outer)) {
@@ -635,7 +637,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           return val;
         } else if (lhs->type == PVIP_NODE_VARIABLE) {
           // $var := foo;
-          int val    = Kiji_compiler_to_o(self, do_compile(rhs));
+          int val    = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, rhs));
           Kiji_compiler_set_variable(self, newMVMStringFromPVIP(lhs->pv), val);
           return val;
         } else {
@@ -650,7 +652,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto funcreg = REG_OBJ();
         std::string amp_name(std::string("&") + name);
         MVMString * mvm_name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, amp_name.c_str(), amp_name.size());
-        auto funclex = Kiji_compiler_push_lexical(this, mvm_name, MVM_reg_obj);
+        auto funclex = Kiji_compiler_push_lexical(self, mvm_name, MVM_reg_obj);
         auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
         ASM_GETCODE(funcreg, 0);
         ASM_BINDLEX(
@@ -660,7 +662,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         );
 
         // Compile function body
-        auto frame_no = Kiji_compiler_push_frame(this, name);
+        auto frame_no = Kiji_compiler_push_frame(self, name);
 
         // TODO process named params
         // TODO process types
@@ -673,7 +675,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           {
             // push self
             MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "__self", strlen("__self"));
-            int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+            int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
             int reg = REG_OBJ();
             ASM_PARAM_RP_O(reg, 0);
             ASM_BINDLEX(lex, 0, reg);
@@ -683,7 +685,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             auto n = node->children.nodes[1]->children.nodes[i];
             int reg = REG_OBJ();
             MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
-            int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+            int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
             ASM_PARAM_RP_O(reg, i);
             ASM_BINDLEX(lex, 0, reg);
             ++i; // <- really??
@@ -696,9 +698,9 @@ KijiLoopGuard::~KijiLoopGuard() {
           assert(stmts->type == PVIP_NODE_STATEMENTS);
           for (int i=0; i<stmts->children.size ; ++i) {
             PVIPNode * n=stmts->children.nodes[i];
-            int reg = do_compile(n);
+            int reg = Kiji_compiler_do_compile(self, n);
             if (i==stmts->children.size-1 && reg >= 0) {
-              switch (Kiji_compiler_get_local_type(this, reg)) {
+              switch (Kiji_compiler_get_local_type(self, reg)) {
               case MVM_reg_int64:
                 ASM_RETURN_I(reg);
                 break;
@@ -724,21 +726,21 @@ KijiLoopGuard::~KijiLoopGuard() {
             ASM_RETURN_O(reg);
           }
         }
-        Kiji_compiler_pop_frame(this);
+        Kiji_compiler_pop_frame(self);
 
         ASM_WRITE_UINT16_T(frame_no, func_pos);
 
         // bind method object to class how
-        if (!current_class_how) {
+        if (!self->current_class_how) {
           MVM_panic(MVM_exitcode_compunit, "Compilation error. You can't write methods outside of class definition");
         }
         {
           MVMString * methname = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name.c_str(), name.size());
           // self, type_obj, name, method
-          MVMObject * method_table = ((MVMKnowHOWREPR *)current_class_how)->body.methods;
+          MVMObject * method_table = ((MVMKnowHOWREPR *)self->current_class_how)->body.methods;
           MVMObject* code_type = tc_->instance->boot_types->BOOTCode;
           MVMCode *coderef = (MVMCode*)REPR(code_type)->allocate(tc_, STABLE(code_type));
-          coderef->body.sf = this->cu->frames[frame_no];
+          coderef->body.sf = self->cu->frames[frame_no];
           REPR(method_table)->ass_funcs->bind_key_boxed(tc_, STABLE(method_table),
               method_table, OBJECT_BODY(method_table), (MVMObject *)methname, (MVMObject*)coderef);
         }
@@ -752,7 +754,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto funcreg = REG_OBJ();
         std::string amp_name(std::string("&") + name);
         MVMString * mvm_name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, amp_name.c_str(), amp_name.size());
-        auto funclex = Kiji_compiler_push_lexical(this, mvm_name, MVM_reg_obj);
+        auto funclex = Kiji_compiler_push_lexical(self, mvm_name, MVM_reg_obj);
         auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
         ASM_GETCODE(funcreg, 0);
         ASM_BINDLEX(
@@ -762,7 +764,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         );
 
         // Compile function body
-        auto frame_no = Kiji_compiler_push_frame(this, name);
+        auto frame_no = Kiji_compiler_push_frame(self, name);
 
         // TODO process named params
         // TODO process types
@@ -776,7 +778,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             auto n = node->children.nodes[1]->children.nodes[i];
             int reg = REG_OBJ();
             MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
-            int lex = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+            int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
             ASM_PARAM_RP_O(reg, i);
             ASM_BINDLEX(lex, 0, reg);
             ++i;
@@ -789,9 +791,9 @@ KijiLoopGuard::~KijiLoopGuard() {
           assert(stmts->type == PVIP_NODE_STATEMENTS);
           for (int i=0; i<stmts->children.size ; ++i) {
             PVIPNode * n=stmts->children.nodes[i];
-            int reg = do_compile(n);
+            int reg = Kiji_compiler_do_compile(self, n);
             if (i==stmts->children.size-1 && reg >= 0) {
-              switch (Kiji_compiler_get_local_type(this, reg)) {
+              switch (Kiji_compiler_get_local_type(self, reg)) {
               case MVM_reg_int64:
                 ASM_RETURN_I(reg);
                 break;
@@ -817,7 +819,7 @@ KijiLoopGuard::~KijiLoopGuard() {
             ASM_RETURN_O(reg);
           }
         }
-        Kiji_compiler_pop_frame(this);
+        Kiji_compiler_pop_frame(self);
 
         ASM_WRITE_UINT16_T(frame_no, func_pos);
 
@@ -843,8 +845,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         //   if_o label_for
         // label_end:
 
-        KijiLoopGuard loop(this);
-          auto src_reg = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
+        KijiLoopGuard loop(self);
+          auto src_reg = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
           auto iter_reg = REG_OBJ();
           LABEL(label_end);
           ASM_ITER(iter_reg, src_reg);
@@ -857,22 +859,22 @@ KijiLoopGuard::~KijiLoopGuard() {
           ASM_SHIFT_O(val, iter_reg);
 
           if (node->children.nodes[1]->type == PVIP_NODE_LAMBDA) {
-            auto body = do_compile(node->children.nodes[1]);
+            auto body = Kiji_compiler_do_compile(self, node->children.nodes[1]);
             MVMCallsite* callsite = new MVMCallsite;
             memset(callsite, 0, sizeof(MVMCallsite));
             callsite->arg_count = 1;
             callsite->num_pos = 1;
             callsite->arg_flags = new MVMCallsiteEntry[1];
             callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
-            auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
+            auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
             ASM_PREPARGS(callsite_no);
             ASM_ARG_O(0, val);
             ASM_INVOKE_V(body);
           } else {
             MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, "$_", strlen("$_"));
-            int it = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+            int it = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
             ASM_BINDLEX(it, 0, val);
-            do_compile(node->children.nodes[1]);
+            Kiji_compiler_do_compile(self, node->children.nodes[1]);
           }
 
           Kiji_compiler_if_any(self, iter_reg, label_for);
@@ -889,11 +891,11 @@ KijiLoopGuard::~KijiLoopGuard() {
         }
         auto n = node->children.nodes[0];
         if (n->type != PVIP_NODE_VARIABLE) {
-          printf("This is variable: %s\n", PVIP_node_name(n->type));
+          printf("self is variable: %s\n", PVIP_node_name(n->type));
           exit(0);
         }
         MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
-        Kiji_compiler_push_pkg_var(this, name);
+        Kiji_compiler_push_pkg_var(self, name);
         return UNKNOWN_REG;
       }
       case PVIP_NODE_MY: {
@@ -903,11 +905,11 @@ KijiLoopGuard::~KijiLoopGuard() {
         }
         auto n = node->children.nodes[0];
         if (n->type != PVIP_NODE_VARIABLE) {
-          printf("This is variable: %s\n", PVIP_node_name(n->type));
+          printf("self is variable: %s\n", PVIP_node_name(n->type));
           exit(0);
         }
         MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, n->pv->buf, n->pv->len);
-        int idx = Kiji_compiler_push_lexical(this, name, MVM_reg_obj);
+        int idx = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
         return idx;
       }
       case PVIP_NODE_UNLESS: {
@@ -915,10 +917,10 @@ KijiLoopGuard::~KijiLoopGuard() {
         //   if_o label_end
         //   body
         // label_end:
-        auto cond_reg = do_compile(node->children.nodes[0]);
+        auto cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
         LABEL(label_end);
         Kiji_compiler_if_any(self, cond_reg, label_end);
-        auto dst_reg = do_compile(node->children.nodes[1]);
+        auto dst_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
         label_end.put();
         return dst_reg;
       }
@@ -943,7 +945,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         //   goto lable_end
         // label_end:
 
-        auto if_cond_reg = do_compile(node->children.nodes[0]);
+        auto if_cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
         auto if_body = node->children.nodes[1];
         auto dst_reg = REG_OBJ();
 
@@ -957,8 +959,8 @@ KijiLoopGuard::~KijiLoopGuard() {
           if (n->type == PVIP_NODE_ELSE) {
             break;
           }
-          auto reg = do_compile(n->children.nodes[0]);
-          elsif_poses.emplace_back(this);
+          auto reg = Kiji_compiler_do_compile(self, n->children.nodes[0]);
+          elsif_poses.emplace_back(self);
           Kiji_compiler_if_any(self, reg, elsif_poses.back());
         }
 
@@ -1024,7 +1026,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           callsite->num_pos = 0;
           callsite->arg_flags = new MVMCallsiteEntry[0];
 
-          auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
+          auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
           ASM_PREPARGS(callsite_no);
 
           auto dest_reg = REG_OBJ(); // ctx
@@ -1041,15 +1043,15 @@ KijiLoopGuard::~KijiLoopGuard() {
         for (int i=0; i<node->children.size; i++) {
           PVIPNode*n = node->children.nodes[i];
           // should i return values?
-          do_compile(n);
+          Kiji_compiler_do_compile(self, n);
         }
         return UNKNOWN_REG;
       case PVIP_NODE_STRING_CONCAT: {
         auto dst_reg = REG_STR();
         auto lhs = node->children.nodes[0];
         auto rhs = node->children.nodes[1];
-        auto l = Kiji_compiler_to_s(self, do_compile(lhs));
-        auto r = Kiji_compiler_to_s(self, do_compile(rhs));
+        auto l = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs));
+        auto r = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, rhs));
         ASM_CONCAT_S(
           dst_reg,
           l,
@@ -1063,8 +1065,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto rhs = node->children.nodes[1];
         ASM_REPEAT_S(
           dst_reg,
-          Kiji_compiler_to_s(self, do_compile(lhs)),
-          Kiji_compiler_to_i(self, do_compile(rhs))
+          Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs)),
+          Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, rhs))
         );
         return dst_reg;
       }
@@ -1084,8 +1086,8 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
       case PVIP_NODE_ATPOS: {
         assert(node->children.size == 2);
-        auto container = do_compile(node->children.nodes[0]);
-        auto idx       = Kiji_compiler_to_i(self, do_compile(node->children.nodes[1]));
+        auto container = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+        auto idx       = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
         auto dst = REG_OBJ();
         ASM_ATPOS_O(dst, container, idx);
         return dst;
@@ -1097,11 +1099,11 @@ KijiLoopGuard::~KijiLoopGuard() {
           PVIP_node_push_child(call, node->children.nodes[1]);
         }
         // TODO possibly memory leaks
-        return do_compile(call);
+        return Kiji_compiler_do_compile(self, call);
       }
       case PVIP_NODE_METHODCALL: {
         assert(node->children.size == 3 || node->children.size==2);
-        auto obj = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
+        auto obj = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
         auto str = Kiji_compiler_push_string(self, newMVMStringFromPVIP(node->children.nodes[1]->pv));
         auto meth = REG_OBJ();
         auto ret = REG_OBJ();
@@ -1122,10 +1124,10 @@ KijiLoopGuard::~KijiLoopGuard() {
           for (int j=0; j<args->children.size; j++) {
             PVIPNode* a= args->children.nodes[j];
             callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
-            ASM_ARG_O(i, Kiji_compiler_to_o(self, do_compile(a)));
+            ASM_ARG_O(i, Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, a)));
             ++i;
           }
-          auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
+          auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
           ASM_PREPARGS(callsite_no);
         } else {
           MVMCallsite* callsite = new MVMCallsite;
@@ -1134,7 +1136,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           callsite->num_pos = 1;
           callsite->arg_flags = new MVMCallsiteEntry[1];
           callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
-          auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
+          auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
           ASM_PREPARGS(callsite_no);
         }
 
@@ -1157,15 +1159,15 @@ KijiLoopGuard::~KijiLoopGuard() {
         LABEL(label_else);
         auto dst_reg = REG_OBJ();
 
-          auto cond_reg = do_compile(node->children.nodes[0]);
+          auto cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
           Kiji_compiler_unless_any(self, cond_reg, label_else);
 
-          auto if_reg = do_compile(node->children.nodes[1]);
+          auto if_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
           ASM_SET(dst_reg, Kiji_compiler_to_o(self, if_reg));
           Kiji_compiler_goto(self, label_end);
 
         label_else.put();
-          auto else_reg = do_compile(node->children.nodes[2]);
+          auto else_reg = Kiji_compiler_do_compile(self, node->children.nodes[2]);
           ASM_SET(dst_reg, Kiji_compiler_to_o(self, else_reg));
 
         label_end.put();
@@ -1173,7 +1175,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return dst_reg;
       }
       case PVIP_NODE_NOT: {
-        auto src_reg = Kiji_compiler_to_i(self, do_compile(node->children.nodes[0]));
+        auto src_reg = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
         auto dst_reg = REG_INT64();
         ASM_NOT_I(dst_reg, src_reg);
         return dst_reg;
@@ -1245,15 +1247,15 @@ KijiLoopGuard::~KijiLoopGuard() {
         return Kiji_compiler_str_inplace(self, node, MVM_OP_repeat_s, MVM_reg_int64);
       }
       case PVIP_NODE_UNARY_TILDE: { // ~
-        return Kiji_compiler_to_s(self, self->do_compile(node->children.nodes[0]));
+        return Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
       }
       case PVIP_NODE_NOP:
         return -1;
       case PVIP_NODE_ATKEY: {
         assert(node->children.size == 2);
         auto dst       = REG_OBJ();
-        auto container = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
-        auto key       = Kiji_compiler_to_s(self, do_compile(node->children.nodes[1]));
+        auto container = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+        auto key       = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
         ASM_ATKEY_O(dst, container, key);
         return dst;
       }
@@ -1265,8 +1267,8 @@ KijiLoopGuard::~KijiLoopGuard() {
         for (int i=0; i<node->children.size; i++) {
           PVIPNode* pair = node->children.nodes[i];
           assert(pair->type == PVIP_NODE_PAIR);
-          auto k = Kiji_compiler_to_s(self, do_compile(pair->children.nodes[0]));
-          auto v = Kiji_compiler_to_o(self, do_compile(pair->children.nodes[1]));
+          auto k = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, pair->children.nodes[0]));
+          auto v = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, pair->children.nodes[1]));
           ASM_BINDKEY_O(hash, k, v);
         }
         return hash;
@@ -1298,8 +1300,8 @@ KijiLoopGuard::~KijiLoopGuard() {
 
         auto dst_reg = REG_OBJ();
 
-          auto arg1 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
-          auto arg2 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[1]));
+          auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+          auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           Kiji_compiler_if_any(self, arg1, label_a1_true);
           Kiji_compiler_unless_any(self, arg2, label_both_false);
           ASM_SET(dst_reg, arg2);
@@ -1330,9 +1332,9 @@ KijiLoopGuard::~KijiLoopGuard() {
         LABEL(label_end);
         LABEL(label_a1);
         auto dst_reg = REG_OBJ();
-          auto arg1 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
+          auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
           Kiji_compiler_if_any(self, arg1, label_a1);
-          auto arg2 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[1]));
+          auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
           Kiji_compiler_goto(self, label_end);
         label_a1.put();
@@ -1353,9 +1355,9 @@ KijiLoopGuard::~KijiLoopGuard() {
         LABEL(label_end);
         LABEL(label_a1);
         auto dst_reg = REG_OBJ();
-          auto arg1 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
+          auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
           Kiji_compiler_unless_any(self, arg1, label_a1);
-          auto arg2 = Kiji_compiler_to_o(self, do_compile(node->children.nodes[1]));
+          auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
           Kiji_compiler_goto(self, label_end);
         label_a1.put();
@@ -1364,11 +1366,11 @@ KijiLoopGuard::~KijiLoopGuard() {
         return dst_reg;
       }
       case PVIP_NODE_UNARY_PLUS: {
-        return Kiji_compiler_to_n(self, do_compile(node->children.nodes[0]));
+        return Kiji_compiler_to_n(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
       }
       case PVIP_NODE_UNARY_MINUS: {
-        auto reg = do_compile(node->children.nodes[0]);
-        if (Kiji_compiler_get_local_type(this, reg) == MVM_reg_int64) {
+        auto reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+        if (Kiji_compiler_get_local_type(self, reg) == MVM_reg_int64) {
           ASM_NEG_I(reg, reg);
           return reg;
         } else {
@@ -1379,7 +1381,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
       case PVIP_NODE_CHAIN:
         if (node->children.size==1) {
-          return do_compile(node->children.nodes[0]);
+          return Kiji_compiler_do_compile(self, node->children.nodes[0]);
         } else {
           return Kiji_compiler_compile_chained_comparisions(self, node);
         }
@@ -1393,7 +1395,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           if (std::string(ident->pv->buf, ident->pv->len) == "say") {
             for (int i=0; i<args->children.size; i++) {
               PVIPNode* a = args->children.nodes[i];
-              uint16_t reg_num = Kiji_compiler_to_s(self, do_compile(a));
+              uint16_t reg_num = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, a));
               if (i==args->children.size-1) {
                 ASM_SAY(reg_num);
               } else {
@@ -1404,14 +1406,14 @@ KijiLoopGuard::~KijiLoopGuard() {
           } else if (std::string(ident->pv->buf, ident->pv->len) == "print") {
             for (int i=0; i<args->children.size; i++) {
               PVIPNode* a = args->children.nodes[i];
-              uint16_t reg_num = Kiji_compiler_to_s(self, do_compile(a));
+              uint16_t reg_num = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, a));
               ASM_PRINT(reg_num);
             }
             return Kiji_compiler_const_true(self);
           } else if (std::string(ident->pv->buf, ident->pv->len) == "open") {
             // TODO support arguments
             assert(args->children.size == 1);
-            auto fname_s = do_compile(args->children.nodes[0]);
+            auto fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
             auto dst_reg_o = REG_OBJ();
             // TODO support latin1, etc.
             auto mode = Kiji_compiler_push_string(self, newMVMString_nolen("r"));
@@ -1422,7 +1424,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           } else if (std::string(ident->pv->buf, ident->pv->len) == "slurp") {
             assert(args->children.size <= 2);
             assert(args->children.size != 2 && "Encoding option is not supported yet");
-            auto fname_s = do_compile(args->children.nodes[0]);
+            auto fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
             auto dst_reg_s = REG_STR();
             auto encoding_s = REG_STR();
             ASM_CONST_S(encoding_s, Kiji_compiler_push_string(self, newMVMString_nolen("utf8"))); // TODO support latin1, etc.
@@ -1445,7 +1447,7 @@ KijiLoopGuard::~KijiLoopGuard() {
               outer // outer frame
             );
           } else {
-            func_reg_no = Kiji_compiler_to_o(self, do_compile(node->children.nodes[0]));
+            func_reg_no = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
           }
 
           {
@@ -1460,12 +1462,12 @@ KijiLoopGuard::~KijiLoopGuard() {
 
             for (int i=0; i<args->children.size; i++) {
               PVIPNode *a = args->children.nodes[i];
-              auto reg = do_compile(a);
+              auto reg = Kiji_compiler_do_compile(self, a);
               if (reg<0) {
                 MVM_panic(MVM_exitcode_compunit, "Compilation error. You should not pass void function as an argument: %s", PVIP_node_name(a->type));
               }
 
-              switch (Kiji_compiler_get_local_type(this, reg)) {
+              switch (Kiji_compiler_get_local_type(self, reg)) {
               case MVM_reg_int64:
                 callsite->arg_flags[i] = MVM_CALLSITE_ARG_INT;
                 arg_regs.push_back(reg);
@@ -1487,12 +1489,12 @@ KijiLoopGuard::~KijiLoopGuard() {
               }
             }
 
-            auto callsite_no = Kiji_compiler_push_callsite(this, callsite);
+            auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
             ASM_PREPARGS(callsite_no);
 
             int i=0;
             for (auto reg:arg_regs) {
-              switch (Kiji_compiler_get_local_type(this, reg)) {
+              switch (Kiji_compiler_get_local_type(self, reg)) {
               case MVM_reg_int64:
                 ASM_ARG_I(i, reg);
                 break;
@@ -1641,8 +1643,8 @@ KijiLoopGuard::~KijiLoopGuard() {
     int Kiji_compiler_str_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op) {
         assert(node->children.size == 2);
 
-        int reg_num1 = Kiji_compiler_to_s(self, self->do_compile(node->children.nodes[0]));
-        int reg_num2 = Kiji_compiler_to_s(self, self->do_compile(node->children.nodes[1]));
+        int reg_num1 = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+        int reg_num2 = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
         int reg_num_dst = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, reg_num_dst, reg_num1, reg_num2);
         return reg_num_dst;
@@ -1650,8 +1652,8 @@ KijiLoopGuard::~KijiLoopGuard() {
     int Kiji_compiler_binary_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op_i) {
         assert(node->children.size == 2);
 
-        int reg_num1 = Kiji_compiler_to_i(self, self->do_compile(node->children.nodes[0]));
-        int reg_num2 = Kiji_compiler_to_i(self, self->do_compile(node->children.nodes[1]));
+        int reg_num1 = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+        int reg_num2 = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
         auto dst_reg = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, dst_reg, reg_num1, reg_num2);
         return dst_reg;
@@ -1661,7 +1663,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
         auto lhs = Kiji_compiler_get_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv));
-        auto rhs = self->do_compile(node->children.nodes[1]);
+        auto rhs = Kiji_compiler_do_compile(self, node->children.nodes[1]);
         auto tmp = REG_NUM64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, tmp, Kiji_compiler_to_n(self, lhs), Kiji_compiler_to_n(self, rhs));
         Kiji_compiler_set_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv), Kiji_compiler_to_o(self, tmp));
@@ -1672,7 +1674,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
         auto lhs = Kiji_compiler_get_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv));
-        auto rhs = self->do_compile(node->children.nodes[1]);
+        auto rhs = Kiji_compiler_do_compile(self, node->children.nodes[1]);
         auto tmp = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op, tmp, Kiji_compiler_to_i(self, lhs), Kiji_compiler_to_i(self, rhs));
         Kiji_compiler_set_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv), Kiji_compiler_to_o(self, tmp));
@@ -1683,7 +1685,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         assert(node->children.nodes[0]->type == PVIP_NODE_VARIABLE);
 
         auto lhs = Kiji_compiler_get_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv));
-        auto rhs = self->do_compile(node->children.nodes[1]);
+        auto rhs = Kiji_compiler_do_compile(self, node->children.nodes[1]);
         auto tmp = REG_STR();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, tmp, Kiji_compiler_to_s(self, lhs), rhs_type == MVM_reg_int64 ? Kiji_compiler_to_i(self, rhs) : Kiji_compiler_to_s(self, rhs));
         Kiji_compiler_set_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv), Kiji_compiler_to_o(self, tmp));
@@ -1692,17 +1694,17 @@ KijiLoopGuard::~KijiLoopGuard() {
     int Kiji_compiler_numeric_binop(KijiCompiler *self, const PVIPNode* node, uint16_t op_i, uint16_t op_n) {
         assert(node->children.size == 2);
 
-        int reg_num1 = self->do_compile(node->children.nodes[0]);
+        int reg_num1 = Kiji_compiler_do_compile(self, node->children.nodes[0]);
         if (Kiji_compiler_get_local_type(self, reg_num1) == MVM_reg_int64) {
           int reg_num_dst = REG_INT64();
-          int reg_num2 = Kiji_compiler_to_i(self, self->do_compile(node->children.nodes[1]));
+          int reg_num2 = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           assert(Kiji_compiler_get_local_type(self, reg_num1) == MVM_reg_int64);
           assert(Kiji_compiler_get_local_type(self, reg_num2) == MVM_reg_int64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_i, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
         } else if (Kiji_compiler_get_local_type(self, reg_num1) == MVM_reg_num64) {
           int reg_num_dst = REG_NUM64();
-          int reg_num2 = Kiji_compiler_to_n(self, self->do_compile(node->children.nodes[1]));
+          int reg_num2 = Kiji_compiler_to_n(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           assert(Kiji_compiler_get_local_type(self, reg_num2) == MVM_reg_num64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, reg_num1, reg_num2);
           return reg_num_dst;
@@ -1713,7 +1715,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           int dst_num = REG_NUM64();
           ASM_OP_U16_U16(MVM_OP_BANK_primitives, MVM_OP_smrt_numify, dst_num, reg_num1);
 
-          int reg_num2 = Kiji_compiler_to_n(self, self->do_compile(node->children.nodes[1]));
+          int reg_num2 = Kiji_compiler_to_n(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           assert(Kiji_compiler_get_local_type(self, reg_num2) == MVM_reg_num64);
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
           return reg_num_dst;
@@ -1722,7 +1724,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           ASM_COERCE_SN(dst_num, reg_num1);
 
           int reg_num_dst = REG_NUM64();
-          int reg_num2 = Kiji_compiler_to_n(self, self->do_compile(node->children.nodes[1]));
+          int reg_num2 = Kiji_compiler_to_n(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, reg_num_dst, dst_num, reg_num2);
 
           return reg_num_dst;
@@ -1749,10 +1751,10 @@ KijiLoopGuard::~KijiLoopGuard() {
       int reg = UNKNOWN_REG;
       if (node->type == PVIP_NODE_STATEMENTS || node->type == PVIP_NODE_ELSE) {
         for (int i=0, l=node->children.size; i<l; i++) {
-          reg = self->do_compile(node->children.nodes[i]);
+          reg = Kiji_compiler_do_compile(self, node->children.nodes[i]);
         }
       } else {
-        reg = self->do_compile(node);
+        reg = Kiji_compiler_do_compile(self, node);
       }
       if (reg == UNKNOWN_REG) {
         ASM_NULL(dst_reg);
@@ -1764,13 +1766,13 @@ KijiLoopGuard::~KijiLoopGuard() {
     // Compile chained comparisions like `1 < $n < 3`.
     // TODO: optimize simple case like `1 < $n`
     uint16_t Kiji_compiler_compile_chained_comparisions(KijiCompiler *self, const PVIPNode* node) {
-      auto lhs = self->do_compile(node->children.nodes[0]);
+      auto lhs = Kiji_compiler_do_compile(self, node->children.nodes[0]);
       auto dst_reg = REG_INT64();
       KijiLabel label_end(self);
       KijiLabel label_false(self);
       for (int i=1; i<node->children.size; i++) {
         PVIPNode *iter = node->children.nodes[i];
-        auto rhs = self->do_compile(iter->children.nodes[0]);
+        auto rhs = Kiji_compiler_do_compile(self, iter->children.nodes[0]);
         // result will store to lhs.
         uint16_t ret = Kiji_compiler_do_compare(self, iter->type, lhs, rhs);
         Kiji_compiler_unless_any(self, ret, label_false);
@@ -1921,7 +1923,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         ASM_BINDLEX(lex, 0, package);
       }
 
-      self->do_compile(node);
+      Kiji_compiler_do_compile(self, node);
 
       // bootarray
       /*
@@ -2043,7 +2045,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       // compile body
       for (int i=0; i<node->children.nodes[2]->children.size; i++) {
         PVIPNode *n = node->children.nodes[2]->children.nodes[i];
-        (void)self->do_compile(n);
+        (void)Kiji_compiler_do_compile(self, n);
       }
 
       self->current_class_how = NULL;
