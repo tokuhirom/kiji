@@ -218,7 +218,7 @@ kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
 
 src/kiji.o: $(KIJI_HEADERS) Makefile
 src/frame.o: $(KIJI_HEADERS) Makefile
-src/compiler.o: $(KIJI_HEADERS) Makefile
+src/compiler.o: $(KIJI_HEADERS) Makefile src/compiler.cc
 src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
 src/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
 

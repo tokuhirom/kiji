@@ -420,7 +420,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         return UNKNOWN_REG;
       }
       case PVIP_NODE_STRING: {
-        int str_num = push_string(node->pv);
+        int str_num = push_string(node->pv->buf, node->pv->len);
         int reg_num = REG_STR();
         ASM_CONST_S(reg_num, str_num);
         return reg_num;
@@ -455,7 +455,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           assert(lhs->children.nodes[0]->type == PVIP_NODE_VARIABLE);
           MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
           Kiji_compiler_push_pkg_var(this, name);
-          auto varname = push_string(lhs->children.nodes[0]->pv);
+          auto varname = push_string(lhs->children.nodes[0]->pv->buf, lhs->children.nodes[0]->pv->len);
           int val    = to_o(do_compile(rhs));
           int outer = 0;
           int lex_no = 0;
@@ -947,7 +947,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       case PVIP_NODE_METHODCALL: {
         assert(node->children.size == 3 || node->children.size==2);
         auto obj = to_o(do_compile(node->children.nodes[0]));
-        auto str = push_string(node->children.nodes[1]->pv);
+        auto str = push_string(node->children.nodes[1]->pv->buf, node->children.nodes[1]->pv->len);
         auto meth = REG_OBJ();
         auto ret = REG_OBJ();
 
@@ -1916,4 +1916,22 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
 
       return retval;
+    }
+    bool KijiCompiler::find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+      return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc_, name, lex_no, outer) == KIJI_TRUE;
+    }
+    Kiji_variable_type_t KijiCompiler::find_variable_by_name(const std::string &name_cc, int &lex_no, int &outer) {
+      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+      return Kiji_find_variable_by_name(frames_.back(), tc_, name, &lex_no, &outer);
+    }
+    int KijiCompiler::push_string(const char*string, int length) {
+      MVMString* str = MVM_string_utf8_decode(tc_, tc_->instance->VMString, string, length);
+      CU->num_strings++;
+      CU->strings = (MVMString**)realloc(CU->strings, sizeof(MVMString*)*CU->num_strings);
+      if (!CU->strings) {
+        MVM_panic(MVM_exitcode_compunit, "Cannot allocate memory");
+      }
+      CU->strings[CU->num_strings-1] = str;
+      return CU->num_strings-1;
     }
