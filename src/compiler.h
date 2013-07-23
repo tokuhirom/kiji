@@ -112,8 +112,8 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int frame_no;
     MVMObject* current_class_how;
 
-    MVMSerializationContext * sc_classes_;
-    int num_sc_classes_;
+    MVMSerializationContext * sc_classes;
+    int num_sc_classes;
 
     KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
     KijiLabel label_unsolved() { return KijiLabel(this); }

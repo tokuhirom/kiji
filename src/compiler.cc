@@ -163,12 +163,12 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
 }
 
     void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2) {
-      self->num_sc_classes_++;
+      self->num_sc_classes++;
 
       *wval1 = 1;
-      *wval2 = self->num_sc_classes_-1;
+      *wval2 = self->num_sc_classes-1;
 
-      MVM_sc_set_object(self->tc_, self->sc_classes_, self->num_sc_classes_-1, object);
+      MVM_sc_set_object(self->tc_, self->sc_classes, self->num_sc_classes-1, object);
     }
 
 
@@ -1854,9 +1854,9 @@ KijiLoopGuard::~KijiLoopGuard() {
 
       auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
       assert(tc);
-      sc_classes_ = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
+      this->sc_classes = (MVMSerializationContext*)MVM_sc_create(tc_, handle);
 
-      num_sc_classes_ = 0;
+      this->num_sc_classes = 0;
     }
 
     void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm) {
@@ -1998,7 +1998,7 @@ KijiLoopGuard::~KijiLoopGuard() {
       CU->num_scs = 2;
       CU->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
       CU->scs[0] = sc;
-      CU->scs[1] = sc_classes_;
+      CU->scs[1] = self->sc_classes;
       CU->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
       CU->scs_to_resolve[0] = NULL;
       CU->scs_to_resolve[1] = NULL;
