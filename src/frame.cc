@@ -67,3 +67,45 @@ void Kiji_frame_push_pkg_var(KijiFrame* self, MVMString *name) {
   Renew(self->package_variables, self->num_package_variables, MVMString*);
   self->package_variables[self->num_package_variables-1] = name;
 }
+
+/* Push lexical variable. */
+int Kiji_frame_push_lexical(KijiFrame*self, MVMThreadContext *tc, MVMString *name, MVMuint16 type) {
+    self->frame.num_lexicals++;
+    Renew(self->frame.lexical_types, self->frame.num_lexicals, MVMuint16);
+    self->frame.lexical_types[self->frame.num_lexicals-1] = type;
+
+    int idx = self->frame.num_lexicals-1;
+
+    MVMLexicalHashEntry *entry = (MVMLexicalHashEntry*)calloc(sizeof(MVMLexicalHashEntry), 1);
+    entry->value = idx;
+
+    MVM_string_flatten(tc, name);
+    // lexical_names is Hash.
+    MVM_HASH_BIND(tc, self->frame.lexical_names, name, entry);
+
+    return idx;
+}
+
+uint16_t Kiji_frame_get_local_type(KijiFrame*self, int n) {
+  assert(n>=0);
+  assert(n<self->frame.num_locals);
+  return self->frame.local_types[n];
+}
+
+// reserve register
+int Kiji_frame_push_local_type(KijiFrame* self, MVMuint16 reg_type) {
+  self->frame.num_locals++;
+  Renew(self->frame.local_types, self->frame.num_locals, MVMuint16);
+  self->frame.local_types[self->frame.num_locals-1] = reg_type;
+  if (self->frame.num_locals >= 65535) {
+    printf("[panic] Too much registers\n");
+    abort();
+  }
+  return self->frame.num_locals-1;
+}
+
+void Kiji_frame_push_handler(KijiFrame*self, MVMFrameHandler* handler) {
+  self->frame.num_handlers++;
+  Renew(self->frame.handlers, self->frame.num_handlers, MVMFrameHandler);
+  self->frame.handlers[self->frame.num_handlers-1] = *handler;
+}

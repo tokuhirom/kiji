@@ -263,7 +263,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
     // reserve register
     int push_local_type(MVMuint16 reg_type) {
-      return frames_.back()->push_local_type(reg_type);
+      return Kiji_frame_push_local_type(frames_.back(), reg_type);
     }
 
     int reg_obj() { return push_local_type(MVM_reg_obj); }
@@ -423,7 +423,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
     // Get register type at 'n'
     uint16_t get_local_type(int n) {
-      return frames_.back()->get_local_type(n);
+      return Kiji_frame_get_local_type(frames_.back(), n);
     }
     int push_string(PVIPString* pv) {
       return push_string(pv->buf, pv->len);
@@ -452,10 +452,12 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     }
     // Push lexical variable.
     int push_lexical(PVIPString *pv, MVMuint16 type) {
-      return push_lexical(std::string(pv->buf, pv->len), type);
+      MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, pv->buf, pv->len);
+      return Kiji_frame_push_lexical(frames_.back(), tc_, name, type);
     }
-    int push_lexical(const std::string name, MVMuint16 type) {
-      return frames_.back()->push_lexical(tc_, name, type);
+    int push_lexical(const std::string name_cc, MVMuint16 type) {
+      MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
+      return Kiji_frame_push_lexical(frames_.back(), tc_, name, type);
     }
     void push_pkg_var(const std::string name_cc) {
       MVMString * name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
@@ -497,7 +499,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       return CU->num_callsites-1;
     }
     void push_handler(MVMFrameHandler *handler) {
-      return frames_.back()->push_handler(handler);
+      return Kiji_frame_push_handler(frames_.back(), handler);
     }
     MVMStaticFrame* get_frame(int frame_no) {
       return cu_->frames[frame_no];
