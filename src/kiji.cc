@@ -72,8 +72,8 @@ static void run_repl() {
 }
 
 int main(int argc, char** argv) {
-  CmdLineState*state = (CmdLineState*)malloc(sizeof(CmdLineState));
-  memset(state, 0, sizeof(CmdLineState));
+  CmdLineState*state;
+  Newxz(state, 1, CmdLineState);
 
   command_t cmd;
   cmd.data = state;

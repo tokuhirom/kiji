@@ -5,6 +5,8 @@ use utf8;
 use 5.008_001;
 use Getopt::Long;
 
+my $ARGV = join(' ', @ARGV);
+
 my $p = Getopt::Long::Parser->new(
     config => [qw(posix_default no_ignore_case auto_help)]
 );
@@ -202,12 +204,12 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
 
 KIJI_OBJS = src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o
 
-KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h
+KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h src/handy.h
 
 all: Makefile kiji
 
 Makefile: Configure.pl
-    perl Configure.pl
+    perl Configure.pl <<ARGV>>
     echo "Re-run make"
     exit 1
 

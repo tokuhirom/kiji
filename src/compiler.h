@@ -2147,11 +2147,9 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
       // finalize frame
       for (int i=0; i<cu_->num_frames; i++) {
         MVMStaticFrame *frame = cu_->frames[i];
+        // XXX Should I need to time sizeof(MVMRegister)??
         frame->env_size = frame->num_lexicals * sizeof(MVMRegister);
-        // TODO use Newz
-        frame->static_env = (MVMRegister*) malloc(frame->env_size);
-        assert(frame->static_env);
-        memset(frame->static_env, 0, frame->env_size);
+        Newxz(frame->static_env, frame->env_size, MVMRegister);
 
         char buf[1023+1];
         int len = snprintf(buf, 1023, "frame_cuuid_%d", i);
@@ -2163,8 +2161,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
 
       // Creates code objects to go with each of the static frames.
       // ref create_code_objects in src/core/bytecode.c
-      cu_->coderefs = (MVMObject**)malloc(sizeof(MVMObject *) * cu_->num_frames);
-      memset(cu_->coderefs, 0, sizeof(MVMObject *) * cu_->num_frames); // is this needed?
+      Newxz(cu_->coderefs, cu_->num_frames, MVMObject*);
 
       MVMObject* code_type = tc->instance->boot_types->BOOTCode;
 
