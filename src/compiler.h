@@ -2,15 +2,10 @@
 /* vim:ts=2:sw=2:tw=0:
  */
 
-#include <iostream>
-#include <string>
 #include <vector>
-#include <list>
 #include <stdint.h>
-#include <sstream>
 #include <memory>
 #include "gen.assembler.h"
-#include "builtin.h"
 #include "pvip.h"
 #include "frame.h"
 #include "handy.h"
@@ -40,63 +35,48 @@
 #define REG_INT64() Kiji_compiler_push_local_type(self, MVM_reg_int64)
 #define REG_NUM64() Kiji_compiler_push_local_type(self, MVM_reg_num64)
 
-
-KIJI_STATIC_INLINE void dump_object(MVMThreadContext*tc, MVMObject* obj) {
-  if (obj==NULL) {
-    printf("(null)\n");
-    return;
-  }
-  MVM_string_say(tc, REPR(obj)->name);
-}
-
 struct KijiCompiler;
 
-    class KijiLabel {
-    private:
-      KijiCompiler *compiler_;
-      ssize_t address_;
-      std::vector<ssize_t> reserved_addresses_;
-    public:
-      KijiLabel(KijiCompiler *compiler) :compiler_(compiler), address_(-1) { }
-      KijiLabel(KijiCompiler *compiler, ssize_t address) :compiler_(compiler), address_(address) { }
-      ~KijiLabel() {
-        assert(address_ != -1 && "Unsolved label");
-      }
-      ssize_t address() const {
-        return address_;
-      }
-      void put();
-      void reserve(ssize_t address) {
-        reserved_addresses_.push_back(address);
-      }
-      bool is_solved() const { return address_!=-1; }
-    };
+class KijiLabel {
+private:
+  KijiCompiler *compiler_;
+  ssize_t address_;
+  std::vector<ssize_t> reserved_addresses_;
+public:
+  KijiLabel(KijiCompiler *compiler) :compiler_(compiler), address_(-1) { }
+  ~KijiLabel() {
+    assert(address_ != -1 && "Unsolved label");
+  }
+  ssize_t address() const {
+    return address_;
+  }
+  void put();
+  void reserve(ssize_t address) {
+    reserved_addresses_.push_back(address);
+  }
+  bool is_solved() const { return address_!=-1; }
+};
 
-    class KijiLoopGuard {
-    private:
-      KijiCompiler *compiler_;
-      MVMuint32 start_offset_;
-      MVMuint32 last_offset_;
-      MVMuint32 next_offset_;
-      MVMuint32 redo_offset_;
-    public:
-      KijiLoopGuard(KijiCompiler *compiler);
-      ~KijiLoopGuard();
-      // fixme: `put` is not the best verb in English here.
-      void put_last();
-      void put_redo();
-      void put_next();
-    };
+class KijiLoopGuard {
+private:
+  KijiCompiler *compiler_;
+  MVMuint32 start_offset_;
+  MVMuint32 last_offset_;
+  MVMuint32 next_offset_;
+  MVMuint32 redo_offset_;
+public:
+  KijiLoopGuard(KijiCompiler *compiler);
+  ~KijiLoopGuard();
+  // fixme: `put` is not the best verb in English here.
+  void put_last();
+  void put_redo();
+  void put_next();
+};
 
-  KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int n);
-uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
-    KIJI_STATIC_INLINE int Kiji_compiler_push_local_type(KijiCompiler* self, MVMuint16 reg_type);
-
-
-  /**
-   * OP map is 3rd/MoarVM/src/core/oplist
-   * interp code is 3rd/MoarVM/src/core/interp.c
-   */
+/**
+* OP map is 3rd/MoarVM/src/core/oplist
+* interp code is 3rd/MoarVM/src/core/interp.c
+*/
 enum { UNKNOWN_REG = -1 };
 class KijiCompiler {
 public:
@@ -108,11 +88,8 @@ public:
 
   MVMSerializationContext * sc_classes;
   int num_sc_classes;
-
-  KijiCompiler(MVMCompUnit * cu, MVMThreadContext * tc);
 };
 
-void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
 
 KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
   return self->frames_.back();
@@ -155,3 +132,6 @@ int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, 
 uint16_t Kiji_compiler_do_compare(KijiCompiler* self, PVIP_node_type_t type, uint16_t lhs, uint16_t rhs);
 void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm);
 int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node);
+void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc);
+uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
+void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);

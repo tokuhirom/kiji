@@ -5,6 +5,9 @@ extern "C" {
 #include "moarvm.h"
 }
 #include "compiler.h"
+#include "builtin.h"
+#include <list>
+#include <string>
 
 #define MEMORY_ERROR() \
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
@@ -1844,18 +1847,21 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
     }
 
-    KijiCompiler::KijiCompiler(MVMCompUnit * cu__, MVMThreadContext * tc_): cu(cu__), frame_no(0), tc(tc_) {
-      // init compunit.
-      Kiji_compiler_push_frame(this, std::string("frame_name_0"));
-      assert(tc);
+    void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc) {
+      self->cu = cu;
+      self->tc = tc;
+      self->frame_no = 0;
 
-      this->current_class_how = NULL;
+      // init compunit.
+      Kiji_compiler_push_frame(self, std::string("frame_name_0"));
+
+      self->current_class_how = NULL;
 
       auto handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
       assert(tc);
-      this->sc_classes = (MVMSerializationContext*)MVM_sc_create(tc, handle);
+      self->sc_classes = (MVMSerializationContext*)MVM_sc_create(tc, handle);
 
-      this->num_sc_classes = 0;
+      self->num_sc_classes = 0;
     }
 
     void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm) {
