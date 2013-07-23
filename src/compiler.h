@@ -173,4 +173,5 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     return Kiji_frame_get_local_type(Kiji_compiler_top_frame(self), n);
   }
     uint16_t Kiji_compiler_get_variable(KijiCompiler *self, MVMString *name);
+    int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str);
 
