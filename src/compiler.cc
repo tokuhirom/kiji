@@ -434,7 +434,9 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
       case PVIP_NODE_USE: {
         assert(node->children.size==1);
+#define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
         auto name = PVIPSTRING2STDSTRING(node->children.nodes[0]->pv);
+#undef PVIPSTRING2STDSTRING
         if (name == "v6") {
           return UNKNOWN_REG; // nop.
         }

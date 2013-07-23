@@ -35,7 +35,6 @@
         update_addr = (MVMObject*)_r; \
     }
 
-#define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
 #define CU cu
 
 #define MEMORY_ERROR() \
