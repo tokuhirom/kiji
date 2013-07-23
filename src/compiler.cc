@@ -8,6 +8,7 @@ extern "C" {
 #include "builtin.h"
 #include <list>
 #include <string>
+#include <vector>
 
 #define MEMORY_ERROR() \
           MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
@@ -231,9 +232,11 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
       return self->cu->num_callsites-1;
     }
 
-    KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
-      self->frames.pop_back();
-    }
+KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
+  self->num_frames--;
+  Renew(self->frames, self->num_frames, KijiFrame*);
+  /* You don't  need to free the frame itself */
+}
 
     int Kiji_compiler_push_frame(KijiCompiler* self, const std::string & name) {
       MVMThreadContext *tc = self->tc;
@@ -245,10 +248,16 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg) {
       memset(frame, 0, sizeof(KijiFrame));
       frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
       free(buf);
-      if (self->frames.size() != 0) {
+      if (self->num_frames != 0) {
         Kiji_frame_set_outer(frame, Kiji_compiler_top_frame(self));
       }
-      self->frames.push_back(frame);
+      
+      /* push frame */
+      self->num_frames++;
+      Renew(self->frames, self->num_frames, KijiFrame*);
+      self->frames[self->num_frames-1] = frame;
+
+      /* store to compunit, too. */
       MVMCompUnit *cu = self->cu;
       cu->num_frames++;
       Renew(cu->frames, cu->num_frames, MVMStaticFrame*);
@@ -1848,6 +1857,7 @@ KijiLoopGuard::~KijiLoopGuard() {
     }
 
     void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc) {
+      memset(self, 0, sizeof(KijiCompiler));
       self->cu = cu;
       self->tc = tc;
       self->frame_no = 0;

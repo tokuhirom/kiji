@@ -2,7 +2,6 @@
 /* vim:ts=2:sw=2:tw=0:
  */
 
-#include <vector>
 #include <stdint.h>
 #include <memory>
 #include "gen.assembler.h"
@@ -10,6 +9,7 @@
 #include "frame.h"
 #include "handy.h"
 #include "asm.h"
+#include <vector>
 
 #define ASM_OP_U16_U16_U16(a,b,c,d,e) \
   Kiji_asm_op_u16_u16_u16(Kiji_compiler_top_frame(self), a,b,c,d,e)
@@ -79,7 +79,9 @@ public:
 */
 enum { UNKNOWN_REG = -1 };
 struct KijiCompiler {
-  std::vector<KijiFrame*> frames;
+  KijiFrame** frames;
+  size_t num_frames;
+
   MVMCompUnit* cu;
   MVMThreadContext *tc;
   int frame_no;
@@ -89,9 +91,8 @@ struct KijiCompiler {
   int num_sc_classes;
 };
 
-
 KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
-  return self->frames.back();
+  return self->frames[self->num_frames-1];
 }
 
 // reserve register
