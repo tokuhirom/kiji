@@ -127,10 +127,7 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     int compile_class(const PVIPNode* node);
 
     uint16_t get_variable(MVMString *name);
-    void set_variable(const PVIPString *name, uint16_t val_reg) {
-      set_variable(std::string(name->buf, name->len), val_reg);
-    }
-    void set_variable(const std::string &name, uint16_t val_reg);
+    void set_variable(MVMString *name, uint16_t val_reg);
 
     // This reg returns register number contains true value.
     int const_true();

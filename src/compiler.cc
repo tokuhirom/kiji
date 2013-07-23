@@ -311,7 +311,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto reg_no = get_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv));
         auto i_tmp = to_i(reg_no);
         ASM_DEC_I(i_tmp);
-        set_variable(node->children.nodes[0]->pv, to_o(i_tmp));
+        set_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv), to_o(i_tmp));
         return reg_no;
       }
       case PVIP_NODE_POSTINC: { // $i++
@@ -323,7 +323,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto i_tmp = to_i(reg_no);
         ASM_INC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
-        set_variable(node->children.nodes[0]->pv, dst_reg);
+        set_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv), dst_reg);
         return reg_no;
       }
       case PVIP_NODE_PREINC: { // ++$i
@@ -335,7 +335,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto i_tmp = to_i(reg_no);
         ASM_INC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
-        set_variable(node->children.nodes[0]->pv, dst_reg);
+        set_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv), dst_reg);
         return dst_reg;
       }
       case PVIP_NODE_PREDEC: { // --$i
@@ -347,7 +347,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto i_tmp = to_i(reg_no);
         ASM_DEC_I(i_tmp);
         auto dst_reg = to_o(i_tmp);
-        set_variable(PVIPSTRING2STDSTRING(node->children.nodes[0]->pv), dst_reg);
+        set_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv), dst_reg);
         return dst_reg;
       }
       case PVIP_NODE_UNARY_BITWISE_NEGATION: { // +^1
@@ -612,7 +612,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         } else if (lhs->type == PVIP_NODE_VARIABLE) {
           // $var := foo;
           int val    = this->to_o(do_compile(rhs));
-          set_variable(std::string(lhs->pv->buf, lhs->pv->len), val);
+          set_variable(newMVMStringFromPVIP(lhs->pv), val);
           return val;
         } else {
           printf("You can't bind value to %s, currently.\n", PVIP_node_name(lhs->type));
@@ -1647,7 +1647,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = REG_NUM64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op_n, tmp, to_n(lhs), to_n(rhs));
-        set_variable(node->children.nodes[0]->pv, to_o(tmp));
+        set_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv), to_o(tmp));
         return tmp;
     }
     int KijiCompiler::binary_inplace(const PVIPNode* node, uint16_t op) {
@@ -1659,7 +1659,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = REG_INT64();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_primitives, op, tmp, to_i(lhs), to_i(rhs));
-        set_variable(node->children.nodes[0]->pv, to_o(tmp));
+        set_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv), to_o(tmp));
         return tmp;
     }
     int KijiCompiler::str_inplace(const PVIPNode* node, uint16_t op, uint16_t rhs_type) {
@@ -1671,7 +1671,7 @@ KijiLoopGuard::~KijiLoopGuard() {
         auto rhs = do_compile(node->children.nodes[1]);
         auto tmp = REG_STR();
         ASM_OP_U16_U16_U16(MVM_OP_BANK_string, op, tmp, to_s(lhs), rhs_type == MVM_reg_int64 ? to_i(rhs) : to_s(rhs));
-        set_variable(node->children.nodes[0]->pv, to_o(tmp));
+        set_variable(newMVMStringFromPVIP(node->children.nodes[0]->pv), to_o(tmp));
         return tmp;
     }
     int KijiCompiler::numeric_binop(const PVIPNode* node, uint16_t op_i, uint16_t op_n) {
@@ -2089,11 +2089,10 @@ KijiLoopGuard::~KijiLoopGuard() {
       return reg;
     }
 
-    void KijiCompiler::set_variable(const std::string &name_cc, uint16_t val_reg) {
+    void KijiCompiler::set_variable(MVMString * name, uint16_t val_reg) {
       KijiCompiler *self = this;
       int lex_no = -1;
       int outer = -1;
-      MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
       Kiji_variable_type_t vartype = Kiji_compiler_find_variable_by_name(self, name, &lex_no, &outer);
       if (vartype==KIJI_VARIABLE_TYPE_MY) {
         ASM_BINDLEX(
