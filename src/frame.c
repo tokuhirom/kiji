@@ -1,12 +1,10 @@
 // vim:ts=2:sw=2:tw=0:
 #include <stdio.h>
-extern "C" {
 #include "moarvm.h"
-};
 #include "frame.h"
 
 // lexical variable number by name
-bool Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer) {
+Kiji_boolean Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer) {
   MVMStaticFrame *f = &(frame_->frame);
   *outer = 0;
   while (f) {
@@ -16,12 +14,12 @@ bool Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, co
 
     if (entry) {
       *lex_no= entry->value;
-      return true;
+      return KIJI_TRUE;
     }
     f = f->outer;
     ++(*outer);
   }
-  return false;
+  return KIJI_FALSE;
   // printf("Unknown lexical variable in find_lexical_by_name: %s\n", name_cc.c_str());
   // exit(0);
 }
@@ -40,8 +38,9 @@ Kiji_variable_type_t Kiji_find_variable_by_name(KijiFrame *f, MVMThreadContext* 
       }
 
       // check package variables
-      for (int i=0; i<f->num_package_variables; i++) {
-        auto n = f->package_variables[i];
+      int i;
+      for (i=0; i<f->num_package_variables; i++) {
+        MVMString* n = f->package_variables[i];
         if (MVM_string_equal(tc, n, name)) {
           return KIJI_VARIABLE_TYPE_OUR;
         }

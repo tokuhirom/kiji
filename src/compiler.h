@@ -448,7 +448,7 @@ void dump_object(MVMThreadContext*tc, MVMObject* obj) {
     // lexical variable number by name
     bool find_lexical_by_name(const std::string &name_cc, int *lex_no, int *outer) {
       MVMString* name = MVM_string_utf8_decode(tc_, tc_->instance->VMString, name_cc.c_str(), name_cc.size());
-      return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc_, name, lex_no, outer);
+      return Kiji_frame_find_lexical_by_name(&(*(frames_.back())), tc_, name, lex_no, outer) == KIJI_TRUE;
     }
     // Push lexical variable.
     int push_lexical(PVIPString *pv, MVMuint16 type) {

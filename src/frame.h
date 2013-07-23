@@ -4,13 +4,21 @@
 
 #pragma once
 
-#include <sstream>
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "handy.h"
 
-enum Kiji_variable_type_t {
+typedef enum {
   KIJI_VARIABLE_TYPE_MY,
   KIJI_VARIABLE_TYPE_OUR
-};
+} Kiji_variable_type_t;
+
+typedef enum {
+  KIJI_FALSE=0,
+  KIJI_TRUE=1,
+} Kiji_boolean;
 
 typedef struct _KijiFrame {
   MVMString **package_variables;
@@ -25,7 +33,11 @@ uint16_t Kiji_frame_get_local_type(KijiFrame*self, int n);
 int Kiji_frame_push_lexical(KijiFrame*self, MVMThreadContext *tc, MVMString*name, MVMuint16 type);
 void Kiji_frame_push_pkg_var(KijiFrame* self, MVMString *name);
 void Kiji_frame_set_outer(KijiFrame *self, KijiFrame*framef);
-bool Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer);
+Kiji_boolean Kiji_frame_find_lexical_by_name(KijiFrame* frame_, MVMThreadContext* tc, const MVMString* name, int *lex_no, int *outer);
 Kiji_variable_type_t Kiji_find_variable_by_name(KijiFrame *f, MVMThreadContext* tc, MVMString * name, int *lex_no, int *outer);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif /* KIJI_FRAME_H_ */

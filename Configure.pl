@@ -217,6 +217,7 @@ kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
 	$(CXX) $(CXXFLAGS) -Wall $(CINCLUDE) -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
 
 src/kiji.o: $(KIJI_HEADERS) Makefile
+src/frame.o: $(KIJI_HEADERS) Makefile
 
 src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
 
