@@ -118,7 +118,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     KijiLabel label() { return KijiLabel(this, frames_.back()->frame.bytecode_size); }
     KijiLabel label_unsolved() { return KijiLabel(this); }
 
-    void goto_(KijiLabel &label);
     void return_any(uint16_t reg);
     void if_any(uint16_t reg, KijiLabel &label);
     void unless_any(uint16_t reg, KijiLabel &label);
@@ -174,4 +173,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
   }
     uint16_t Kiji_compiler_get_variable(KijiCompiler *self, MVMString *name);
     int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str);
+    void Kiji_compiler_goto(KijiCompiler*self, KijiLabel &label);
+    void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg);
 

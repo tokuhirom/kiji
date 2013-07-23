@@ -500,7 +500,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           auto label_end = label_unsolved();
           unless_any(reg, label_end);
           do_compile(node->children.nodes[1]);
-          goto_(label_while);
+          Kiji_compiler_goto(self, label_while);
         label_end.put();
 
         loop.put_last();
@@ -526,7 +526,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           retval = REG_OBJ();
           ASM_NULL(retval);
         }
-        return_any(retval);
+        Kiji_compiler_return_any(self, retval);
         Kiji_compiler_pop_frame(this);
 
         // warn if void context.
@@ -954,12 +954,12 @@ KijiLoopGuard::~KijiLoopGuard() {
         }
 
         auto label_end = label_unsolved();
-        goto_(label_end);
+        Kiji_compiler_goto(self, label_end);
 
         // update if_label and compile if body
         label_if.put();
           compile_statements(if_body, dst_reg);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
 
         // compile elsif body
         for (int i=2; i<node->children.size; i++) {
@@ -971,7 +971,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           elsif_poses.front().put();
           elsif_poses.pop_front();
           compile_statements(n->children.nodes[1], dst_reg);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
         }
         assert(elsif_poses.size() == 0);
 
@@ -1148,7 +1148,7 @@ KijiLoopGuard::~KijiLoopGuard() {
 
           auto if_reg = do_compile(node->children.nodes[1]);
           ASM_SET(dst_reg, to_o(if_reg));
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
 
         label_else.put();
           auto else_reg = do_compile(node->children.nodes[2]);
@@ -1289,17 +1289,17 @@ KijiLoopGuard::~KijiLoopGuard() {
           if_any(arg1, label_a1_true);
           unless_any(arg2, label_both_false);
           ASM_SET(dst_reg, arg2);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
         label_both_false.put();
           ASM_SET(dst_reg, arg1);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
         label_a1_true.put(); // a1:true, a2:unknown
           if_any(arg2, label_both_true);
           ASM_SET(dst_reg, arg1);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
         label_both_true.put();
           ASM_NULL(dst_reg);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
         label_end.put();
         return dst_reg;
       }
@@ -1320,7 +1320,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           if_any(arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
         label_a1.put();
           ASM_SET(dst_reg, arg1);
         label_end.put();
@@ -1343,7 +1343,7 @@ KijiLoopGuard::~KijiLoopGuard() {
           unless_any(arg1, label_a1);
           auto arg2 = to_o(do_compile(node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
-          goto_(label_end);
+          Kiji_compiler_goto(self, label_end);
         label_a1.put();
           ASM_SET(dst_reg, arg1);
         label_end.put();
@@ -1775,10 +1775,10 @@ KijiLoopGuard::~KijiLoopGuard() {
         lhs = rhs;
       }
       ASM_CONST_I64(dst_reg, 1);
-      goto_(label_end);
+      Kiji_compiler_goto(self, label_end);
     label_false.put();
       ASM_CONST_I64(dst_reg, 0);
-      // goto_(label_end());
+      // Kiji_compiler_goto(self, label_end());
     label_end.put();
       return dst_reg;
     }
@@ -2173,9 +2173,8 @@ KijiLoopGuard::~KijiLoopGuard() {
       }
       ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_if_op(this, reg), reg, label.address());
     }
-    void KijiCompiler::return_any(uint16_t reg) {
-      KijiCompiler *self = this;
-      switch (Kiji_compiler_get_local_type(this, reg)) {
+    void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg) {
+      switch (Kiji_compiler_get_local_type(self, reg)) {
       case MVM_reg_int64:
         ASM_RETURN_I(reg);
         break;
@@ -2191,10 +2190,12 @@ KijiLoopGuard::~KijiLoopGuard() {
       default: abort();
       }
     }
-    void KijiCompiler::goto_(KijiLabel &label) {
-      KijiCompiler *self = this;
+    size_t Kiji_compiler_bytecode_size(KijiCompiler*self) {
+      return Kiji_compiler_top_frame(self)->frame.bytecode_size;
+    }
+    void Kiji_compiler_goto(KijiCompiler*self, KijiLabel &label) {
       if (!label.is_solved()) {
-        label.reserve(ASM_BYTECODE_SIZE() + 2);
+        label.reserve(Kiji_compiler_bytecode_size(self) + 2);
       }
       ASM_GOTO(label.address());
     }
