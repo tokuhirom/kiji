@@ -202,7 +202,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
-KIJI_OBJS = src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o
+KIJI_OBJS = src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop_guard.o
 
 KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h src/handy.h src/asm.h
 

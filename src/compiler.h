@@ -57,22 +57,6 @@ public:
   bool is_solved() const { return address_!=-1; }
 };
 
-class KijiLoopGuard {
-private:
-  KijiCompiler *compiler_;
-  MVMuint32 start_offset_;
-  MVMuint32 last_offset_;
-  MVMuint32 next_offset_;
-  MVMuint32 redo_offset_;
-public:
-  KijiLoopGuard(KijiCompiler *compiler);
-  ~KijiLoopGuard();
-  // fixme: `put` is not the best verb in English here.
-  void put_last();
-  void put_redo();
-  void put_next();
-};
-
 /**
 * OP map is 3rd/MoarVM/src/core/oplist
 * interp code is 3rd/MoarVM/src/core/interp.c
@@ -135,3 +119,4 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node);
 void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc);
 uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
+size_t Kiji_compiler_bytecode_size(KijiCompiler*self);
