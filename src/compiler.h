@@ -119,7 +119,6 @@ uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
     // objectify the register.
   public:
     KijiCompiler(MVMCompUnit * cu, MVMThreadContext * tc);
-    ~KijiCompiler() { }
   };
 
     void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
