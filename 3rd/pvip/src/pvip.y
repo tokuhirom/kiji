@@ -371,6 +371,7 @@ structural_infix_expr =
         '..' - '*' { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, PVIP_node_new_children(PVIP_NODE_INFINITY)); a1=$$; }
         | '..' a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_RANGE, a1, a2); a1=$$; }
         | - 'cmp' ![a-z] - a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_CMP, a1, a2); a1=$$; }
+        | - '<=>' - a2:named_unary_expr { $$=PVIP_node_new_children2(PVIP_NODE_NUM_CMP, a1, a2); a1=$$; }
     )? { $$=a1; }
 
 funcall =
@@ -574,6 +575,7 @@ twvars =
     | '$?PACKAGE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_PACKAGE); }
     | '$?CLASS' { $$ = PVIP_node_new_children(PVIP_NODE_TW_CLASS); }
     | '$?MODULE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_MODULE); }
+    | '$*OS' { $$ = PVIP_node_new_children(PVIP_NODE_TW_OS); }
 
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }

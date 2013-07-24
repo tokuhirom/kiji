@@ -62,3 +62,9 @@ $a +>= 1;
 $a+<=3;$a+>=3
 --- expected
 (statements (inplace_blshift (variable "$a") (int 3)) (inplace_brshift (variable "$a") (int 3)))
+
+===
+--- code
+$a <=> 3
+--- expected
+(statements (num_cmp (variable "$a") (int 3)))

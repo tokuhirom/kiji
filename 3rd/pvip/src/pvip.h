@@ -131,6 +131,7 @@ typedef enum {
     PVIP_NODE_TW_PACKAGE, /* $?PACKAGE */
     PVIP_NODE_TW_CLASS, /* $?CLASS */
     PVIP_NODE_TW_MODULE, /* $?MODULE */
+    PVIP_NODE_TW_OS, /* $*OS */
     PVIP_NODE_SLANGS, /* $~MAIN */
     PVIP_NODE_LOGICAL_ANDTHEN, /* andthen operator */
     PVIP_NODE_VALUE_IDENTITY, /* '===' operator in S03-operators/value_equivalence.t */
@@ -138,6 +139,7 @@ typedef enum {
     PVIP_NODE_SPECIAL_VARIABLE_REGEXP_MATCH, /* $/ - regex match */
     PVIP_NODE_SPECIAL_VARIABLE_EXCEPTIONS, /* $! - exceptions */
     PVIP_NODE_ENUM,
+    PVIP_NODE_NUM_CMP, /* <=> */
 } PVIP_node_type_t;
 
 typedef enum {
