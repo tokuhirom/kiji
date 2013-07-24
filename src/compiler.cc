@@ -6,9 +6,12 @@ extern "C" {
 }
 #include "compiler.h"
 #include "builtin.h"
+#include "asm.h"
+#include "compiler/loop.h"
+#include "gen.assembler.h"
+
 #include <list>
 #include <string>
-#include "compiler/loop.h"
 #include <vector>
 
 #define MEMORY_ERROR() \

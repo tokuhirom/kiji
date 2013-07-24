@@ -3,14 +3,10 @@
  */
 
 #include <stdint.h>
-#include <memory>
-#include "gen.assembler.h"
 #include "pvip.h"
 #include "frame.h"
 #include "handy.h"
-#include "asm.h"
 #include "compiler/label.h"
-#include <vector>
 
 #define ASM_OP_U16_U16_U16(a,b,c,d,e) \
   Kiji_asm_op_u16_u16_u16(Kiji_compiler_top_frame(self), a,b,c,d,e)

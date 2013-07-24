@@ -5,6 +5,7 @@ extern "C" {
 #include "moarvm.h"
 }
 #include "../compiler.h"
+#include "../asm.h"
 #include "label.h"
 
 void KijiLabel::put() {
