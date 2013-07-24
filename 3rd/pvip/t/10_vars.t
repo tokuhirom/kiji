@@ -90,3 +90,9 @@ $*OS
 $*PID
 --- expected
 (statements (tw_pid))
+
+===
+--- code
+$?OS
+--- expected
+(statements (tw_os))
