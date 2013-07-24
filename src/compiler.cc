@@ -33,10 +33,6 @@ extern "C" {
 #define newMVMStringFromSTDSTRING(p) \
   MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (p).c_str(), (p).size())
 
-    size_t Kiji_compiler_bytecode_size(KijiCompiler*self) {
-      return Kiji_compiler_top_frame(self)->frame.bytecode_size;
-    }
-
 // lexical variable number by name
 bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int *lex_no, int *outer) {
   return Kiji_frame_find_lexical_by_name(Kiji_compiler_top_frame(self), self->tc, name, lex_no, outer) == KIJI_TRUE;

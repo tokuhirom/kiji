@@ -94,4 +94,10 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node);
 void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc);
 uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
+#ifdef __cplusplus
+extern "C" {
+#endif
 size_t Kiji_compiler_bytecode_size(KijiCompiler*self);
+#ifdef __cplusplus
+};
+#endif
