@@ -137,6 +137,7 @@ typedef enum {
     PVIP_NODE_CMP, /* 'cmp' operator */
     PVIP_NODE_SPECIAL_VARIABLE_REGEXP_MATCH, /* $/ - regex match */
     PVIP_NODE_SPECIAL_VARIABLE_EXCEPTIONS, /* $! - exceptions */
+    PVIP_NODE_ENUM,
 } PVIP_node_type_t;
 
 typedef enum {

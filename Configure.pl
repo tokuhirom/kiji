@@ -243,7 +243,7 @@ test: kiji
 3rd/MoarVM/moarvm: 3rd/MoarVM/Makefile 3rd/MoarVM/src/core/*.c 3rd/MoarVM/src/core/validation.c 3rd/MoarVM/src/6model/reprs/*.c
 	cd 3rd/MoarVM/ && make
 
-3rd/pvip/libpvip.a: 3rd/greg/greg 3rd/pvip/src/*.c 3rd/pvip/src/*.h
+3rd/pvip/libpvip.a: 3rd/greg/greg 3rd/pvip/src/*.c 3rd/pvip/src/*.h 3rd/pvip/src/pvip.y
 	cd 3rd/pvip/ && make
 
 clean:

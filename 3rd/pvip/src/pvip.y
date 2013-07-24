@@ -116,6 +116,7 @@ statementlist =
 statement =
         - (
               use_stmt
+            | enum_stmt
             | if_stmt
             | for_stmt
             | while_stmt
@@ -145,6 +146,8 @@ normal_or_postfix_stmt =
         | ( ' '+ 'for' - cond_for:expr - eat_terminator ) { $$ = PVIP_node_new_children2(PVIP_NODE_FOR, cond_for, n); }
         | ( - eat_terminator ) { $$=n; }
     )
+
+enum_stmt = 'enum' ws+ i:ident - q:qw { $$ = PVIP_node_new_children2(PVIP_NODE_ENUM, i, q); }
 
 last_stmt = 'last' { $$ = PVIP_node_new_children(PVIP_NODE_LAST); }
 
@@ -266,7 +269,7 @@ list_prefix_expr =
 
 reduce_operator =
     < '*' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
-    | < '+' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+    | < '+' ![<>=] > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
     | < '-' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
     | < '<=' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
     | < '>=' > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
@@ -416,7 +419,7 @@ additive_expr =
             $$ = PVIP_node_new_children2(PVIP_NODE_BIN_XOR, l, r);
             l = $$;
         }
-        | - '+' - r1:multiplicative_expr {
+        | - '+' ![<>=] - r1:multiplicative_expr {
             $$ = PVIP_node_new_children2(PVIP_NODE_ADD, l, r1);
             l = $$;
           }
@@ -496,7 +499,7 @@ autoincrement_expr =
 method_postfix_expr =
           f1:term { $$=f1; } (
               '{' - k:term - '}' { $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
-            | '<' - k:ident - '>' { PVIP_node_change_type(k, PVIP_NODE_STRING); $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
+            | '<' - k:atkey_key - '>' {  $$ = PVIP_node_new_children2(PVIP_NODE_ATKEY, f1, k); f1=$$; }
             | '.^' f2:ident { f3 = NULL; } f3:paren_args? {
                 $$ = PVIP_node_new_children3(PVIP_NODE_META_METHOD_CALL, f1, f2, maybe(f3));
                 f1=$$;
@@ -519,6 +522,8 @@ method_postfix_expr =
             | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); f1=$$; }
           )*
 
+atkey_key = < [^>]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+
 term = 
     integer
     | path
@@ -534,6 +539,7 @@ term =
     | hash
     | lambda
     | it_method
+    | enum
     | 'try' ws - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | perl5_regexp
     | 'm:P5/./' { $$ = PVIP_node_new_children(PVIP_NODE_NOP); }
@@ -545,6 +551,9 @@ term =
     | regexp
     | funcref
     | < '$~' [A-Za-z] [A-Za-z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_SLANGS, yytext, yyleng); }
+
+enum =
+    'enum' ws+ q:qw { $$ = PVIP_node_new_children2(PVIP_NODE_ENUM, PVIP_node_new_children(PVIP_NODE_NOP), q); }
 
 path =
     'qp{' { $$ = PVIP_node_new_string(PVIP_NODE_PATH, "", 0); } (
@@ -567,7 +576,7 @@ twvars =
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
 
-reserved = 'class' | 'try' | 'has' | 'sub ' | 'cmp' ![a-z0-9]
+reserved = ( 'class' | 'try' | 'has' | 'sub' | 'cmp' | 'enum' ) ![-A-Za-z0-9]
 
 # TODO optimizable
 class =
@@ -612,6 +621,7 @@ hash_key =
 qw =
     '<<' - qw_list - '>>'
     | '<' - qw_list - '>'
+    | '<' - '>' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
 
 qw_list =
         a:qw_item { $$ = PVIP_node_new_children1(PVIP_NODE_LIST, a); a = $$; }
@@ -620,7 +630,7 @@ qw_list =
 
 # I want to use [^ ] but greg does not support it...
 # https://github.com/nddrylliog/greg/issues/12
-qw_item = < [a-zA-Z0-9_]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
+qw_item = < [^ >\n]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
 
 # TODO optimize
 funcdef =

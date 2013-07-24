@@ -43,3 +43,22 @@ __END__
 1 cmp 3
 --- expected
 (statements (cmp (int 1) (int 3)))
+
+===
+--- code
+$a +<= 3
+--- expected
+(statements (inplace_blshift (variable "$a") (int 3)))
+
+===
+--- code
+$a +<= 3;
+$a +>= 1;
+--- expected
+(statements (inplace_blshift (variable "$a") (int 3)) (inplace_brshift (variable "$a") (int 3)))
+
+===
+--- code
+$a+<=3;$a+>=3
+--- expected
+(statements (inplace_blshift (variable "$a") (int 3)) (inplace_brshift (variable "$a") (int 3)))
