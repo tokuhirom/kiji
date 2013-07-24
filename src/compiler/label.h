@@ -3,26 +3,25 @@
 #include <vector>
 
 #define LABEL(name) \
-  KijiLabel name(self);
+  KijiLabel name; \
+  Kiji_label_init(&name);
+
+#define LABEL_PUT(name) \
+  Kiji_label_put(&name, self)
+
+#define LABEL_RESERVE(name) \
+  Kiji_label_reserve(&name, self)
 
 struct KijiCompiler;
 
-class KijiLabel {
-private:
-  KijiCompiler *compiler_;
-  ssize_t address_;
-  std::vector<ssize_t> reserved_addresses_;
-public:
-  KijiLabel(KijiCompiler *compiler) :compiler_(compiler), address_(-1) { }
-  ~KijiLabel() {
-    assert(address_ != -1 && "Unsolved label");
-  }
-  ssize_t address() const {
-    return address_;
-  }
-  void put();
-  void reserve(ssize_t address) {
-    reserved_addresses_.push_back(address);
-  }
-  bool is_solved() const { return address_!=-1; }
+struct KijiLabel {
+  ssize_t address;
+  std::vector<ssize_t> reserved_addresses;
 };
+
+void Kiji_label_put(KijiLabel *self, KijiCompiler *compiler);
+void Kiji_label_reserve(KijiLabel *self, ssize_t address);
+bool Kiji_label_is_solved(const KijiLabel *self);
+KIJI_STATIC_INLINE void Kiji_label_init(KijiLabel *self) {
+  self->address = -1;
+}

@@ -465,16 +465,16 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
 
         LOOP_ENTER;
 
-        LABEL(label_while); label_while.put();
+        LABEL(label_while); LABEL_PUT(label_while);
 
         LOOP_NEXT;
           int reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
           assert(reg != UNKNOWN_REG);
           LABEL(label_end);
-          Kiji_compiler_unless_any(self, reg, label_end);
+          Kiji_compiler_unless_any(self, reg, &label_end);
           Kiji_compiler_do_compile(self, node->children.nodes[1]);
-          Kiji_compiler_goto(self, label_while);
-        label_end.put();
+          Kiji_compiler_goto(self, &label_while);
+        LABEL_PUT(label_end);
 
         LOOP_LAST;
 
@@ -809,9 +809,9 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
           auto iter_reg = REG_OBJ();
           LABEL(label_end);
           ASM_ITER(iter_reg, src_reg);
-          Kiji_compiler_unless_any(self, iter_reg, label_end);
+          Kiji_compiler_unless_any(self, iter_reg, &label_end);
 
-        LABEL(label_for); label_for.put();
+        LABEL(label_for); LABEL_PUT(label_for);
         LOOP_NEXT;
 
           auto val = REG_OBJ();
@@ -836,9 +836,9 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
             Kiji_compiler_do_compile(self, node->children.nodes[1]);
           }
 
-          Kiji_compiler_if_any(self, iter_reg, label_for);
+          Kiji_compiler_if_any(self, iter_reg, &label_for);
 
-        label_end.put();
+        LABEL_PUT(label_end);
         LOOP_LAST;
 
         LOOP_LEAVE;
@@ -880,9 +880,9 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         // label_end:
         auto cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
         LABEL(label_end);
-        Kiji_compiler_if_any(self, cond_reg, label_end);
+        Kiji_compiler_if_any(self, cond_reg, &label_end);
         auto dst_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
-        label_end.put();
+        LABEL_PUT(label_end);
         return dst_reg;
       }
       case PVIP_NODE_IF: {
@@ -911,7 +911,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         auto dst_reg = REG_OBJ();
 
         LABEL(label_if);
-        Kiji_compiler_if_any(self, if_cond_reg, label_if);
+        Kiji_compiler_if_any(self, if_cond_reg, &label_if);
 
         // put else if conditions
         std::list<KijiLabel> elsif_poses;
@@ -921,8 +921,9 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
             break;
           }
           auto reg = Kiji_compiler_do_compile(self, n->children.nodes[0]);
-          elsif_poses.emplace_back(self);
-          Kiji_compiler_if_any(self, reg, elsif_poses.back());
+          elsif_poses.emplace_back();
+          Kiji_label_init(&(elsif_poses.back()));
+          Kiji_compiler_if_any(self, reg, &(elsif_poses.back()));
         }
 
         // compile else clause
@@ -931,12 +932,12 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         }
 
         LABEL(label_end);
-        Kiji_compiler_goto(self, label_end);
+        Kiji_compiler_goto(self, &label_end);
 
         // update if_label and compile if body
-        label_if.put();
+        LABEL_PUT(label_if);
           Kiji_compiler_compile_statements(self, if_body, dst_reg);
-          Kiji_compiler_goto(self, label_end);
+          Kiji_compiler_goto(self, &label_end);
 
         // compile elsif body
         for (int i=2; i<node->children.size; i++) {
@@ -945,14 +946,14 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
             break;
           }
 
-          elsif_poses.front().put();
+          LABEL_PUT(elsif_poses.front());
           elsif_poses.pop_front();
           Kiji_compiler_compile_statements(self, n->children.nodes[1], dst_reg);
-          Kiji_compiler_goto(self, label_end);
+          Kiji_compiler_goto(self, &label_end);
         }
         assert(elsif_poses.size() == 0);
 
-        label_end.put();
+        LABEL_PUT(label_end);
 
         return dst_reg;
       }
@@ -1121,17 +1122,17 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         auto dst_reg = REG_OBJ();
 
           auto cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
-          Kiji_compiler_unless_any(self, cond_reg, label_else);
+          Kiji_compiler_unless_any(self, cond_reg, &label_else);
 
           auto if_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
           ASM_SET(dst_reg, Kiji_compiler_to_o(self, if_reg));
-          Kiji_compiler_goto(self, label_end);
+          Kiji_compiler_goto(self, &label_end);
 
-        label_else.put();
+        LABEL_PUT(label_else);
           auto else_reg = Kiji_compiler_do_compile(self, node->children.nodes[2]);
           ASM_SET(dst_reg, Kiji_compiler_to_o(self, else_reg));
 
-        label_end.put();
+        LABEL_PUT(label_end);
 
         return dst_reg;
       }
@@ -1263,21 +1264,21 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
 
           auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
           auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
-          Kiji_compiler_if_any(self, arg1, label_a1_true);
-          Kiji_compiler_unless_any(self, arg2, label_both_false);
+          Kiji_compiler_if_any(self, arg1, &label_a1_true);
+          Kiji_compiler_unless_any(self, arg2, &label_both_false);
           ASM_SET(dst_reg, arg2);
-          Kiji_compiler_goto(self, label_end);
-        label_both_false.put();
+          Kiji_compiler_goto(self, &label_end);
+        LABEL_PUT(label_both_false);
           ASM_SET(dst_reg, arg1);
-          Kiji_compiler_goto(self, label_end);
-        label_a1_true.put(); // a1:true, a2:unknown
-          Kiji_compiler_if_any(self, arg2, label_both_true);
+          Kiji_compiler_goto(self, &label_end);
+        LABEL_PUT(label_a1_true); // a1:true, a2:unknown
+          Kiji_compiler_if_any(self, arg2, &label_both_true);
           ASM_SET(dst_reg, arg1);
-          Kiji_compiler_goto(self, label_end);
-        label_both_true.put();
+          Kiji_compiler_goto(self, &label_end);
+        LABEL_PUT(label_both_true);
           ASM_NULL(dst_reg);
-          Kiji_compiler_goto(self, label_end);
-        label_end.put();
+          Kiji_compiler_goto(self, &label_end);
+        LABEL_PUT(label_end);
         return dst_reg;
       }
       case PVIP_NODE_LOGICAL_OR: { // '||'
@@ -1294,13 +1295,13 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         LABEL(label_a1);
         auto dst_reg = REG_OBJ();
           auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-          Kiji_compiler_if_any(self, arg1, label_a1);
+          Kiji_compiler_if_any(self, arg1, &label_a1);
           auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
-          Kiji_compiler_goto(self, label_end);
-        label_a1.put();
+          Kiji_compiler_goto(self, &label_end);
+        LABEL_PUT(label_a1);
           ASM_SET(dst_reg, arg1);
-        label_end.put();
+        LABEL_PUT(label_end);
         return dst_reg;
       }
       case PVIP_NODE_LOGICAL_AND: { // '&&'
@@ -1317,13 +1318,13 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         LABEL(label_a1);
         auto dst_reg = REG_OBJ();
           auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-          Kiji_compiler_unless_any(self, arg1, label_a1);
+          Kiji_compiler_unless_any(self, arg1, &label_a1);
           auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
           ASM_SET(dst_reg, arg2);
-          Kiji_compiler_goto(self, label_end);
-        label_a1.put();
+          Kiji_compiler_goto(self, &label_end);
+        LABEL_PUT(label_a1);
           ASM_SET(dst_reg, arg1);
-        label_end.put();
+        LABEL_PUT(label_end);
         return dst_reg;
       }
       case PVIP_NODE_UNARY_PLUS: {
@@ -1729,22 +1730,22 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
     uint16_t Kiji_compiler_compile_chained_comparisions(KijiCompiler *self, const PVIPNode* node) {
       auto lhs = Kiji_compiler_do_compile(self, node->children.nodes[0]);
       auto dst_reg = REG_INT64();
-      KijiLabel label_end(self);
-      KijiLabel label_false(self);
+      LABEL(label_end);
+      LABEL(label_false);
       for (int i=1; i<node->children.size; i++) {
         PVIPNode *iter = node->children.nodes[i];
         auto rhs = Kiji_compiler_do_compile(self, iter->children.nodes[0]);
         // result will store to lhs.
         uint16_t ret = Kiji_compiler_do_compare(self, iter->type, lhs, rhs);
-        Kiji_compiler_unless_any(self, ret, label_false);
+        Kiji_compiler_unless_any(self, ret, &label_false);
         lhs = rhs;
       }
       ASM_CONST_I64(dst_reg, 1);
-      Kiji_compiler_goto(self, label_end);
-    label_false.put();
+      Kiji_compiler_goto(self, &label_end);
+    LABEL_PUT(label_false);
       ASM_CONST_I64(dst_reg, 0);
-      // Kiji_compiler_goto(self, label_end());
-    label_end.put();
+      // Kiji_compiler_goto(self, &label_end());
+    LABEL_PUT(label_end);
       return dst_reg;
     }
     int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n) {
@@ -2124,17 +2125,17 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         return reg;
       }
     }
-    void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel &label) {
-      if (!label.is_solved()) {
-        label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
+    void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label) {
+      if (!Kiji_label_is_solved(label)) {
+        Kiji_label_reserve(label, ASM_BYTECODE_SIZE() + 2 + 2);
       }
-      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_unless_op(self, reg), reg, label.address());
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_unless_op(self, reg), reg, label->address);
     }
-    void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel &label) {
-      if (!label.is_solved()) {
-        label.reserve(ASM_BYTECODE_SIZE() + 2 + 2);
+    void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label) {
+      if (!Kiji_label_is_solved(label)) {
+        Kiji_label_reserve(label, ASM_BYTECODE_SIZE() + 2 + 2);
       }
-      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_if_op(self, reg), reg, label.address());
+      ASM_OP_U16_U32(MVM_OP_BANK_primitives, Kiji_compiler_if_op(self, reg), reg, label->address);
     }
     void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg) {
       switch (Kiji_compiler_get_local_type(self, reg)) {
@@ -2153,9 +2154,9 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
       default: abort();
       }
     }
-    void Kiji_compiler_goto(KijiCompiler*self, KijiLabel &label) {
-      if (!label.is_solved()) {
-        label.reserve(Kiji_compiler_bytecode_size(self) + 2);
+    void Kiji_compiler_goto(KijiCompiler*self, KijiLabel *label) {
+      if (!Kiji_label_is_solved(label)) {
+        Kiji_label_reserve(label, Kiji_compiler_bytecode_size(self) + 2);
       }
-      ASM_GOTO(label.address());
+      ASM_GOTO(label->address);
     }

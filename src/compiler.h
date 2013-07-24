@@ -66,10 +66,10 @@ KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int
 
 uint16_t Kiji_compiler_get_variable(KijiCompiler *self, MVMString *name);
 int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str);
-void Kiji_compiler_goto(KijiCompiler*self, KijiLabel &label);
+void Kiji_compiler_goto(KijiCompiler*self, KijiLabel *label);
 void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg);
-void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel &label);
-void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel &label);
+void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
+void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
 uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
 int Kiji_compiler_const_true(KijiCompiler *self);
 void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node);
