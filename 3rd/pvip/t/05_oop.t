@@ -68,3 +68,8 @@ class Foo::Bar { }
 --- expected
 (statements (class (ident "Foo::Bar") (nop) (statements)))
 
+===
+--- code
+class A is B is C { }
+--- expected
+(statements (class (ident "A") (list (ident "B") (ident "C")) (statements)))

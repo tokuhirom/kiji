@@ -593,18 +593,21 @@ reserved = ( 'class' | 'try' | 'has' | 'sub' | 'cmp' | 'enum' ) ![-A-Za-z0-9]
 
 # TODO optimizable
 class =
-    'class' (
+    'class' { is=NULL; } (
         ws+ i:ident
-    )? (
-        ws+ 'is' ws+ c:ident
-    )? - b:block {
+    )? - is:is_list? - b:block {
         $$ = PVIP_node_new_children3(
             PVIP_NODE_CLASS,
             i ? i : PVIP_node_new_children(PVIP_NODE_NOP),
-            c ? c : PVIP_node_new_children(PVIP_NODE_NOP),
+            is ? is : PVIP_node_new_children(PVIP_NODE_NOP),
             b
         );
     }
+
+is_list =
+    'is' ws+ a:ident { a=PVIP_node_new_children1(PVIP_NODE_LIST, a); } (
+        ws+ 'is' ws+ b:ident { PVIP_node_push_child(a, b); }
+    )* { $$ = a }
 
 it_method = (
         '.' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_IT_METHODCALL, i); i=$$; }
