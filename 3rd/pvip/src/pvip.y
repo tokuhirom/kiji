@@ -576,6 +576,7 @@ twvars =
     | '$?CLASS' { $$ = PVIP_node_new_children(PVIP_NODE_TW_CLASS); }
     | '$?MODULE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_MODULE); }
     | '$*OS' { $$ = PVIP_node_new_children(PVIP_NODE_TW_OS); }
+    | '$*PID' { $$ = PVIP_node_new_children(PVIP_NODE_TW_PID); }
 
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }

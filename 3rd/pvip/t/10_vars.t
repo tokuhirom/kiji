@@ -78,3 +78,15 @@ $!
 $/
 --- expected
 (statements (special_variable_regexp_match))
+
+===
+--- code
+$*OS
+--- expected
+(statements (tw_os))
+
+===
+--- code
+$*PID
+--- expected
+(statements (tw_pid))
