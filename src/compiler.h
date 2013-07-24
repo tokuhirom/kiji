@@ -65,10 +65,6 @@ KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int
 }
 
 uint16_t Kiji_compiler_get_variable(KijiCompiler *self, MVMString *name);
-void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg);
-void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
-void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
-uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
 void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node);
 int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node);
 void Kiji_compiler_set_variable(KijiCompiler *self, MVMString * name, uint16_t val_reg);
@@ -89,7 +85,6 @@ uint16_t Kiji_compiler_do_compare(KijiCompiler* self, PVIP_node_type_t type, uin
 void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm);
 int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node);
 void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc);
-uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
 #ifdef __cplusplus
 extern "C" {
@@ -99,6 +94,11 @@ bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int
 int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str);
 int Kiji_compiler_const_true(KijiCompiler *self);
 void Kiji_compiler_goto(KijiCompiler*self, KijiLabel *label);
+void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg);
+void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
+void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
+uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
+uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
 #ifdef __cplusplus
 };
 #endif
