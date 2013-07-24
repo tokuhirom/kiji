@@ -68,3 +68,9 @@ $a+<=3;$a+>=3
 $a <=> 3
 --- expected
 (statements (num_cmp (variable "$a") (int 3)))
+
+===
+--- code
+say |@arr
+--- expected
+(statements (funcall (ident "say") (args (unary_flatten_object (variable "@arr")))))

@@ -477,6 +477,7 @@ symbolic_unary =
     | '~' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_TILDE, f1); }
     | '?' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_BOOLEAN, f1); }
     | '^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_UPTO, f1); }
+    | '|' !'|' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_FLATTEN_OBJECT, f1); }
     | exponentiation_expr
 
 exponentiation_expr = 

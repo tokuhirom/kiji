@@ -141,6 +141,7 @@ typedef enum {
     PVIP_NODE_SPECIAL_VARIABLE_EXCEPTIONS, /* $! - exceptions */
     PVIP_NODE_ENUM,
     PVIP_NODE_NUM_CMP, /* <=> */
+    PVIP_NODE_UNARY_FLATTEN_OBJECT, /* unary | */
 } PVIP_node_type_t;
 
 typedef enum {
