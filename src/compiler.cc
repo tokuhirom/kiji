@@ -33,10 +33,6 @@ extern "C" {
 #define newMVMStringFromSTDSTRING(p) \
   MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (p).c_str(), (p).size())
 
-// lexical variable number by name
-bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int *lex_no, int *outer) {
-  return Kiji_frame_find_lexical_by_name(Kiji_compiler_top_frame(self), self->tc, name, lex_no, outer) == KIJI_TRUE;
-}
 
 // taken from 'compose' function in 6model/bootstrap.c.
 static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObject *type_obj) {
@@ -2031,23 +2027,6 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
     Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer) {
       return Kiji_find_variable_by_name(Kiji_compiler_top_frame(self), self->tc, name, lex_no, outer);
     }
-    int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str) {
-      self->cu->num_strings++;
-      self->cu->strings = (MVMString**)realloc(self->cu->strings, sizeof(MVMString*)*self->cu->num_strings);
-      if (!self->cu->strings) {
-        MVM_panic(MVM_exitcode_compunit, "Cannot allocate memory");
-      }
-      self->cu->strings[self->cu->num_strings-1] = str;
-      return self->cu->num_strings-1;
-    }
-
-    // This reg returns register number contains true value.
-    int Kiji_compiler_const_true(KijiCompiler *self) {
-      auto reg = REG_INT64();
-      ASM_CONST_I64(reg, 1);
-      return reg;
-    }
-
     void Kiji_compiler_set_variable(KijiCompiler *self, MVMString * name, uint16_t val_reg) {
       int lex_no = -1;
       int outer = -1;
@@ -2149,10 +2128,4 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         break;
       default: abort();
       }
-    }
-    void Kiji_compiler_goto(KijiCompiler*self, KijiLabel *label) {
-      if (!Kiji_label_is_solved(label)) {
-        Kiji_label_reserve(label, Kiji_compiler_bytecode_size(self) + 2);
-      }
-      ASM_GOTO(label->address);
     }
