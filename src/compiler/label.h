@@ -1,6 +1,7 @@
-#pragma once
+#ifndef KIJI_LABEL_H_
+#define KIJI_LABEL_H_
 
-#include <vector>
+#include "../handy.h"
 
 #define LABEL(name) \
   KijiLabel name; \
@@ -16,12 +17,14 @@ struct KijiCompiler;
 
 struct KijiLabel {
   ssize_t address;
-  std::vector<ssize_t> reserved_addresses;
+
+  ssize_t *reserved_addresses;
+  size_t   num_reserved_addresses;
 };
 
-void Kiji_label_put(KijiLabel *self, KijiCompiler *compiler);
-void Kiji_label_reserve(KijiLabel *self, ssize_t address);
+void Kiji_label_init(KijiLabel *self);
 bool Kiji_label_is_solved(const KijiLabel *self);
-KIJI_STATIC_INLINE void Kiji_label_init(KijiLabel *self) {
-  self->address = -1;
-}
+void Kiji_label_reserve(KijiLabel *self, ssize_t address);
+void Kiji_label_put(KijiLabel *self, KijiCompiler *compiler);
+
+#endif /* KIJI_LABEL_H_ */

@@ -2,6 +2,7 @@
 #define KIJI_HANDY_H_
 
 #include <string.h>
+#include <stdlib.h>
 
 // TODO use MVM_panic
 #define Renew(v,n,t) \
@@ -17,6 +18,8 @@
     ptr=(type*)malloc(sizeof(type)*nitems); \
     if (!ptr) { MVM_panic(MVM_exitcode_compunit, "Cannot allocate memory"); } \
     memset(ptr, 0, sizeof(type)*nitems);
+
+#define Safefree(ptr) free(ptr)
 
 #ifndef KIJI_STATIC_INLINE
 # if defined(__GNUC__) || defined(__cplusplus) || (defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L))
