@@ -3,7 +3,7 @@ __END__
 
 ===
 --- code
-enum E <>;
+enum E <>
 --- expected
 (statements (enum (ident "E") (list)))
 
@@ -17,4 +17,4 @@ enum < ook! ook. ook? >;
 --- code
 my enum A (a => 'foo', b => 'bar');
 --- expected
-(statements (my (enum (ident "A") (list (pair (ident "a") (ident "foo")) (pair (ident "b") (ident "bar"))))))
+(statements (my (enum (ident "A") (list (pair (ident "a") (string "foo")) (pair (ident "b") (string "bar"))))) (nop))

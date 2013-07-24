@@ -540,6 +540,7 @@ term =
     | '$?LINE' { $$ = PVIP_node_new_int(PVIP_NODE_INT, G->data.line_number); }
     | array
     | class
+    | role
     | funcall
     | qw
     | hash
@@ -591,13 +592,16 @@ twvars =
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
 
-reserved = ( 'class' | 'try' | 'has' | 'sub' | 'cmp' | 'enum' ) ![-A-Za-z0-9]
+reserved = ( 'role' | 'class' | 'try' | 'has' | 'sub' | 'cmp' | 'enum' ) ![-A-Za-z0-9]
+
+role =
+    'role' ws+ i:ident - b:block { $$ = PVIP_node_new_children1(PVIP_NODE_ROLE, b); }
 
 # TODO optimizable
 class =
-    'class' { is=NULL; } (
+    'class' { $$=i=NULL; is=NULL; } (
         ws+ i:ident
-    )? - is:is_list? - b:block {
+    )? - is:is_does_list? - b:block {
         $$ = PVIP_node_new_children3(
             PVIP_NODE_CLASS,
             i ? i : PVIP_node_new_children(PVIP_NODE_NOP),
@@ -606,10 +610,16 @@ class =
         );
     }
 
-is_list =
-    'is' ws+ a:ident { a=PVIP_node_new_children1(PVIP_NODE_LIST, a); } (
-        ws+ 'is' ws+ b:ident { PVIP_node_push_child(a, b); }
-    )* { $$ = a }
+# XXX Bad Code
+is_does_list =
+    'is' ws+ a:ident { a=PVIP_node_new_children1(PVIP_NODE_LIST, PVIP_node_new_children1(PVIP_NODE_IS, a)); } (
+        - 'is' ws+ b:ident { PVIP_node_push_child(a, PVIP_node_new_children1(PVIP_NODE_IS, b)); }
+        | - 'does' ws+ b:ident { PVIP_node_push_child(a, PVIP_node_new_children1(PVIP_NODE_DOES, b)); }
+    )* { $$=a; }
+    | 'does' ws+ a:ident { a=PVIP_node_new_children1(PVIP_NODE_LIST, PVIP_node_new_children1(PVIP_NODE_DOES, a)); } (
+        - 'is' ws+ b:ident { PVIP_node_push_child(a, PVIP_node_new_children1(PVIP_NODE_IS, b)); }
+        | - 'does' ws+ b:ident { PVIP_node_push_child(a, PVIP_node_new_children1(PVIP_NODE_DOES, b)); }
+    )* { $$=a; }
 
 it_method = (
         '.' i:ident { $$ = PVIP_node_new_children1(PVIP_NODE_IT_METHODCALL, i); i=$$; }

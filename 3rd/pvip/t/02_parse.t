@@ -95,7 +95,7 @@ __END__
 ===
 --- code: say()
 --- expected
-(statements (funcall (ident "say") (args ())))
+(statements (funcall (ident "say") (args)))
 
 ===
 --- code: say(3)
@@ -373,19 +373,19 @@ say 'ok ', 11*say 'ok 10';
 --- code
 class { 1 }
 --- expected
-(statements (class (nop ) (statements (int 1))))
+(statements (class (nop) (nop) (statements (int 1))))
 
 ===
 --- code
 class Foo { 1 }
 --- expected
-(statements (class (ident "Foo") (statements (int 1))))
+(statements (class (ident "Foo") (nop) (statements (int 1))))
 
 ===
 --- code
 class { method bar() { } }
 --- expected
-(statements (class (nop ) (statements (method (ident "bar") (args ) (statements )))))
+(statements (class (nop) (nop) (statements (method (ident "bar") (args) (statements)))))
 
 ===
 --- code

@@ -55,7 +55,7 @@ $a +<= 3
 $a +<= 3;
 $a +>= 1;
 --- expected
-(statements (inplace_blshift (variable "$a") (int 3)) (inplace_brshift (variable "$a") (int 3)))
+(statements (inplace_blshift (variable "$a") (int 3)) (inplace_brshift (variable "$a") (int 1)))
 
 ===
 --- code

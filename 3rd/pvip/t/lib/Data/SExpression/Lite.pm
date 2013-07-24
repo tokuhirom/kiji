@@ -19,19 +19,19 @@ sub parse {
     if (length($sexp) == 0) {
         Carp::confess("Do not pass the empty string.");
     }
+    $self->lex(\$sexp) eq '(' or die "No opening paren";
     $self->_parse(\$sexp);
 }
 
 sub _parse {
     my ($self, $sexp) = @_;
-    $self->lex($sexp) eq '(' or die "No opening paren";
     my @tokens;
     while ($$sexp =~ /\S/) {
         my $token = $self->lex($sexp);
         if ($token eq ')') {
-            return @tokens;
+            return \@tokens;
         } elsif ($token eq '(') {
-            push @tokens, $self->_parse(\"($$sexp");
+            push @tokens, $self->_parse($sexp);
         } else {
             push @tokens, $token;
         }

@@ -6,19 +6,19 @@ __END__
 --- code
 class { }
 --- expected
-(statements (class (nop) (statements)))
+(statements (class (nop) (nop) (statements)))
 
 ===
 --- code
 class Foo { }
 --- expected
-(statements (class (ident "Foo") (statements)))
+(statements (class (ident "Foo") (nop) (statements)))
 
 ===
 --- code
 class NotComplex is Cool { }
 --- expected
-(statements (class (ident "NotComplex") (statements)))
+(statements (class (ident "NotComplex") (list (is (ident "Cool"))) (statements)))
 
 ===
 --- code
@@ -70,6 +70,13 @@ class Foo::Bar { }
 
 ===
 --- code
+role C { }
+--- expected
+(statements (role (statements)))
+
+=== class A is B is C
+--- code
 class A is B is C { }
 --- expected
-(statements (class (ident "A") (list (ident "B") (ident "C")) (statements)))
+(statements (class (ident "A") (list (is (ident "B")) (is (ident "C"))) (statements)))
+

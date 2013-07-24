@@ -16,7 +16,8 @@ END {
             if (length($block->expected) == 0) {
                 die "Expected should be non-empty string."
             }
-            my $got = parse_perl6($block->code);
+            my $got_sexp = parse_perl6($block->code);
+            my $got = parse_sexp($got_sexp);
             my $expected = parse_sexp($block->expected);
             is_deeply($got, $expected, 'Test: ' . $block->code) or do {
                 $Data::Dumper::Sortkeys=1;
@@ -26,6 +27,7 @@ END {
                 diag Dumper($got);
                 diag "EXPECTED:";
                 diag Dumper($expected);
+                diag "SEXP: $got_sexp";
             };
         };
     }
@@ -43,21 +45,14 @@ sub parse_perl6 {
     unless ($sexp =~ /\A\(/) {
         die "Cannot get sexp from '$src': $sexp";
     }
-    my $got = eval {
-        parse_sexp($sexp);
-    };
-    if ($@) {
-        diag $sexp;
-        die $@
-    }
-    return $got;
+    $sexp;
 }
+
 
 sub parse_sexp {
     my $expected = shift;
     my $sexp = Data::SExpression::Lite->new();
-    $expected = [$sexp->parse($expected)];
-    $expected;
+    return $sexp->parse($expected);
 }
 
 1;

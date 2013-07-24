@@ -147,6 +147,9 @@ typedef enum {
     PVIP_NODE_NUM_CMP, /* <=> */
     PVIP_NODE_UNARY_FLATTEN_OBJECT, /* unary | */
     PVIP_NODE_COMPLEX, /* 2i */
+    PVIP_NODE_ROLE,
+    PVIP_NODE_IS,
+    PVIP_NODE_DOES,
 } PVIP_node_type_t;
 
 typedef enum {
