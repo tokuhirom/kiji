@@ -147,7 +147,9 @@ normal_or_postfix_stmt =
         | ( - eat_terminator ) { $$=n; }
     )
 
-enum_stmt = 'enum' ws+ i:ident - q:qw { $$ = PVIP_node_new_children2(PVIP_NODE_ENUM, i, q); }
+enum_stmt =
+    'my' ws+ 'enum' ws+ i:ident - e:expr { $$ = PVIP_node_new_children1(PVIP_NODE_MY, PVIP_node_new_children2(PVIP_NODE_ENUM, i, e)); }
+    | 'enum' ws+ i:ident - q:qw { $$ = PVIP_node_new_children2(PVIP_NODE_ENUM, i, q); }
 
 last_stmt = 'last' { $$ = PVIP_node_new_children(PVIP_NODE_LAST); }
 
