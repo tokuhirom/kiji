@@ -37,7 +37,7 @@
 * interp code is 3rd/MoarVM/src/core/interp.c
 */
 enum { UNKNOWN_REG = -1 };
-struct KijiCompiler {
+typedef struct _KijiCompiler {
   KijiFrame** frames;
   size_t num_frames;
 
@@ -48,7 +48,7 @@ struct KijiCompiler {
 
   MVMSerializationContext * sc_classes;
   int num_sc_classes;
-};
+} KijiCompiler;
 
 KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
   return self->frames[self->num_frames-1];

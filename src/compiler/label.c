@@ -1,9 +1,9 @@
 /* vim:ts=2:sw=2:tw=0:
  */
 
-extern "C" {
 #include "moarvm.h"
-}
+#include <stdint.h>
+#include <stdio.h>
 #include "label.h"
 #include "../compiler.h"
 #include "../asm.h"
