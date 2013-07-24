@@ -23,3 +23,22 @@ int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str) {
   return self->cu->num_strings-1;
 }
 
+void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2) {
+  self->num_sc_classes++;
+
+  *wval1 = 1;
+  *wval2 = self->num_sc_classes-1;
+
+  MVM_sc_set_object(self->tc, self->sc_classes, self->num_sc_classes-1, object);
+}
+
+/* Push lexical variable. */
+int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type) {
+  return Kiji_frame_push_lexical(Kiji_compiler_top_frame(self), self->tc, name, type);
+}
+
+void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name) {
+  Kiji_frame_push_pkg_var(Kiji_compiler_top_frame(self), name);
+}
+
+

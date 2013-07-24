@@ -152,26 +152,6 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
 
 
 
-    void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2) {
-      self->num_sc_classes++;
-
-      *wval1 = 1;
-      *wval2 = self->num_sc_classes-1;
-
-      MVM_sc_set_object(self->tc, self->sc_classes, self->num_sc_classes-1, object);
-    }
-
-
-    // Push lexical variable.
-    int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type) {
-      return Kiji_frame_push_lexical(Kiji_compiler_top_frame(self), self->tc, name, type);
-    }
-
-    void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name) {
-      Kiji_frame_push_pkg_var(Kiji_compiler_top_frame(self), name);
-    }
-
-
     // Is a and b equivalent?
     KIJI_STATIC_INLINE bool callsite_eq(MVMCallsite *a, MVMCallsite *b) {
       if (a->arg_count != b->arg_count) {

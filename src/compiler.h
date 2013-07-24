@@ -99,6 +99,9 @@ void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
 void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
 uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
+void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2);
+int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type);
+void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name);
 #ifdef __cplusplus
 };
 #endif
