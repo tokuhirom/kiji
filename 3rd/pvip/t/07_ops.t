@@ -74,3 +74,15 @@ $a <=> 3
 say |@arr
 --- expected
 (statements (funcall (ident "say") (args (unary_flatten_object (variable "@arr")))))
+
+===
+--- code
+7 .. 9
+--- expected
+(statements (range (int 7) (int 9)))
+
+===
+--- code
+7 !~~ 9
+--- expected
+(statements (chain (int 7) (not_smart_match (int 9))))
