@@ -333,7 +333,7 @@ tight_and = f1:chaining_infix_expr (
 #  C  Chaining infix    != == < <= > >= eq ne lt le gt ge ~~ === eqv !eqv (<) (elem)
 chaining_infix_expr = f1:methodcall_expr { $$ = PVIP_node_new_children1(PVIP_NODE_CHAIN, f1); f1=$$; } (
           - '==='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_VALUE_IDENTITY,          f2); PVIP_node_push_child(f1, tmp); }
-        | - '=='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ,          f2); PVIP_node_push_child(f1, tmp); }
+        | - '==' !'=' - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_EQ,          f2); PVIP_node_push_child(f1, tmp); }
         | - '!='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_NE,          f2); PVIP_node_push_child(f1, tmp); }
         | - '<'   - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LT,          f2); PVIP_node_push_child(f1, tmp); }
         | - '<='  - f2:methodcall_expr { PVIPNode* tmp = PVIP_node_new_children1(PVIP_NODE_LE,          f2); PVIP_node_push_child(f1, tmp); }
@@ -551,12 +551,12 @@ term =
     | 'try' ws+ b:expr { $$ = PVIP_node_new_children1(PVIP_NODE_TRY, b); }
     | perl5_regexp
     | 'm:P5/./' { $$ = PVIP_node_new_children(PVIP_NODE_NOP); }
+    | regexp
     | !reserved ident
     | '\\' t:term { $$ = PVIP_node_new_children1(PVIP_NODE_REF, t); }
     | '(' - ')' { $$ = PVIP_node_new_children(PVIP_NODE_LIST); }
     | language
     | ':' < [a-z]+ > { $$ = PVIP_node_new_children2(PVIP_NODE_PAIR, PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng), PVIP_node_new_children(PVIP_NODE_TRUE)); }
-    | regexp
     | funcref
     | < '$~' [A-Za-z] [A-Za-z0-9]* > { $$ = PVIP_node_new_string(PVIP_NODE_SLANGS, yytext, yyleng); }
 
@@ -629,7 +629,7 @@ it_method = (
     ) { $$=i; }
 
 ident =
-    < [A-Za-z] [A-Za-z0-9_]* ( '::' [A-Za-z] [A-Za-z0-9_]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng); }
+    < '::'? [A-Za-z] [A-Za-z0-9_]* ( '::' [A-Za-z] [A-Za-z0-9_]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng); }
     | < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
         $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
     }
@@ -828,7 +828,7 @@ perl5_regexp =
        | esc '/' { r=PVIP_node_append_string(r, "/", 1); }
     )+ '/' { $$=r; }
 
-regexp_start = '/' { $$ = PVIP_node_new_string(PVIP_NODE_REGEXP, "", 0); }
+regexp_start = ( 'm/' | '/' ) { $$ = PVIP_node_new_string(PVIP_NODE_REGEXP, "", 0); }
 
 regexp =
     r:regexp_start (

@@ -7,3 +7,9 @@ __END__
 /./
 --- expected
 (statements (regexp "."))
+
+===
+--- code
+m/./
+--- expected
+(statements (regexp "."))
