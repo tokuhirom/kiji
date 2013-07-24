@@ -530,7 +530,8 @@ method_postfix_expr =
 atkey_key = < [^>]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyleng); }
 
 term = 
-    integer
+    complex
+    | integer
     | path
     | dec_number
     | string
@@ -585,6 +586,7 @@ twvars =
     | '$?PERLVER' { $$ = PVIP_node_new_children(PVIP_NODE_TW_PERLVER); }
     | '$*OSVER' { $$ = PVIP_node_new_children(PVIP_NODE_TW_OSVER); }
     | '$?OSVER' { $$ = PVIP_node_new_children(PVIP_NODE_TW_OSVER); }
+    | '$*CWD' { $$ = PVIP_node_new_children(PVIP_NODE_TW_CWD); }
 
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
@@ -748,6 +750,8 @@ dec_number =
     | <([0-9_]+)> {
     $$ = PVIP_node_new_intf(PVIP_NODE_INT, yytext, yyleng, 10);
 }
+
+complex = < [0-9]+ > 'i' { $$ = PVIP_node_new_intf(PVIP_NODE_COMPLEX, yytext, yyleng, 10); }
 
 integer =
     '0b' <[01_]+> {

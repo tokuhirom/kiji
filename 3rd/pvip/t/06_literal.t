@@ -85,3 +85,9 @@ q|a'|
 IO::Path
 --- expected
 (statements (ident "IO::Path"))
+
+===
+--- code
+2i
+--- expected
+(statements (complex 2))

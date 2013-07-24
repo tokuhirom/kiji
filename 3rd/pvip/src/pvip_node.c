@@ -15,7 +15,7 @@
 
 PVIPNode * PVIP_node_new_int(PVIP_node_type_t type, int64_t n) {
     PVIPNode *node = malloc(sizeof(PVIPNode));
-    assert(type == PVIP_NODE_INT);
+    assert(PVIP_node_category(type) == PVIP_CATEGORY_INT);
     node->type = type;
     node->iv = n;
     return node;
@@ -177,6 +177,7 @@ PVIP_category_t PVIP_node_category(PVIP_node_type_t type) {
     case PVIP_NODE_SLANGS:
         return PVIP_CATEGORY_STRING;
     case PVIP_NODE_INT:
+    case PVIP_NODE_COMPLEX:
         return PVIP_CATEGORY_INT;
     case PVIP_NODE_NUMBER:
         return PVIP_CATEGORY_NUMBER;

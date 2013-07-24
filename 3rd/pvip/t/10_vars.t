@@ -96,3 +96,9 @@ $*PID
 $?OS
 --- expected
 (statements (tw_os))
+
+===
+--- code
+$*CWD
+--- expected
+(statements (tw_cwd))
