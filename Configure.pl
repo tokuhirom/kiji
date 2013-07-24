@@ -5,21 +5,27 @@ use utf8;
 use 5.008_001;
 use Getopt::Long;
 
+my $ARGV = join(' ', @ARGV);
+
 my $p = Getopt::Long::Parser->new(
     config => [qw(posix_default no_ignore_case auto_help)]
 );
 $p->getoptions(
     'debug!' => \my $debug,
+    'debug-asm!' => \my $debug_asm,
 );
 my @CXXFLAGS = qw(-g -std=c++11);
 my @CFLAGS= qw(-g);
 if ($debug) {
-    push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
-    push @CFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
+    # push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
+    # push @CFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
+    push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG );
+    push @CFLAGS, qw(-D_GLIBCXX_DEBUG );
 } else {
     push @CXXFLAGS, qw(-O3);
     push @CFLAGS, qw(-O3);
 }
+push @CXXFLAGS, qw(-DDEBUG_ASM) if $debug_asm;
 push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin' || $ENV{TRAVIS};
 my $CXXFLAGS=join(' ', @CXXFLAGS);
 my $CFLAGS=join(' ', @CFLAGS);
@@ -196,15 +202,27 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
+KIJI_OBJS = src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop.o src/compiler/label.o src/compiler/core.o src/compiler/op_helper.o
 
-all: kiji
+KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h src/handy.h src/asm.h src/compiler/loop.h src/compiler/label.h
 
-kiji: 3rd/MoarVM/moarvm src/kiji.cc src/kiji.o 3rd/pvip/libpvip.a src/compiler.h src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o
-	$(CXX) $(CXXFLAGS) -include src/stdafx.h -Wall $(CINCLUDE) -o kiji src/kiji.o $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o
+all: Makefile kiji
 
-src/kiji.o: src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h
+Makefile: Configure.pl
+    perl Configure.pl <<ARGV>>
+    echo "Re-run make"
+    exit 1
 
-src/builtin/array.o: 3rd/MoarVM/moarvm
+kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
+	$(CXX) $(CXXFLAGS) -Wall $(CINCLUDE) -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
+
+src/kiji.o: $(KIJI_HEADERS) Makefile
+src/frame.o: $(KIJI_HEADERS) Makefile
+src/compiler.o: $(KIJI_HEADERS) Makefile src/compiler.cc
+src/compiler/loop.o: $(KIJI_HEADERS) Makefile src/compiler.cc
+src/compiler/label.o: $(KIJI_HEADERS) Makefile src/compiler.cc
+src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
+src/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
 
 .c.o: src/builtin.h
     $(CC) $(CINCLUDE) $(CFLAGS) -c -o $@ $<
@@ -231,9 +249,7 @@ test: kiji
 clean:
 	rm -rf kiji src/gen.* 3rd/greg/greg 3rd/greg/*.o vgcore.* core Makefile 3rd/pvip/libpvip.a
     cd 3rd/pvip/ && make clean
-
-src/gen.stdafx.pch: src/stdafx.h
-	clang++ $(CXXFLAGS) -cc1 -emit-pch -x c++-header ./src/stdafx.h -o src/gen.stdafx.pch
+    cd 3rd/MoarVM/ && make clean
 
 src/gen.assembler.h: build/asm.pl
 	perl build/asm.pl

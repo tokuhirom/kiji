@@ -1,6 +1,6 @@
 // vim:ts=2:sw=2:tw=0:
 
-
+#include <stddef.h>
 #include <stdio.h>
 #include <assert.h>
 #include <fstream>
@@ -12,6 +12,7 @@ extern "C" {
 #include "commander.h"
 }
 #include "compiler.h"
+#include "asm.h"
 
 typedef struct _CmdLineState {
     int dump_ast;
@@ -71,8 +72,8 @@ static void run_repl() {
 }
 
 int main(int argc, char** argv) {
-  CmdLineState*state = (CmdLineState*)malloc(sizeof(CmdLineState));
-  memset(state, 0, sizeof(CmdLineState));
+  CmdLineState*state;
+  Newxz(state, 1, CmdLineState);
 
   command_t cmd;
   cmd.data = state;
@@ -125,21 +126,31 @@ int main(int argc, char** argv) {
   MVMCompUnit cu;
   memset(&cu, 0, sizeof(MVMCompUnit));
 
-  kiji::Compiler compiler(&cu, vm->main_thread);
-  compiler.compile(root_node, vm);
-  if (state->dump_bytecode) {
-    compiler.finalize(vm);
+  int apr_return_status;
+  apr_pool_t  *pool        = NULL;
+  /* Ensure the file exists, and get its size. */
+  if ((apr_return_status = apr_pool_create(&pool, NULL)) != APR_SUCCESS) {
+    MVM_panic(MVM_exitcode_compunit, "Could not allocate APR memory pool: errorcode %d", apr_return_status);
+  }
+  cu.pool       = pool;
 
+  KijiCompiler compiler;
+  Kiji_compiler_init(&compiler, &cu, vm->main_thread);
+  Kiji_compiler_compile(&compiler, root_node, vm);
+  Kiji_compiler_finalize(&compiler, vm);
+#ifdef DEBUG_ASM
+  Kiji_asm_dump_compunit(&cu);
+#endif
+
+  if (state->dump_bytecode) {
     // dump it
     char *dump = MVM_bytecode_dump(vm->main_thread, &cu);
 
     printf("%s", dump);
     free(dump);
   } else {
-    compiler.finalize(vm);
-
     MVMThreadContext *tc = vm->main_thread;
-    MVMStaticFrame *start_frame = compiler.get_start_frame();
+    MVMStaticFrame *start_frame = cu.main_frame ? cu.main_frame : cu.frames[0];
     MVM_interp_run(tc, &toplevel_initial_invoke, start_frame);
   }
 
