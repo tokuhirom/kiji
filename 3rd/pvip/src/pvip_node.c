@@ -90,11 +90,11 @@ PVIPNode* PVIP_node_append_string_from_oct(PVIPNode *node, const char* str, size
     return PVIP_node_append_string(node, &c, 1);
 }
 
-PVIPNode* PVIP_node_append_string_variable(PVIPNode*node, PVIPNode*var) {
+PVIPNode* PVIP_node_append_string_node(PVIPNode*node, PVIPNode*stuff) {
     if (node->type == PVIP_NODE_STRING) {
-        return PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, node, var);
+        return PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, node, stuff);
     } else if (node->type == PVIP_NODE_STRING_CONCAT) {
-        return PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, node, var);
+        return PVIP_node_new_children2(PVIP_NODE_STRING_CONCAT, node, stuff);
     } else {
         abort();
     }
@@ -175,6 +175,7 @@ PVIP_category_t PVIP_node_category(PVIP_node_type_t type) {
     case PVIP_NODE_PRIVATE_ATTRIBUTE:
     case PVIP_NODE_PATH:
     case PVIP_NODE_SLANGS:
+    case PVIP_NODE_UNICODE_CHAR:
         return PVIP_CATEGORY_STRING;
     case PVIP_NODE_INT:
     case PVIP_NODE_COMPLEX:

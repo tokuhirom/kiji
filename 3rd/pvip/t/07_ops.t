@@ -86,3 +86,21 @@ say |@arr
 7 !~~ 9
 --- expected
 (statements (chain (int 7) (not_smart_match (int 9))))
+
+===
+--- code
+7 & 9
+--- expected
+(statements (junctive_and (int 7) (int 9)))
+
+===
+--- code
+7 S& 9
+--- expected
+(statements (junctive_sand (int 7) (int 9)))
+
+===
+--- code
+7 | 9
+--- expected
+(statements (junctive_or (int 7) (int 9)))

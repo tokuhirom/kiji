@@ -102,3 +102,9 @@ $?OS
 $*CWD
 --- expected
 (statements (tw_cwd))
+
+===
+--- code
+$*EXECUTABLE_NAME
+--- expected
+(statements (tw_executable_name))

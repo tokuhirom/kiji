@@ -137,6 +137,8 @@ typedef enum {
     PVIP_NODE_TW_PERLVER, /* $*PPERLVER */
     PVIP_NODE_TW_OSVER, /* $*OSVER */
     PVIP_NODE_TW_CWD, /* $*CWD */
+    PVIP_NODE_TW_EXECUTABLE_NAME, /* $*EXECUTABLE_NAME */
+    PVIP_NODE_TW_ROUTINE, /* &?ROUTINE */
     PVIP_NODE_SLANGS, /* $~MAIN */
     PVIP_NODE_LOGICAL_ANDTHEN, /* andthen operator */
     PVIP_NODE_VALUE_IDENTITY, /* '===' operator in S03-operators/value_equivalence.t */
@@ -150,6 +152,11 @@ typedef enum {
     PVIP_NODE_ROLE,
     PVIP_NODE_IS,
     PVIP_NODE_DOES,
+    PVIP_NODE_JUNCTIVE_AND, /* & */
+    PVIP_NODE_JUNCTIVE_SAND, /* S& */
+    PVIP_NODE_JUNCTIVE_OR, /* | */
+    PVIP_NODE_UNICODE_CHAR, /* \c[] */
+    PVIP_NODE_STUB, /* ... */
 } PVIP_node_type_t;
 
 typedef enum {
@@ -197,7 +204,7 @@ void PVIP_node_destroy(PVIPNode *node);
 PVIPNode* PVIP_node_append_string(PVIPNode *node, const char* str, size_t len);
 PVIPNode* PVIP_node_append_string_from_hex(PVIPNode * node, const char *str, size_t len);
 PVIPNode* PVIP_node_append_string_from_oct(PVIPNode * node, const char *str, size_t len);
-PVIPNode* PVIP_node_append_string_variable(PVIPNode*node, PVIPNode*var);
+PVIPNode* PVIP_node_append_string_node(PVIPNode*node, PVIPNode*stuff);
 
 void PVIP_node_change_type(PVIPNode *node, PVIP_node_type_t type);
 

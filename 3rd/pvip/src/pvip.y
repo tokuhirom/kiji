@@ -125,6 +125,7 @@ statement =
             | multi_method_stmt
             | die_stmt
             | has_stmt
+            | '...' { $$ = PVIP_node_new_children(PVIP_NODE_STUB); }
             | funcdef - ';'*
             | bl:block ';'* {
                 if (bl->type == PVIP_NODE_HASH) {
@@ -376,7 +377,7 @@ structural_infix_expr =
     )? { $$=a1; }
 
 funcall =
-    i:ident - a:paren_args {
+    !reserved i:ident - a:paren_args {
         $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, i, a);
     }
     | !reserved i:ident ws+ a:bare_args {
@@ -392,10 +393,19 @@ named_unary_expr =
     | junctive_or_expr
 
 junctive_or_expr =
-    junctive_and_expr
+    a:junctive_and_expr (
+        - (
+            '|' ![|] - b:junctive_and_expr { a = PVIP_node_new_children2(PVIP_NODE_JUNCTIVE_OR, a, b); }
+        )
+    )* { $$ = a; }
 
 junctive_and_expr =
-    concatenation_expr
+    a:concatenation_expr (
+        - (
+            '&' ![&] - b:concatenation_expr { a = PVIP_node_new_children2(PVIP_NODE_JUNCTIVE_AND, a, b); }
+            | 'S&' ![&] - b:concatenation_expr { a = PVIP_node_new_children2(PVIP_NODE_JUNCTIVE_SAND, a, b); }
+        )
+    )* { $$ = a; }
 
 #  X  Concatenation     ~
 concatenation_expr =
@@ -427,7 +437,7 @@ additive_expr =
             $$ = PVIP_node_new_children2(PVIP_NODE_ADD, l, r1);
             l = $$;
           }
-        | - '-' - r2:multiplicative_expr {
+        | - '-' !'-' - r2:multiplicative_expr {
             $$ = PVIP_node_new_children2(PVIP_NODE_SUB, l, r2);
             l = $$;
           }
@@ -472,7 +482,7 @@ multiplicative_expr =
 #  L  Symbolic unary    ! + - ~ ? | || +^ ~^ ?^ ^
 symbolic_unary =
     '+' !'^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_PLUS, f1); }
-    | '-' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_MINUS, f1); }
+    | '-' !'-' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_MINUS, f1); }
     | '!' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_NOT, f1); }
     | '+^' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_BITWISE_NEGATION, f1); }
     | '~' - f1:exponentiation_expr { $$ = PVIP_node_new_children1(PVIP_NODE_UNARY_TILDE, f1); }
@@ -524,6 +534,11 @@ method_postfix_expr =
                     f1=$$;
                 }
             )
+            | '.' f2:string f3:paren_args {
+                /* Rakudo says "Quoted method name requires parenthesized arguments" */
+                $$ = PVIP_node_new_children3(PVIP_NODE_METHODCALL, f1, f2, f3);
+                f1=$$;
+            }
             | a:paren_args { $$ = PVIP_node_new_children2(PVIP_NODE_FUNCALL, f1, a); f1=$$; }
           )*
 
@@ -588,6 +603,8 @@ twvars =
     | '$*OSVER' { $$ = PVIP_node_new_children(PVIP_NODE_TW_OSVER); }
     | '$?OSVER' { $$ = PVIP_node_new_children(PVIP_NODE_TW_OSVER); }
     | '$*CWD' { $$ = PVIP_node_new_children(PVIP_NODE_TW_CWD); }
+    | '$*EXECUTABLE_NAME' { $$ = PVIP_node_new_children(PVIP_NODE_TW_EXECUTABLE_NAME); }
+    | '&?ROUTINE' { $$ = PVIP_node_new_children(PVIP_NODE_TW_ROUTINE); }
 
 language =
     ':lang<' < [a-zA-Z0-9]+ > '>' { $$ = PVIP_node_new_string(PVIP_NODE_LANG, yytext, yyleng); }
@@ -629,8 +646,8 @@ it_method = (
     ) { $$=i; }
 
 ident =
-    < '::'? [A-Za-z] [A-Za-z0-9_]* ( '::' [A-Za-z] [A-Za-z0-9_]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng); }
-    | < [a-zA-Z] [a-zA-Z0-9]* ( ( '_' | '-') [a-zA-Z0-9]+ )* > {
+    < '::'? [A-Za-z] [-A-Za-z0-9_]* ( '::' [A-Za-z] [A-Za-z0-9_]* )* > { $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng); }
+    | < [a-zA-Z] [a-zA-Z0-9]* ( [-_] [a-zA-Z0-9]+ )* > {
         $$ = PVIP_node_new_string(PVIP_NODE_IDENT, yytext, yyleng);
     }
 
@@ -795,7 +812,7 @@ dq_string_start='"' { $$ = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); }
 dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0); } (
         "\n" { G->data.line_number++; s=PVIP_node_append_string(s, "\n", 1); }
         | < [^"\\\n$]+ > { s=PVIP_node_append_string(s, yytext, yyleng); }
-        | v:variable { s=PVIP_node_append_string_variable(s, v); }
+        | v:variable { s=PVIP_node_append_string_node(s, v); }
         | esc 'a' { s=PVIP_node_append_string(s, "\a", 1); }
         | esc 'b' { s=PVIP_node_append_string(s, "\b", 1); }
         | esc 't' { s=PVIP_node_append_string(s, "\t", 1); }
@@ -804,6 +821,7 @@ dq_string = s:dq_string_start { s = PVIP_node_new_string(PVIP_NODE_STRING, "", 0
         | esc '"' { s=PVIP_node_append_string(s, "\"", 1); }
         | esc '$' { s=PVIP_node_append_string(s, "\"", 1); }
         | esc '0' { s=PVIP_node_append_string(s, "\0", 1); }
+        | esc 'c[' < [^\]]+ > ']' { s=PVIP_node_append_string_node(s, PVIP_node_new_string(PVIP_NODE_UNICODE_CHAR, yytext, yyleng)); }
         | ( esc 'x' (
                   '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) >
             | '[' '0'? < ( [a-fA-F0-9] [a-fA-F0-9] ) > ']' )
