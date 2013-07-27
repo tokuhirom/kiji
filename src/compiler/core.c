@@ -76,3 +76,6 @@ int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_l
   return cu->num_frames-1;
 }
 
+Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer) {
+  return Kiji_find_variable_by_name(Kiji_compiler_top_frame(self), self->tc, name, lex_no, outer);
+}

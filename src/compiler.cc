@@ -1942,9 +1942,6 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
 
       return retval;
     }
-    Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer) {
-      return Kiji_find_variable_by_name(Kiji_compiler_top_frame(self), self->tc, name, lex_no, outer);
-    }
     void Kiji_compiler_set_variable(KijiCompiler *self, MVMString * name, uint16_t val_reg) {
       int lex_no = -1;
       int outer = -1;

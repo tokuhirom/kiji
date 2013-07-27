@@ -104,6 +104,7 @@ int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 ty
 void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name);
 void Kiji_compiler_pop_frame(KijiCompiler* self);
 int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_len);
+Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer);
 #ifdef __cplusplus
 };
 #endif
