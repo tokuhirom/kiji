@@ -1,5 +1,5 @@
-kiji - -Ofun interpreter on MoarVM
-===================================
+kiji - -Ofun Perl6 interpreter on MoarVM
+=========================================
 
 This is a new great toy for Perl hackers.
 
@@ -28,6 +28,11 @@ Supported Environment
 ---------------------
 
 kiji is tested on ubuntu 12.04. But kiji may works any POSIX compliant environment.
+
+Known bugs
+----------
+
+`t/99_fib.t` fails in GC.
 
 See also
 --------
