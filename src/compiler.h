@@ -27,6 +27,20 @@
         update_addr = (MVMObject*)_r; \
     }
 
+#define newMVMString(str, len) \
+  MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, str, len)
+
+#define newMVMString_nolen(str) \
+  MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (str), strlen((str)))
+
+#define newMVMStringFromPVIP(p) \
+  MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (p)->buf, (p)->len)
+
+#define newMVMStringFromSTDSTRING(p) \
+  MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, (p).c_str(), (p).size())
+
+
+
 #define REG_OBJ() Kiji_compiler_push_local_type(self, MVM_reg_obj)
 #define REG_STR() Kiji_compiler_push_local_type(self, MVM_reg_str)
 #define REG_INT64() Kiji_compiler_push_local_type(self, MVM_reg_int64)
@@ -64,6 +78,28 @@ KIJI_STATIC_INLINE uint16_t Kiji_compiler_get_local_type(KijiCompiler* self, int
   return Kiji_frame_get_local_type(Kiji_compiler_top_frame(self), n);
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node);
+size_t Kiji_compiler_bytecode_size(KijiCompiler*self);
+bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int *lex_no, int *outer);
+int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str);
+int Kiji_compiler_const_true(KijiCompiler *self);
+void Kiji_compiler_goto(KijiCompiler*self, KijiLabel *label);
+void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg);
+void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
+void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
+uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
+uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
+void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2);
+int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type);
+void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name);
+void Kiji_compiler_pop_frame(KijiCompiler* self);
+int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_len);
+Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer);
+void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
+void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm);
 uint16_t Kiji_compiler_get_variable(KijiCompiler *self, MVMString *name);
 void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node);
 int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node);
@@ -82,29 +118,10 @@ void Kiji_compiler_compile_statements(KijiCompiler *self, const PVIPNode*node, i
 uint16_t Kiji_compiler_compile_chained_comparisions(KijiCompiler *self, const PVIPNode* node);
 int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
 uint16_t Kiji_compiler_do_compare(KijiCompiler* self, PVIP_node_type_t type, uint16_t lhs, uint16_t rhs);
-void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm);
-int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node);
 void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc);
-#ifdef __cplusplus
-extern "C" {
-#endif
-size_t Kiji_compiler_bytecode_size(KijiCompiler*self);
-bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int *lex_no, int *outer);
-int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str);
-int Kiji_compiler_const_true(KijiCompiler *self);
-void Kiji_compiler_goto(KijiCompiler*self, KijiLabel *label);
-void Kiji_compiler_return_any(KijiCompiler *self, uint16_t reg);
-void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
-void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
-uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
-uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
-void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2);
-int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type);
-void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name);
-void Kiji_compiler_pop_frame(KijiCompiler* self);
-int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_len);
-Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer);
-void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
+int Kiji_compiler_str_cmp_binop(KijiCompiler * self, uint16_t lhs, uint16_t rhs, uint16_t op);
+int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
+size_t Kiji_compiler_push_callsite(KijiCompiler *self, MVMCallsite *callsite);
 #ifdef __cplusplus
 };
 #endif
