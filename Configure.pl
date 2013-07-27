@@ -208,6 +208,12 @@ KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h 
 
 all: Makefile kiji
 
+roast: 3rd/roast/README kiji
+    prove --exec ./kiji -r 3rd/roast/
+
+3rd/roast/README:
+    git clone git://github.com/perl6/roast.git 3rd/roast/
+
 Makefile: Configure.pl
     perl Configure.pl <<ARGV>>
     echo "Re-run make"
@@ -254,7 +260,7 @@ clean:
 src/gen.assembler.h: build/asm.pl
 	perl build/asm.pl
 
-.PHONY: all clean test
+.PHONY: all clean test roast
 ...
 $tmpl =~ s!<<([a-zA-Z_-]+)>>!"\$$1"!gee;
 $tmpl =~ s!^    !\t!smg;

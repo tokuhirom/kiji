@@ -7,3 +7,4 @@ vgcore.*
 /Makefile
 /kiji.dSYM
 /callgrind.out.*
+/3rd/roast/
