@@ -9,6 +9,7 @@ extern "C" {
 #include "asm.h"
 #include "compiler/loop.h"
 #include "gen.assembler.h"
+#include "compiler/gen.nd.h"
 
 #include <list>
 #include <string>
@@ -22,22 +23,19 @@ extern "C" {
   Kiji_compiler_bytecode_size(self)
 
 
+#define CALL_ND(name) \
+  Kiji_compiler_nd_ ## name (self, node)
+
     // This reg returns register number contains true value.
     int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
       MVMThreadContext *tc = self->tc;
+      int ret = Kiji_compiler_compile_nodes(self, node);
+      if (ret != -18185963) {
+        return ret;
+      }
+
       // printf("node: %s\n", node.type_name());
       switch (node->type) {
-      case PVIP_NODE_POSTDEC: { // $i--
-        assert(node->children.size == 1);
-        if (node->children.nodes[0]->type != PVIP_NODE_VARIABLE) {
-          MVM_panic(MVM_exitcode_compunit, "The argument for postinc operator is not a variable");
-        }
-        auto reg_no = Kiji_compiler_get_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv));
-        auto i_tmp = Kiji_compiler_to_i(self, reg_no);
-        ASM_DEC_I(i_tmp);
-        Kiji_compiler_set_variable(self, newMVMStringFromPVIP(node->children.nodes[0]->pv), Kiji_compiler_to_o(self, i_tmp));
-        return reg_no;
-      }
       case PVIP_NODE_POSTINC: { // $i++
         assert(node->children.size == 1);
         if (node->children.nodes[0]->type != PVIP_NODE_VARIABLE) {

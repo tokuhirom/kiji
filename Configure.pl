@@ -202,7 +202,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
-KIJI_OBJS = src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop.o src/compiler/label.o src/compiler/core.o src/compiler/op_helper.o
+KIJI_OBJS = src/compiler/nd_ops.o src/compiler/gen.nd.o src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop.o src/compiler/label.o src/compiler/core.o src/compiler/op_helper.o
 
 KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h src/handy.h src/asm.h src/compiler/loop.h src/compiler/label.h
 
@@ -222,13 +222,18 @@ Makefile: Configure.pl
 kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
 	$(CXX) $(CXXFLAGS) -Wall $(CINCLUDE) -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
 
-src/kiji.o: $(KIJI_HEADERS) Makefile
-src/frame.o: $(KIJI_HEADERS) Makefile
-src/compiler.o: $(KIJI_HEADERS) Makefile src/compiler.cc
-src/compiler/loop.o: $(KIJI_HEADERS) Makefile src/compiler.cc
-src/compiler/label.o: $(KIJI_HEADERS) Makefile src/compiler.cc
-src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
-src/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS) Makefile
+src/kiji.o: $(KIJI_HEADERS)
+src/frame.o: $(KIJI_HEADERS)
+src/compiler.o: $(KIJI_HEADERS) src/compiler.cc src/compiler/gen.nd.h
+src/compiler/loop.o: $(KIJI_HEADERS)
+src/compiler/label.o: $(KIJI_HEADERS)
+src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
+src/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
+src/compiler/nd_ops.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
+src/compiler/gen.nd.o: src/compiler/gen.nd.h
+
+src/compiler/gen.nd.h: src/compiler/nd_*.c build/compiler.pl
+    perl build/compiler.pl
 
 .c.o: src/builtin.h
     $(CC) $(CINCLUDE) $(CFLAGS) -c -o $@ $<
