@@ -202,9 +202,9 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
-KIJI_OBJS = src/compiler/nd_ops.o src/compiler/gen.nd.o src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop.o src/compiler/label.o src/compiler/core.o src/compiler/op_helper.o
+KIJI_OBJS = src/compiler/nd_ops.o src/compiler/gen.nd.o src/compiler.o src/kiji.o src/asm.o src/builtin/array.o src/builtin/hash.o src/builtin/int.o src/builtin/io.o src/builtin/str.o src/commander.o src/frame.o src/compiler/loop.o src/compiler/label.o src/compiler/core.o src/compiler/op_helper.o src/compiler/nd_control.o
 
-KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h src/handy.h src/asm.h src/compiler/loop.h src/compiler/label.h
+KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h src/frame.h src/compiler.h src/handy.h src/asm.h src/compiler/loop.h src/compiler/label.h src/compiler/nd.h
 
 all: Makefile kiji
 

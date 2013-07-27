@@ -2,12 +2,7 @@
  */
 
 #include "moarvm.h"
-#include "pvip.h"
-#include "../compiler.h"
-#include "../gen.assembler.h"
-
-#define ND(name) \
-  int Kiji_compiler_nd_ ## name (KijiCompiler *self, const PVIPNode *node)
+#include "nd.h"
 
 /* $i-- */
 ND(NODE_POSTDEC) {

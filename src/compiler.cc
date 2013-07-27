@@ -151,44 +151,6 @@ extern "C" {
         // nop, for now.
         return UNKNOWN_REG;
       }
-      case PVIP_NODE_USE: {
-        assert(node->children.size==1);
-#define PVIPSTRING2STDSTRING(pv) std::string((pv)->buf, (pv)->len)
-        auto name = PVIPSTRING2STDSTRING(node->children.nodes[0]->pv);
-#undef PVIPSTRING2STDSTRING
-        if (name == "v6") {
-          return UNKNOWN_REG; // nop.
-        }
-        std::string path = std::string("lib/") + name + ".p6";
-        FILE *fp = fopen(path.c_str(), "rb");
-        if (!fp) {
-          MVM_panic(MVM_exitcode_compunit, "Cannot open file: %s", path.c_str());
-        }
-        PVIPString *error;
-        PVIPNode* root_node = PVIP_parse_fp(fp, 0, &error);
-        if (!root_node) {
-          MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", error->buf);
-        }
-
-        auto frame_no = Kiji_compiler_push_frame(self, path.c_str(), path.size());
-        ASM_CHECKARITY(0,0);
-        Kiji_compiler_do_compile(self, root_node);
-        ASM_RETURN();
-        Kiji_compiler_pop_frame(self);
-
-        auto code_reg = REG_OBJ();
-        ASM_GETCODE(code_reg, frame_no);
-        MVMCallsite* callsite = new MVMCallsite;
-        memset(callsite, 0, sizeof(MVMCallsite));
-        callsite->arg_count = 0;
-        callsite->num_pos = 0;
-        callsite->arg_flags = NULL;
-        auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
-        ASM_PREPARGS(callsite_no);
-        ASM_INVOKE_V(code_reg);
-
-        return UNKNOWN_REG;
-      }
       case PVIP_NODE_DIE: {
         int msg_reg = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
         int dst_reg = REG_OBJ();
