@@ -85,7 +85,6 @@ uint16_t Kiji_compiler_do_compare(KijiCompiler* self, PVIP_node_type_t type, uin
 void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm);
 int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node);
 void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc);
-void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -105,6 +104,7 @@ void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name);
 void Kiji_compiler_pop_frame(KijiCompiler* self);
 int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_len);
 Kiji_variable_type_t Kiji_compiler_find_variable_by_name(KijiCompiler* self, MVMString *name, int *lex_no, int *outer);
+void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm);
 #ifdef __cplusplus
 };
 #endif

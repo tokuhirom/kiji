@@ -1734,37 +1734,6 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
       self->num_sc_classes = 0;
     }
 
-    void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm) {
-      MVMThreadContext *tc = self->tc; // remove me
-      MVMCompUnit *cu = self->cu;
-
-      // finalize frame
-      for (int i=0; i<cu->num_frames; i++) {
-        MVMStaticFrame *frame = cu->frames[i];
-        // XXX Should I need to time sizeof(MVMRegister)??
-        frame->env_size = frame->num_lexicals * sizeof(MVMRegister);
-        Newxz(frame->static_env, frame->env_size, MVMRegister);
-
-        char buf[1023+1];
-        int len = snprintf(buf, 1023, "frame_cuuid_%d", i);
-        frame->cuuid = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
-      }
-
-      cu->main_frame = cu->frames[0];
-      assert(cu->main_frame->cuuid);
-
-      // Creates code objects to go with each of the static frames.
-      // ref create_code_objects in src/core/bytecode.c
-      Newxz(cu->coderefs, cu->num_frames, MVMObject*);
-
-      MVMObject* code_type = tc->instance->boot_types->BOOTCode;
-
-      for (int i = 0; i < cu->num_frames; i++) {
-        cu->coderefs[i] = REPR(code_type)->allocate(tc, STABLE(code_type));
-        ((MVMCode *)cu->coderefs[i])->body.sf = cu->frames[i];
-      }
-    }
-
     void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm) {
       MVMCompUnit *cu = self->cu;
       MVMThreadContext *tc = self->tc;
