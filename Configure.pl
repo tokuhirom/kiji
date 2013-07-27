@@ -76,7 +76,7 @@ MOARVM_OBJS = \
 3rd/MoarVM/src/6model/serialization.o               3rd/MoarVM/src/strings/unicode.o \
 3rd/MoarVM/src/core/args.o                          3rd/MoarVM/src/strings/utf16.o \
 3rd/MoarVM/src/core/bytecodedump.o                  3rd/MoarVM/src/strings/utf8.o \
-3rd/MoarVM/src/6model/containers.o 3rd/MoarVM/src/math/bigintops.o
+3rd/MoarVM/src/6model/containers.o 3rd/MoarVM/src/math/bigintops.o 3rd/MoarVM/src/6model/reprs/MVMException.o
 
 TOM = 3rd/MoarVM/3rdparty/libtommath/bn
 # libtommath files
