@@ -102,6 +102,8 @@ uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
 void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2);
 int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type);
 void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name);
+void Kiji_compiler_pop_frame(KijiCompiler* self);
+int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_len);
 #ifdef __cplusplus
 };
 #endif

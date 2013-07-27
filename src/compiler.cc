@@ -188,40 +188,6 @@ static MVMObject* object_compose(MVMThreadContext *tc, MVMObject *self, MVMObjec
       return self->cu->num_callsites-1;
     }
 
-KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
-  self->num_frames--;
-  Renew(self->frames, self->num_frames, KijiFrame*);
-  /* You don't  need to free the frame itself */
-}
-
-    int Kiji_compiler_push_frame(KijiCompiler* self, const std::string & name) {
-      MVMThreadContext *tc = self->tc;
-      assert(tc);
-      char *buf = (char*)malloc((name.size()+32)*sizeof(char));
-      int len = snprintf(buf, name.size()+31, "%s%d", name.c_str(), self->frame_no++);
-      // TODO Newxz
-      KijiFrame* frame = (KijiFrame*)malloc(sizeof(KijiFrame));
-      memset(frame, 0, sizeof(KijiFrame));
-      frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
-      free(buf);
-      if (self->num_frames != 0) {
-        Kiji_frame_set_outer(frame, Kiji_compiler_top_frame(self));
-      }
-      
-      /* push frame */
-      self->num_frames++;
-      Renew(self->frames, self->num_frames, KijiFrame*);
-      self->frames[self->num_frames-1] = frame;
-
-      /* store to compunit, too. */
-      MVMCompUnit *cu = self->cu;
-      cu->num_frames++;
-      Renew(cu->frames, cu->num_frames, MVMStaticFrame*);
-      cu->frames[cu->num_frames-1] = &(Kiji_compiler_top_frame(self)->frame);
-      cu->frames[cu->num_frames-1]->cu = cu;
-      cu->frames[cu->num_frames-1]->work_size = 0;
-      return cu->num_frames-1;
-    }
 
 
     void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const PVIPNode* node) {
@@ -386,7 +352,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
           MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", error->buf);
         }
 
-        auto frame_no = Kiji_compiler_push_frame(self, path);
+        auto frame_no = Kiji_compiler_push_frame(self, path.c_str(), path.size());
         ASM_CHECKARITY(0,0);
         Kiji_compiler_do_compile(self, root_node);
         ASM_RETURN();
@@ -441,7 +407,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         return UNKNOWN_REG;
       }
       case PVIP_NODE_LAMBDA: {
-        auto frame_no = Kiji_compiler_push_frame(self, "lambda");
+        auto frame_no = Kiji_compiler_push_frame(self, "lambda", strlen("lambda"));
         ASM_CHECKARITY(
           node->children.nodes[0]->children.size,
           node->children.nodes[0]->children.size
@@ -469,7 +435,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         return dst_reg;
       }
       case PVIP_NODE_BLOCK: {
-        auto frame_no = Kiji_compiler_push_frame(self, "block");
+        auto frame_no = Kiji_compiler_push_frame(self, "block", strlen("block"));
         ASM_CHECKARITY(0,0);
         for (int i=0; i<node->children.size; i++) {
           PVIPNode *n = node->children.nodes[i];
@@ -579,7 +545,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         );
 
         // Compile function body
-        auto frame_no = Kiji_compiler_push_frame(self, name);
+        auto frame_no = Kiji_compiler_push_frame(self, name.c_str(), name.size());
 
         // TODO process named params
         // TODO process types
@@ -681,7 +647,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
         );
 
         // Compile function body
-        auto frame_no = Kiji_compiler_push_frame(self, name);
+        auto frame_no = Kiji_compiler_push_frame(self, name.c_str(), name.size());
 
         // TODO process named params
         // TODO process types
@@ -1757,7 +1723,7 @@ KIJI_STATIC_INLINE void Kiji_compiler_pop_frame(KijiCompiler* self) {
       self->frame_no = 0;
 
       // init compunit.
-      Kiji_compiler_push_frame(self, std::string("frame_name_0"));
+      Kiji_compiler_push_frame(self, "frame_name_0", strlen("frame_name_0"));
 
       self->current_class_how = NULL;
 
