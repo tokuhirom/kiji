@@ -209,7 +209,7 @@ KIJI_HEADERS = src/gen.assembler.h src/compiler.h src/builtin.h src/commander.h 
 all: Makefile kiji
 
 roast: 3rd/roast/README kiji
-    prove --exec ./kiji -r 3rd/roast/
+    perl author/roast.pl
 
 3rd/roast/README:
     git clone git://github.com/perl6/roast.git 3rd/roast/
