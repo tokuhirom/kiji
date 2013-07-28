@@ -429,6 +429,15 @@ extern "C" {
         // Compile function body
         auto frame_no = Kiji_compiler_push_frame(self, name.c_str(), name.size());
 
+        if (node->children.nodes[2]->type == PVIP_NODE_EXPORTABLE) {
+          Kiji_frame_add_exportable(
+            Kiji_compiler_top_frame(self),
+            self->tc,
+            mvm_name,
+            frame_no
+          );
+        }
+
         // TODO process named params
         // TODO process types
         {
@@ -450,7 +459,7 @@ extern "C" {
 
         bool returned = false;
         {
-          const PVIPNode*stmts = node->children.nodes[2];
+          const PVIPNode*stmts = node->children.nodes[3];
           assert(stmts->type == PVIP_NODE_STATEMENTS);
           for (int i=0; i<stmts->children.size ; ++i) {
             PVIPNode * n=stmts->children.nodes[i];

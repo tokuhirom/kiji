@@ -157,6 +157,7 @@ typedef enum {
     PVIP_NODE_JUNCTIVE_OR, /* | */
     PVIP_NODE_UNICODE_CHAR, /* \c[] */
     PVIP_NODE_STUB, /* ... */
+    PVIP_NODE_EXPORTABLE, /* is exportable */
 } PVIP_node_type_t;
 
 typedef enum {
@@ -191,6 +192,7 @@ PVIPNode* PVIP_node_new_children(PVIP_node_type_t type);
 PVIPNode* PVIP_node_new_children1(PVIP_node_type_t type, PVIPNode* n1);
 PVIPNode* PVIP_node_new_children2(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2);
 PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2, PVIPNode *n3);
+PVIPNode* PVIP_node_new_children4(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2, PVIPNode *n3, PVIPNode *n4);
 PVIPNode* PVIP_node_new_int(PVIP_node_type_t type, int64_t n);
 PVIPNode* PVIP_node_new_intf(PVIP_node_type_t type, const char *str, size_t len, int base);
 PVIPNode* PVIP_node_new_string(PVIP_node_type_t type, const char* str, size_t len);

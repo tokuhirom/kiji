@@ -1,4 +1,4 @@
-/* vim:ts=2:sw=2:tw=0:
+/* vim:ts=2:sw=2:tw=0
  */
 #include "moarvm.h"
 #include "../compiler.h"
@@ -54,8 +54,8 @@ int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_l
   char *buf = (char*)malloc((name_len+32)*sizeof(char));
   int len = snprintf(buf, name_len+31, "%s%d", name, self->frame_no++);
   // TODO Newxz
-  KijiFrame* frame = (KijiFrame*)malloc(sizeof(KijiFrame));
-  memset(frame, 0, sizeof(KijiFrame));
+  KijiFrame* frame;
+  Newxz(frame, 1, KijiFrame);
   frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
   free(buf);
   if (self->num_frames != 0) {

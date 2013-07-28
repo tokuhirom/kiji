@@ -108,3 +108,23 @@ void Kiji_frame_push_handler(KijiFrame*self, MVMFrameHandler* handler) {
   Renew(self->frame.handlers, self->frame.num_handlers, MVMFrameHandler);
   self->frame.handlers[self->frame.num_handlers-1] = *handler;
 }
+
+void Kiji_frame_add_exportable(KijiFrame *self, MVMThreadContext *tc, MVMString *name, int frame_no) {
+  /* extend area */
+  KijiFrame *target = self;
+  while (target->outer) {
+    if (target->frame_type == KIJI_FRAME_TYPE_USE) {
+      break;
+    }
+    target = target->outer;
+  }
+  target->num_exportables++;
+  Renew(target->exportables, target->num_exportables, KijiExportableEntry);
+
+  /* And store data */
+  Newxz(target->exportables[target->num_exportables-1], 1, KijiExportableEntry);
+  KijiExportableEntry* e = target->exportables[target->num_exportables-1];
+  e->frame_no = frame_no;
+  e->name     = name;
+}
+

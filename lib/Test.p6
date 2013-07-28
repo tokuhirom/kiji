@@ -1,5 +1,6 @@
-say("PLAN");
+module Test;
 
-sub plan($n) {
-    say "1.." ~ $n ~ "\n";
+
+sub plan($n) is exportable {
+  say "1.." ~ $n ~ "\n";
 }

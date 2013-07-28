@@ -6,6 +6,7 @@
 #define YYSTYPE PVIPNode*
 #define YY_NAME(n) PVIP_##n
 #define YY_XTYPE PVIPParserContext
+#define NOP() PVIP_node_new_children(PVIP_NODE_NOP)
 
 /*
 
@@ -680,16 +681,18 @@ qw_item = < [^ >\n]+ > { $$ = PVIP_node_new_string(PVIP_NODE_STRING, yytext, yyl
 # TODO optimize
 funcdef =
     'my' ws - f:funcdef { $$ = PVIP_node_new_children1(PVIP_NODE_MY, f); }
-    | 'sub' ws+ i:ident - '(' - p:params? - ')' - b:block {
+    | 'sub' { p=NULL; e=NULL; } ws+ i:ident - '(' - p:params? - ')' - e:is_exportable? - b:block {
         if (!p) {
             p = PVIP_node_new_children(PVIP_NODE_PARAMS);
         }
-        $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, i, p, b);
+        $$ = PVIP_node_new_children4(PVIP_NODE_FUNC, i, p, e ? e : NOP(), b);
     }
     | 'sub' ws+ i:ident - b:block {
         PVIPNode* pp = PVIP_node_new_children(PVIP_NODE_PARAMS);
-        $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, i, pp, b);
+        $$ = PVIP_node_new_children4(PVIP_NODE_FUNC, i, pp, NOP(), b);
     }
+
+is_exportable = 'is' ws+ 'exportable' { $$ = PVIP_node_new_children(PVIP_NODE_EXPORTABLE); }
 
 lambda =
     '->' - ( !'{' p:params )? - b:block {
@@ -701,7 +704,7 @@ lambda =
     | b:block { $$ = PVIP_node_new_children1(PVIP_NODE_LAMBDA, b); }
     | 'sub' ws+ b:block {
         PVIPNode* pp = PVIP_node_new_children(PVIP_NODE_PARAMS);
-        $$ = PVIP_node_new_children3(PVIP_NODE_FUNC, PVIP_node_new_children(PVIP_NODE_NOP), pp, b);
+        $$ = PVIP_node_new_children4(PVIP_NODE_FUNC, PVIP_node_new_children(PVIP_NODE_NOP), pp, NOP(), b);
     }
 
 params =

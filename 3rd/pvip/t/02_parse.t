@@ -170,6 +170,7 @@ sub foo() { 4 }
     (func
         (ident "foo")
         (params)
+        (nop)
         (statements (int 4))))
 
 ===
@@ -180,6 +181,7 @@ sub foo() { return 5963 } say(foo());
     (func
         (ident "foo")
         (params)
+        (nop)
         (statements (return (int 5963))))
     (funcall
         (ident "say")
@@ -194,6 +196,7 @@ sub foo() { return 5963 }; say(foo());
     (func
         (ident "foo")
         (params)
+        (nop)
         (statements (return (int 5963))))
     (funcall
         (ident "say")
@@ -208,6 +211,7 @@ sub foo ($n) {  }
     (func
         (ident "foo")
         (params (variable "$n"))
+        (nop)
         (statements))
 )
 

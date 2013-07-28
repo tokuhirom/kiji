@@ -154,6 +154,20 @@ PVIPNode* PVIP_node_new_children3(PVIP_node_type_t type, PVIPNode* n1, PVIPNode 
     return node;
 }
 
+PVIPNode* PVIP_node_new_children4(PVIP_node_type_t type, PVIPNode* n1, PVIPNode *n2, PVIPNode *n3, PVIPNode *n4) {
+    assert(n1);
+    assert(n2);
+    assert(n3);
+    assert(n4);
+
+    PVIPNode* node = PVIP_node_new_children(type);
+    PVIP_node_push_child(node, n1);
+    PVIP_node_push_child(node, n2);
+    PVIP_node_push_child(node, n3);
+    PVIP_node_push_child(node, n4);
+    return node;
+}
+
 void PVIP_node_push_child(PVIPNode* node, PVIPNode* child) {
     assert(child);
 

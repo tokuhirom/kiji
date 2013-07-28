@@ -1,4 +1,4 @@
-/* vim:ts=2:sw=2:tw=0:
+/* vim:ts=2:sw=2:tw=0
  */
 
 #include "moarvm.h"
@@ -28,13 +28,30 @@ ND(NODE_USE) {
     MVM_panic(MVM_exitcode_compunit, "Cannot parse: %s", error->buf);
   }
 
+  /* Compile the library code. */
   int frame_no = Kiji_compiler_push_frame(self, path, path_len);
+  self->frames[frame_no]->frame_type = KIJI_FRAME_TYPE_USE;
   Safefree(path);
   ASM_CHECKARITY(0,0);
   Kiji_compiler_do_compile(self, root_node);
   ASM_RETURN();
+  KijiFrame * lib_frame = Kiji_compiler_top_frame(self);
   Kiji_compiler_pop_frame(self);
 
+  int i;
+  for (i=0; i<lib_frame->num_exportables; ++i) {
+    KijiExportableEntry*e = lib_frame->exportables[i];
+    MVMuint16 reg = REG_OBJ();
+    int lex = Kiji_compiler_push_lexical(self, e->name, MVM_reg_obj);
+    ASM_GETCODE(reg, e->frame_no);
+    ASM_BINDLEX(
+      lex,
+      0,
+      reg
+    );
+  }
+
+  /* And call it */
   uint16_t code_reg = REG_OBJ();
   ASM_GETCODE(code_reg, frame_no);
   MVMCallsite* callsite;

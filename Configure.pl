@@ -225,12 +225,13 @@ kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
 src/kiji.o: $(KIJI_HEADERS)
 src/frame.o: $(KIJI_HEADERS)
 src/compiler.o: $(KIJI_HEADERS) src/compiler.cc src/compiler/gen.nd.h
+src/compiler/core.o: $(KIJI_HEADERS)
 src/compiler/loop.o: $(KIJI_HEADERS)
 src/compiler/label.o: $(KIJI_HEADERS)
-src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
-src/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
 src/compiler/nd_ops.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
 src/compiler/gen.nd.o: src/compiler/gen.nd.h
+src/builtin/array.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
+src/asm.o: 3rd/MoarVM/moarvm $(KIJI_HEADERS)
 
 src/compiler/gen.nd.h: src/compiler/nd_*.c build/compiler.pl
     perl build/compiler.pl
