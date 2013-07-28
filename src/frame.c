@@ -52,7 +52,7 @@ Kiji_variable_type_t Kiji_find_variable_by_name(KijiFrame *f, MVMThreadContext* 
     // TODO I should use MVM_panic instead.
     printf("Unknown lexical variable in find_variable_by_name: ");
     MVM_string_say(tc, name);
-    exit(0);
+    exit(1);
 }
 
 void Kiji_frame_set_outer(KijiFrame *self, KijiFrame*framef) {

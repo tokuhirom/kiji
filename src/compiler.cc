@@ -566,7 +566,7 @@ extern "C" {
         auto n = node->children.nodes[0];
         if (n->type != PVIP_NODE_VARIABLE) {
           printf("self is variable: %s\n", PVIP_node_name(n->type));
-          exit(0);
+          exit(1);
         }
         MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
         Kiji_compiler_push_pkg_var(self, name);
@@ -580,7 +580,7 @@ extern "C" {
         auto n = node->children.nodes[0];
         if (n->type != PVIP_NODE_VARIABLE) {
           printf("self is variable: %s\n", PVIP_node_name(n->type));
-          exit(0);
+          exit(1);
         }
         MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
         int idx = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
