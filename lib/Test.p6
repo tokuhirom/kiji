@@ -24,3 +24,7 @@ sub ok($x, $msg="") is exportable {
     }
   }
 }
+
+sub is($got, $expected, $desc="") is exportable {
+    ok($got eq $expected, $desc);
+}
