@@ -443,7 +443,6 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
         int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
         ASM_PARAM_RP_O(reg, i);
         ASM_BINDLEX(lex, 0, reg);
-        ++i;
       }
     }
 

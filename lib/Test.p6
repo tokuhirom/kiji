@@ -6,11 +6,17 @@ sub plan($n) is exportable {
   say "1.." ~ $n ~ "\n";
 }
 
-sub ok($x) is exportable {
+sub ok($x, $msg="") is exportable {
   $CNT++;
   if ($x) {
-    say "ok $CNT";
+    print "ok $CNT";
+    if ($msg) {
+      print " - $msg\n";
+    }
   } else {
     say "not ok $CNT";
+    if ($msg) {
+      print " - $msg\n";
+    }
   }
 }
