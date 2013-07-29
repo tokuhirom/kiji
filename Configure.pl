@@ -42,6 +42,7 @@ sub main {
     push @LLIBS, qw(-luuid) if $^O eq 'linux';
 
     my @kiji_srcs = qw(
+        src/kiji.c
         src/compiler/nd_ops.c src/compiler/gen.nd.c src/asm.c src/builtin/array.c src/builtin/hash.c src/builtin/int.c src/builtin/io.c src/builtin/str.c src/commander.c src/frame.c src/compiler/loop.c src/compiler/label.c src/compiler/core.c src/compiler/op_helper.c src/compiler/nd_control.c
     );
     my @kiji_objs;

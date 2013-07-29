@@ -3,14 +3,11 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <assert.h>
-#include <fstream>
 #ifdef __unix__
 #include <unistd.h>
 #endif
-extern "C" {
 #include <moarvm.h>
 #include "commander.h"
-}
 #include "compiler.h"
 #include "asm.h"
 
