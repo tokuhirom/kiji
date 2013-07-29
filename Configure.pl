@@ -88,10 +88,14 @@ sub scan_sources {
         my @incs;
         $src =~ s/^#include "([^"]+)"/
             my $base = basename($1);
-            for (@PATH) {
-                my $path = File::Spec->catfile($_,$base);
-                if (-f $path) {
-                    push @incs, $path;
+            if ($base =~ m{\Agen\.}) {
+                push @incs, File::Spec->catfile("src", $base);
+            } else {
+                for (@PATH) {
+                    my $path = File::Spec->catfile($_,$base);
+                    if (-f $path) {
+                        push @incs, $path;
+                    }
                 }
             }
         /gesm;
