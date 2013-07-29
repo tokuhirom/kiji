@@ -13,28 +13,34 @@ __END__
 
 ===
 --- code
-sub sum($a, $b) { $a+$b }; say(sum(3,5))
+use Test;
+ok(1);
 --- expected
-8
-
-
-===
---- code
-sub sum($a, $b=9) { $a+$b }
-say(sum(3))
-say(sum(7, 6))
---- expected
-12
-13
+ok 1
 
 ===
 --- code
-sub s($b=5963) { $b }; say(s())
+use Test;
+ok(0);
 --- expected
-5963
+not ok 1
 
 ===
 --- code
-sub s($b=5963) { $b }; say(s(4649))
+use Test;
+ok(1, 'ah');
 --- expected
-4649
+ok 1 - ah
+
+===
+--- code
+use Test;
+ok(0, 'ah');
+--- expected
+not ok 1 - ah
+
+===
+--- code
+sub foo () { say("YO") } ; foo()
+--- expected
+YO

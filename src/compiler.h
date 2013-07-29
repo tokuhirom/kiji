@@ -122,6 +122,7 @@ void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext *
 int Kiji_compiler_str_cmp_binop(KijiCompiler * self, uint16_t lhs, uint16_t rhs, uint16_t op);
 int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
 size_t Kiji_compiler_push_callsite(KijiCompiler *self, MVMCallsite *callsite);
+MVMuint16 Kiji_compiler_count_min_arity(KijiCompiler* self, PVIPNode*node);
 #ifdef __cplusplus
 };
 #endif

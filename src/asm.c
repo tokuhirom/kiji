@@ -192,6 +192,7 @@ void Kiji_asm_dump_compunit(MVMCompUnit *cu) {
 void Kiji_asm_dump_frame(MVMStaticFrame *frame) {
   int x=0;
   int z=0;
+  printf("      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f\n");
   for (z=0; z<frame->bytecode_size; z++) {
     if (z%16==0) {
       if (z!=0) {

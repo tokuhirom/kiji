@@ -593,3 +593,16 @@ void Kiji_compiler_compile_array(KijiCompiler* self, uint16_t array_reg, const P
     ASM_PUSH_O(array_reg, reg);
   }
 }
+
+MVMuint16 Kiji_compiler_count_min_arity(KijiCompiler* self, PVIPNode*node) {
+  int i;
+  MVMuint16 ret = 0;
+  for (i=0; i<node->children.size; ++i) {
+    PVIPNode* n = node->children.nodes[i];
+    if (n->children.nodes[2]->type == PVIP_NODE_NOP) {
+      ++ret;
+    }
+  }
+  return ret;
+}
+

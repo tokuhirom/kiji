@@ -431,20 +431,44 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     // TODO process named params
     // TODO process types
     {
+      /* guess minimum argument count */
       ASM_CHECKARITY(
-          node->children.nodes[1]->children.size,
+          Kiji_compiler_count_min_arity(self, node->children.nodes[1]),
           node->children.nodes[1]->children.size
       );
 
+      /* expand params */
       for (int i=0; i<node->children.nodes[1]->children.size; ++i) {
-        PVIPNode* n = node->children.nodes[1]->children.nodes[i]->children.nodes[1];
+        PVIPNode* t = node->children.nodes[1]->children.nodes[i];
+        PVIPNode* n = t->children.nodes[1];
+        PVIPNode* defaults = t->children.nodes[2];
         int reg = REG_OBJ();
         MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
         int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
-        ASM_PARAM_RP_O(reg, i);
-        ASM_BINDLEX(lex, 0, reg);
+        if (defaults->type == PVIP_NODE_NOP) { /* no default value */
+          ASM_PARAM_RP_O(reg, i);
+          ASM_BINDLEX(lex, 0, reg);
+        } else { /* optional argument */
+          /*
+           *   param_rp_o reg, i, label_jmp
+           *   set reg, to_o(do_compile())
+           * label_jmp:
+           *   bindlex lex, 0, reg
+           */
+          LABEL(jmp);
+
+          Kiji_label_reserve(&jmp, Kiji_compiler_bytecode_size(self)+1+1+2+2);
+          ASM_PARAM_OP_O(reg, i, 0);
+
+          ASM_SET(reg, Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, defaults)));
+
+          Kiji_label_put(&jmp, self);
+
+          ASM_BINDLEX(lex, 0, reg);
+        }
       }
     }
+    /* Kiji_asm_dump_frame(&(Kiji_compiler_top_frame(self)->frame)); */
 
     bool returned = false;
     {

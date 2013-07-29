@@ -12,11 +12,15 @@ sub ok($x, $msg="") is exportable {
     print "ok $CNT";
     if ($msg) {
       print " - $msg\n";
+    } else {
+      print "\n";
     }
   } else {
-    say "not ok $CNT";
+    print "not ok $CNT";
     if ($msg) {
       print " - $msg\n";
+    } else {
+      print "\n";
     }
   }
 }

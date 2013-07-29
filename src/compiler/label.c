@@ -16,7 +16,7 @@ void Kiji_label_init(KijiLabel *self) {
 
 void Kiji_label_put(KijiLabel *self, KijiCompiler *compiler) {
   assert(self->address == -1);
-  self->address = Kiji_compiler_top_frame(compiler)->frame.bytecode_size;
+  self->address = Kiji_compiler_bytecode_size(compiler);
 
   /* rewrite reserved addresses */
   int i;
