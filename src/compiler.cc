@@ -15,12 +15,6 @@ extern "C" {
 #include <string>
 #include <vector>
 
-#define MEMORY_ERROR() \
-          MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
-
-#define ASM_BYTECODE_SIZE() \
-  Kiji_compiler_bytecode_size(self)
-
 // This reg returns register number contains true value.
 int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
   MVMThreadContext *tc = self->tc;
@@ -121,7 +115,7 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     assert(node->children.size ==1);
     auto reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
     if (reg < 0) {
-      MEMORY_ERROR();
+      MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
     }
     // ASM_RETURN_O(Kiji_compiler_to_o(self, reg));
     switch (Kiji_compiler_get_local_type(self, reg)) {
@@ -312,7 +306,7 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     std::string amp_name(std::string("&") + name);
     MVMString * mvm_name = MVM_string_utf8_decode(tc, tc->instance->VMString, amp_name.c_str(), amp_name.size());
     auto funclex = Kiji_compiler_push_lexical(self, mvm_name, MVM_reg_obj);
-    auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
+    auto func_pos = Kiji_compiler_bytecode_size(self) + 2 + 2;
     ASM_GETCODE(funcreg, 0);
     ASM_BINDLEX(
         funclex,
@@ -414,7 +408,7 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     std::string amp_name(std::string("&") + name);
     MVMString * mvm_name = MVM_string_utf8_decode(tc, tc->instance->VMString, amp_name.c_str(), amp_name.size());
     auto funclex = Kiji_compiler_push_lexical(self, mvm_name, MVM_reg_obj);
-    auto func_pos = ASM_BYTECODE_SIZE() + 2 + 2;
+    auto func_pos = Kiji_compiler_bytecode_size(self) + 2 + 2;
     ASM_GETCODE(funcreg, 0);
     ASM_BINDLEX(
         funclex,
