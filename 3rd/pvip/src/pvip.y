@@ -7,6 +7,7 @@
 #define YY_NAME(n) PVIP_##n
 #define YY_XTYPE PVIPParserContext
 #define NOP() PVIP_node_new_children(PVIP_NODE_NOP)
+#define MAYBE(n) (n) ? (n) : NOP()
 
 /*
 
@@ -708,11 +709,20 @@ lambda =
     }
 
 params =
-    v:term { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }
-    ( - ',' - v1:term { PVIP_node_push_child(v, v1); $$=v; } )*
+    v:param { $$ = PVIP_node_new_children1(PVIP_NODE_PARAMS, v); v=$$; }
+    ( - ',' - v1:param { PVIP_node_push_child(v, v1); $$=v; } )*
     { $$=v; }
 
-block = 
+# Str $x=""
+param =
+    { i=NULL; d=NULL; } ( i:ident ws+ )? v:term ( - d:param_defaults )? {
+        $$ = PVIP_node_new_children3(PVIP_NODE_PARAM, MAYBE(i), v, MAYBE(d));
+    }
+
+param_defaults =
+    '=' - e:expr { $$=e; }
+
+block =
     ('{' - s:statementlist - '}') {
         if (s->children.nodes[0]->type == PVIP_NODE_PAIR) {
             PVIP_node_change_type(s, PVIP_NODE_HASH);

@@ -192,8 +192,9 @@ extern "C" {
           node->children.nodes[0]->children.size,
           node->children.nodes[0]->children.size
         );
+        /* Compile parameters */
         for (int i=0; i<node->children.nodes[0]->children.size; i++) {
-          PVIPNode *n = node->children.nodes[0]->children.nodes[i];
+          PVIPNode *n = node->children.nodes[0]->children.nodes[i]->children.nodes[1];
           int reg = REG_OBJ();
           MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
           int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
@@ -447,7 +448,7 @@ extern "C" {
           );
 
           for (int i=0; i<node->children.nodes[1]->children.size; ++i) {
-            auto n = node->children.nodes[1]->children.nodes[i];
+            PVIPNode* n = node->children.nodes[1]->children.nodes[i]->children.nodes[1];
             int reg = REG_OBJ();
             MVMString * name = MVM_string_utf8_decode(tc, tc->instance->VMString, n->pv->buf, n->pv->len);
             int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);

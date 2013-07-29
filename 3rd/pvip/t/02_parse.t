@@ -210,7 +210,7 @@ sub foo ($n) {  }
 (statements
     (func
         (ident "foo")
-        (params (variable "$n"))
+        (params (param (nop) (variable "$n") (nop)))
         (nop)
         (statements))
 )

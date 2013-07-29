@@ -158,6 +158,7 @@ typedef enum {
     PVIP_NODE_UNICODE_CHAR, /* \c[] */
     PVIP_NODE_STUB, /* ... */
     PVIP_NODE_EXPORTABLE, /* is exportable */
+    PVIP_NODE_PARAM,
 } PVIP_node_type_t;
 
 typedef enum {
