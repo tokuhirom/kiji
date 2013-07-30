@@ -53,7 +53,6 @@ int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_l
   assert(tc);
   PVIPString * name_with_id = PVIP_string_new();
   PVIP_string_printf(name_with_id, "%s%d", name, self->frame_no++);
-  // TODO Newxz
   KijiFrame* frame;
   Newxz(frame, 1, KijiFrame);
   frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_with_id->buf, name_with_id->len);
