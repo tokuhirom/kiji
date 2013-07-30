@@ -51,13 +51,14 @@ void Kiji_compiler_pop_frame(KijiCompiler* self) {
 int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_len) {
   MVMThreadContext *tc = self->tc;
   assert(tc);
-  char *buf = (char*)malloc((name_len+32)*sizeof(char));
-  int len = snprintf(buf, name_len+31, "%s%d", name, self->frame_no++);
+  PVIPString * name_with_id = PVIP_string_new();
+  PVIP_string_printf(name_with_id, "%s%d", name, self->frame_no++);
   // TODO Newxz
   KijiFrame* frame;
   Newxz(frame, 1, KijiFrame);
-  frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, buf, len);
-  free(buf);
+  frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_with_id->buf, name_with_id->len);
+  PVIP_string_destroy(name_with_id);
+
   if (self->num_frames != 0) {
     Kiji_frame_set_outer(frame, Kiji_compiler_top_frame(self));
   }
