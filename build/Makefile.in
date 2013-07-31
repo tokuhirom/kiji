@@ -3,10 +3,8 @@
 EXE = 
 O   = .o
 
-CXXFLAGS=<?= $s->{CXXFLAGS} ?>
 CFLAGS=<?= $s->{CFLAGS} ?>
 
-CXX=clang++
 CINCLUDE = -I3rd/MoarVM/3rdparty/apr/include -I3rd/MoarVM/3rdparty/libatomic_ops/src -I3rd/MoarVM/3rdparty/libtommath/ -I3rd/MoarVM/3rdparty/sha1/ -I3rd/MoarVM/src -I3rd/MoarVM/3rdparty -I3rd/pvip/src/
 LLIBS=<?= $s->{LLIBS} ?>
 MOARVM_OBJS = \
@@ -166,7 +164,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
-KIJI_OBJS = src/compiler.o <?= join " ", @{$s->{KIJI_OBJS}} ?>
+KIJI_OBJS = <?= join " ", @{$s->{KIJI_OBJS}} ?>
 
 all: Makefile kiji
 
@@ -186,18 +184,15 @@ Makefile: Configure.pl build/Makefile.in
     exit 1
 
 kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
-	$(CXX) $(CXXFLAGS) -Wall $(CINCLUDE) -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
+	$(CC) $(CCFLAGS) -Wall $(CINCLUDE) -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
 
-src/compiler.o: src/gen.assembler.h src/compiler.cc src/compiler/gen.nd.h
+src/compiler/nd.h: src/gen.assembler.h
 
 src/compiler/gen.nd.h: src/compiler/nd_*.c build/compiler.pl
     perl build/compiler.pl
 
 .c.o: src/builtin.h
     $(CC) $(CINCLUDE) $(CFLAGS) -c -o $@ $<
-
-.cc.o: src/builtin.h
-	$(CXX) $(CINCLUDE) $(CXXFLAGS) -c -o $@ $<
 
 test: kiji
 	prove -r t
@@ -213,7 +208,7 @@ test: kiji
 	cd 3rd/pvip/ && make
 
 clean:
-	rm -rf kiji src/gen.* vgcore.* core Makefile 3rd/pvip/libpvip.a
+	rm -rf kiji src/gen.* vgcore.* core Makefile 3rd/pvip/libpvip.a $(KIJI_OBJS)
     cd 3rd/pvip/ && make clean
     cd 3rd/MoarVM/ && make clean
 

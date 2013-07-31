@@ -4,6 +4,10 @@
 #include "../compiler.h"
 #include "../gen.assembler.h"
 
+int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
+  return Kiji_compiler_compile_nodes(self, node);
+}
+
 /* lexical variable number by name */
 bool Kiji_compiler_find_lexical_by_name(KijiCompiler *self, MVMString *name, int *lex_no, int *outer) {
   return Kiji_frame_find_lexical_by_name(Kiji_compiler_top_frame(self), self->tc, name, lex_no, outer) == KIJI_TRUE;

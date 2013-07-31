@@ -24,19 +24,13 @@ sub main {
         'debug-asm!' => \my $debug_asm,
     );
 
-    my @CXXFLAGS = qw(-g);
     my @CFLAGS= qw(-g);
     if ($debug) {
-        # push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
-        # push @CFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
-        push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG );
-        push @CFLAGS, qw(-D_GLIBCXX_DEBUG );
+        push @CFLAGS, qw( );
     } else {
-        push @CXXFLAGS, qw(-O3);
         push @CFLAGS, qw(-O3);
     }
-    push @CXXFLAGS, qw(-DDEBUG_ASM) if $debug_asm;
-    push @CXXFLAGS, '-stdlib=libc++' if $^O eq 'darwin' || $ENV{TRAVIS};
+    push @CFLAGS, qw(-DDEBUG_ASM) if $debug_asm;
 
     my @LLIBS = qw(-lapr-1 -lpthread -lm);
     push @LLIBS, qw(-luuid) if $^O eq 'linux';
@@ -59,7 +53,6 @@ sub main {
     my $src = render_mt(
         $tmpl, {
             LLIBS => join(' ', @LLIBS),
-            CXXFLAGS => join(' ', @CXXFLAGS),
             CFLAGS => join(' ', @CFLAGS),
             ARGV => $ARGV,
             KIJI_OBJS => \@kiji_objs,
@@ -84,7 +77,7 @@ sub slurp {
 sub scan_sources {
     my @files = @_;
     my @ret;
-    my @PATH = qw(src/ 3rd/MoarVM/src/ 3rd/pvip/src/), (grep { -d $_ } <src/*>);
+    my @PATH = qw(src/ src/compiler/ 3rd/MoarVM/src/ 3rd/pvip/src/), (grep { -d $_ } <src/*>);
     for my $file (@files) {
         my $src = slurp($file);
         my @incs;
