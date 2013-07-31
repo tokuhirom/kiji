@@ -24,65 +24,6 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
 
   // printf("node: %s\n", node.type_name());
   switch (node->type) {
-  case PVIP_NODE_ATPOS: {
-    assert(node->children.size == 2);
-    auto container = Kiji_compiler_do_compile(self, node->children.nodes[0]);
-    auto idx       = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
-    auto dst = REG_OBJ();
-    ASM_ATPOS_O(dst, container, idx);
-    return dst;
-  }
-  case PVIP_NODE_IT_METHODCALL: {
-    PVIPNode * node_it = PVIP_node_new_string(PVIP_NODE_VARIABLE, "$_", 2);
-    PVIPNode * call = PVIP_node_new_children2(PVIP_NODE_METHODCALL, node_it, node->children.nodes[0]);
-    if (node->children.size == 2) {
-      PVIP_node_push_child(call, node->children.nodes[1]);
-    }
-    // TODO possibly memory leaks
-    return Kiji_compiler_do_compile(self, call);
-  }
-  case PVIP_NODE_METHODCALL: {
-    assert(node->children.size == 3 || node->children.size==2);
-    auto obj = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-    auto str = Kiji_compiler_push_string(self, newMVMStringFromPVIP(node->children.nodes[1]->pv));
-    auto meth = REG_OBJ();
-    auto ret = REG_OBJ();
-
-    ASM_FINDMETH(meth, obj, str);
-    ASM_ARG_O(0, obj);
-
-    if (node->children.size == 3) {
-      auto args = node->children.nodes[2];
-
-      MVMCallsite* callsite = new MVMCallsite;
-      memset(callsite, 0, sizeof(MVMCallsite));
-      callsite->arg_count = 1+args->children.size;
-      callsite->num_pos = 1+args->children.size;
-      callsite->arg_flags = new MVMCallsiteEntry[1+args->children.size];
-      callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
-      int i=1;
-      for (int j=0; j<args->children.size; j++) {
-        PVIPNode* a= args->children.nodes[j];
-        callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
-        ASM_ARG_O(i, Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, a)));
-        ++i;
-      }
-      auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
-      ASM_PREPARGS(callsite_no);
-    } else {
-      MVMCallsite* callsite = new MVMCallsite;
-      memset(callsite, 0, sizeof(MVMCallsite));
-      callsite->arg_count = 1;
-      callsite->num_pos = 1;
-      callsite->arg_flags = new MVMCallsiteEntry[1];
-      callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
-      auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
-      ASM_PREPARGS(callsite_no);
-    }
-
-    ASM_INVOKE_O(ret, meth);
-    return ret;
-  }
   case PVIP_NODE_CONDITIONAL: {
     /*
       *   cond
@@ -97,17 +38,17 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
       */
     LABEL(label_end);
     LABEL(label_else);
-    auto dst_reg = REG_OBJ();
+    MVMuint16 dst_reg = REG_OBJ();
 
-      auto cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+      int cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
       Kiji_compiler_unless_any(self, cond_reg, &label_else);
 
-      auto if_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
+      int if_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
       ASM_SET(dst_reg, Kiji_compiler_to_o(self, if_reg));
       Kiji_compiler_goto(self, &label_end);
 
     LABEL_PUT(label_else);
-      auto else_reg = Kiji_compiler_do_compile(self, node->children.nodes[2]);
+      int else_reg = Kiji_compiler_do_compile(self, node->children.nodes[2]);
       ASM_SET(dst_reg, Kiji_compiler_to_o(self, else_reg));
 
     LABEL_PUT(label_end);
@@ -115,8 +56,8 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     return dst_reg;
   }
   case PVIP_NODE_NOT: {
-    auto src_reg = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-    auto dst_reg = REG_INT64();
+    MVMuint16 src_reg = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    MVMuint16 dst_reg = REG_INT64();
     ASM_NOT_I(dst_reg, src_reg);
     return dst_reg;
   }
@@ -124,22 +65,22 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     return -1;
   case PVIP_NODE_ATKEY: {
     assert(node->children.size == 2);
-    auto dst       = REG_OBJ();
-    auto container = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-    auto key       = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+    MVMuint16 dst       = REG_OBJ();
+    MVMuint16 container = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    MVMuint16 key       = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
     ASM_ATKEY_O(dst, container, key);
     return dst;
   }
   case PVIP_NODE_HASH: {
-    auto hashtype = REG_OBJ();
-    auto hash     = REG_OBJ();
+    MVMuint16 hashtype = REG_OBJ();
+    MVMuint16 hash     = REG_OBJ();
     ASM_HLLHASH(hashtype);
     ASM_CREATE(hash, hashtype);
     for (int i=0; i<node->children.size; i++) {
       PVIPNode* pair = node->children.nodes[i];
       assert(pair->type == PVIP_NODE_PAIR);
-      auto k = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, pair->children.nodes[0]));
-      auto v = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, pair->children.nodes[1]));
+      MVMuint16 k = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, pair->children.nodes[0]));
+      MVMuint16 v = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, pair->children.nodes[1]));
       ASM_BINDKEY_O(hash, k, v);
     }
     return hash;
@@ -169,10 +110,10 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     LABEL(label_both_true);
     LABEL(label_end);
 
-    auto dst_reg = REG_OBJ();
+    MVMuint16 dst_reg = REG_OBJ();
 
-      auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-      auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+      MVMuint16 arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+      MVMuint16 arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
       Kiji_compiler_if_any(self, arg1, &label_a1_true);
       Kiji_compiler_unless_any(self, arg2, &label_both_false);
       ASM_SET(dst_reg, arg2);
@@ -202,10 +143,10 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     // label_end:
     LABEL(label_end);
     LABEL(label_a1);
-    auto dst_reg = REG_OBJ();
-      auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    MVMuint16 dst_reg = REG_OBJ();
+      MVMuint16 arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
       Kiji_compiler_if_any(self, arg1, &label_a1);
-      auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+      MVMuint16 arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
       ASM_SET(dst_reg, arg2);
       Kiji_compiler_goto(self, &label_end);
     LABEL_PUT(label_a1);
@@ -225,10 +166,10 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     // label_end:
     LABEL(label_end);
     LABEL(label_a1);
-    auto dst_reg = REG_OBJ();
-      auto arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    MVMuint16 dst_reg = REG_OBJ();
+      MVMuint16 arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
       Kiji_compiler_unless_any(self, arg1, &label_a1);
-      auto arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+      MVMuint16 arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
       ASM_SET(dst_reg, arg2);
       Kiji_compiler_goto(self, &label_end);
     LABEL_PUT(label_a1);
@@ -236,26 +177,6 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
     LABEL_PUT(label_end);
     return dst_reg;
   }
-  case PVIP_NODE_UNARY_PLUS: {
-    return Kiji_compiler_to_n(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-  }
-  case PVIP_NODE_UNARY_MINUS: {
-    auto reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
-    if (Kiji_compiler_get_local_type(self, reg) == MVM_reg_int64) {
-      ASM_NEG_I(reg, reg);
-      return reg;
-    } else {
-      reg = Kiji_compiler_to_n(self, reg);
-      ASM_NEG_N(reg, reg);
-      return reg;
-    }
-  }
-  case PVIP_NODE_CHAIN:
-    if (node->children.size==1) {
-      return Kiji_compiler_do_compile(self, node->children.nodes[0]);
-    } else {
-      return Kiji_compiler_compile_chained_comparisions(self, node);
-    }
   case PVIP_NODE_FUNCALL: {
     assert(node->children.size == 2);
     const PVIPNode*ident = node->children.nodes[0];
@@ -284,20 +205,20 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
       } else if (std::string(ident->pv->buf, ident->pv->len) == "open") {
         // TODO support arguments
         assert(args->children.size == 1);
-        auto fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
-        auto dst_reg_o = REG_OBJ();
+        int fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
+        MVMuint16 dst_reg_o = REG_OBJ();
         // TODO support latin1, etc.
-        auto mode = Kiji_compiler_push_string(self, newMVMString_nolen("r"));
-        auto mode_s = REG_STR();
+        int mode = Kiji_compiler_push_string(self, newMVMString_nolen("r"));
+        MVMuint16 mode_s = REG_STR();
         ASM_CONST_S(mode_s, mode);
         ASM_OPEN_FH(dst_reg_o, fname_s, mode_s);
         return dst_reg_o;
       } else if (std::string(ident->pv->buf, ident->pv->len) == "slurp") {
         assert(args->children.size <= 2);
         assert(args->children.size != 2 && "Encoding option is not supported yet");
-        auto fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
-        auto dst_reg_s = REG_STR();
-        auto encoding_s = REG_STR();
+        MVMuint16 fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
+        MVMuint16 dst_reg_s = REG_STR();
+        MVMuint16 encoding_s = REG_STR();
         ASM_CONST_S(encoding_s, Kiji_compiler_push_string(self, newMVMString_nolen("utf8"))); // TODO support latin1, etc.
         ASM_SLURP(dst_reg_s, fname_s, encoding_s);
         return dst_reg_s;
@@ -333,7 +254,7 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
 
         for (int i=0; i<args->children.size; i++) {
           PVIPNode *a = args->children.nodes[i];
-          auto reg = Kiji_compiler_do_compile(self, a);
+          int reg = Kiji_compiler_do_compile(self, a);
           if (reg<0) {
             MVM_panic(MVM_exitcode_compunit, "Compilation error. You should not pass void function as an argument: %s", PVIP_node_name(a->type));
           }
@@ -360,7 +281,7 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
           }
         }
 
-        auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
+        int callsite_no = Kiji_compiler_push_callsite(self, callsite);
         ASM_PREPARGS(callsite_no);
 
         int i=0;
@@ -384,7 +305,7 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
           ++i;
         }
       }
-      auto dest_reg = REG_OBJ(); // ctx
+      MVMuint16 dest_reg = REG_OBJ(); // ctx
       ASM_INVOKE_O(
           dest_reg,
           func_reg_no

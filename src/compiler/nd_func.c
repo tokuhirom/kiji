@@ -226,3 +226,57 @@ ND(NODE_FUNC) {
 
   return funcreg;
 }
+
+ND(NODE_IT_METHODCALL) {
+  PVIPNode * node_it = PVIP_node_new_string(PVIP_NODE_VARIABLE, "$_", 2);
+  PVIPNode * call = PVIP_node_new_children2(PVIP_NODE_METHODCALL, node_it, node->children.nodes[0]);
+  if (node->children.size == 2) {
+    PVIP_node_push_child(call, node->children.nodes[1]);
+  }
+  /* TODO possibly memory leaks */
+  return Kiji_compiler_do_compile(self, call);
+}
+
+ND(NODE_METHODCALL) {
+  assert(node->children.size == 3 || node->children.size==2);
+  MVMuint16 obj = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+  int str = Kiji_compiler_push_string(self, newMVMStringFromPVIP(node->children.nodes[1]->pv));
+  MVMuint16 meth = REG_OBJ();
+  MVMuint16 ret = REG_OBJ();
+
+  ASM_FINDMETH(meth, obj, str);
+  ASM_ARG_O(0, obj);
+
+  if (node->children.size == 3) {
+    PVIPNode* args = node->children.nodes[2];
+
+    MVMCallsite* callsite;
+    Newxz(callsite, 1, MVMCallsite);
+    callsite->arg_count = 1+args->children.size;
+    callsite->num_pos = 1+args->children.size;
+    Newxz(callsite->arg_flags, 1+args->children.size, MVMCallsiteEntry);
+    callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
+    int i=1;
+    int j;
+    for (j=0; j<args->children.size; j++) {
+      PVIPNode* a= args->children.nodes[j];
+      callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
+      ASM_ARG_O(i, Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, a)));
+      ++i;
+    }
+    auto callsite_no = Kiji_compiler_push_callsite(self, callsite);
+    ASM_PREPARGS(callsite_no);
+  } else {
+    MVMCallsite* callsite;
+    Newxz(callsite, 1, MVMCallsite);
+    callsite->arg_count = 1;
+    callsite->num_pos = 1;
+    Newxz(callsite->arg_flags, 1, MVMCallsiteEntry);
+    callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
+    int callsite_no = Kiji_compiler_push_callsite(self, callsite);
+    ASM_PREPARGS(callsite_no);
+  }
+
+  ASM_INVOKE_O(ret, meth);
+  return ret;
+}

@@ -215,3 +215,34 @@ ND(NODE_STRING_CONCAT) {
   return dst_reg;
 }
 
+ND(NODE_UNARY_PLUS) {
+  return Kiji_compiler_to_n(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+}
+ND(NODE_UNARY_MINUS) {
+  int reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+  if (Kiji_compiler_get_local_type(self, reg) == MVM_reg_int64) {
+    ASM_NEG_I(reg, reg);
+    return reg;
+  } else {
+    reg = Kiji_compiler_to_n(self, reg);
+    ASM_NEG_N(reg, reg);
+    return reg;
+  }
+}
+
+ND(NODE_CHAIN) {
+  if (node->children.size==1) {
+    return Kiji_compiler_do_compile(self, node->children.nodes[0]);
+  } else {
+    return Kiji_compiler_compile_chained_comparisions(self, node);
+  }
+}
+
+ND(NODE_ATPOS) {
+  assert(node->children.size == 2);
+  int container = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+  MVMuint16 idx       = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+  MVMuint16 dst = REG_OBJ();
+  ASM_ATPOS_O(dst, container, idx);
+  return dst;
+}
