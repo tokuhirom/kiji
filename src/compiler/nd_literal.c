@@ -120,3 +120,20 @@ ND(NODE_ARRAY) {
   }
   return array_reg;
 }
+
+ND(NODE_HASH) {
+  MVMuint16 hashtype = REG_OBJ();
+  MVMuint16 hash     = REG_OBJ();
+  ASM_HLLHASH(hashtype);
+  ASM_CREATE(hash, hashtype);
+  int i;
+  for (i=0; i<node->children.size; i++) {
+    PVIPNode* pair = node->children.nodes[i];
+    assert(pair->type == PVIP_NODE_PAIR);
+    MVMuint16 k = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, pair->children.nodes[0]));
+    MVMuint16 v = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, pair->children.nodes[1]));
+    ASM_BINDKEY_O(hash, k, v);
+  }
+  return hash;
+}
+

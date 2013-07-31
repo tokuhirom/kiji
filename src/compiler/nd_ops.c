@@ -246,3 +246,126 @@ ND(NODE_ATPOS) {
   ASM_ATPOS_O(dst, container, idx);
   return dst;
 }
+
+ND(NODE_REPEAT_S) { /* x operator */
+  MVMuint16 dst_reg = REG_STR();
+  PVIPNode* lhs = node->children.nodes[0];
+  PVIPNode* rhs = node->children.nodes[1];
+  ASM_REPEAT_S(
+    dst_reg,
+    Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs)),
+    Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, rhs))
+  );
+  return dst_reg;
+}
+
+ND(NODE_NOT) {
+  MVMuint16 src_reg = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+  MVMuint16 dst_reg = REG_INT64();
+  ASM_NOT_I(dst_reg, src_reg);
+  return dst_reg;
+}
+
+ND(NODE_ATKEY) {
+  assert(node->children.size == 2);
+  MVMuint16 dst       = REG_OBJ();
+  MVMuint16 container = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+  MVMuint16 key       = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+  ASM_ATKEY_O(dst, container, key);
+  return dst;
+}
+
+ND(NODE_LOGICAL_XOR) { // '^^'
+  //   calc_arg1
+  //   calc_arg2
+  //   if_o arg1, label_a1_true
+  //   # arg1 is false.
+  //   unless_o arg2, label_both_false
+  //   # arg1=false, arg2=true
+  //   set dst_reg, arg2
+  //   goto label_end
+  // label_both_false:
+  //   null dst_reg
+  //   goto label_end
+  // label_a1_true:
+  //   if_o arg2, label_both_true
+  //   set dst_reg, arg1
+  //   goto label_end
+  // label_both_true:
+  //   set dst_reg, arg1
+  //   goto label_end
+  // label_end:
+  LABEL(label_both_false);
+  LABEL(label_a1_true);
+  LABEL(label_both_true);
+  LABEL(label_end);
+
+  MVMuint16 dst_reg = REG_OBJ();
+
+    MVMuint16 arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    MVMuint16 arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+    Kiji_compiler_if_any(self, arg1, &label_a1_true);
+    Kiji_compiler_unless_any(self, arg2, &label_both_false);
+    ASM_SET(dst_reg, arg2);
+    Kiji_compiler_goto(self, &label_end);
+  LABEL_PUT(label_both_false);
+    ASM_SET(dst_reg, arg1);
+    Kiji_compiler_goto(self, &label_end);
+  LABEL_PUT(label_a1_true); // a1:true, a2:unknown
+    Kiji_compiler_if_any(self, arg2, &label_both_true);
+    ASM_SET(dst_reg, arg1);
+    Kiji_compiler_goto(self, &label_end);
+  LABEL_PUT(label_both_true);
+    ASM_NULL(dst_reg);
+    Kiji_compiler_goto(self, &label_end);
+  LABEL_PUT(label_end);
+  return dst_reg;
+}
+
+ND(NODE_LOGICAL_OR) { // '||'
+  //   calc_arg1
+  //   if_o arg1, label_a1
+  //   calc_arg2
+  //   set dst_reg, arg2
+  //   goto label_end
+  // label_a1:
+  //   set dst_reg, arg1
+  //   goto label_end // omit-able
+  // label_end:
+  LABEL(label_end);
+  LABEL(label_a1);
+  MVMuint16 dst_reg = REG_OBJ();
+    MVMuint16 arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    Kiji_compiler_if_any(self, arg1, &label_a1);
+    MVMuint16 arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+    ASM_SET(dst_reg, arg2);
+    Kiji_compiler_goto(self, &label_end);
+  LABEL_PUT(label_a1);
+    ASM_SET(dst_reg, arg1);
+  LABEL_PUT(label_end);
+  return dst_reg;
+}
+
+ND(NODE_LOGICAL_AND) { // '&&'
+  //   calc_arg1
+  //   unless_o arg1, label_a1
+  //   calc_arg2
+  //   set dst_reg, arg2
+  //   goto label_end
+  // label_a1:
+  //   set dst_reg, arg1
+  //   goto label_end // omit-able
+  // label_end:
+  LABEL(label_end);
+  LABEL(label_a1);
+  MVMuint16 dst_reg = REG_OBJ();
+    MVMuint16 arg1 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    Kiji_compiler_unless_any(self, arg1, &label_a1);
+    MVMuint16 arg2 = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[1]));
+    ASM_SET(dst_reg, arg2);
+    Kiji_compiler_goto(self, &label_end);
+  LABEL_PUT(label_a1);
+    ASM_SET(dst_reg, arg1);
+  LABEL_PUT(label_end);
+  return dst_reg;
+}

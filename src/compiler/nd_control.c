@@ -404,14 +404,38 @@ ND(NODE_STATEMENTS) {
   return retval;
 }
 
-ND(NODE_REPEAT_S) { /* x operator */
-  MVMuint16 dst_reg = REG_STR();
-  PVIPNode* lhs = node->children.nodes[0];
-  PVIPNode* rhs = node->children.nodes[1];
-  ASM_REPEAT_S(
-    dst_reg,
-    Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs)),
-    Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, rhs))
-  );
+ND(NODE_CONDITIONAL) {
+  /*
+    *   cond
+    *   unless_o cond, :label_else
+    *   if_body
+    *   copy dst_reg, result
+    *   goto :label_end
+    * label_else:
+    *   else_bdoy
+    *   copy dst_reg, result
+    * label_end:
+    */
+  LABEL(label_end);
+  LABEL(label_else);
+  MVMuint16 dst_reg = REG_OBJ();
+
+    int cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+    Kiji_compiler_unless_any(self, cond_reg, &label_else);
+
+    int if_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
+    ASM_SET(dst_reg, Kiji_compiler_to_o(self, if_reg));
+    Kiji_compiler_goto(self, &label_end);
+
+  LABEL_PUT(label_else);
+    int else_reg = Kiji_compiler_do_compile(self, node->children.nodes[2]);
+    ASM_SET(dst_reg, Kiji_compiler_to_o(self, else_reg));
+
+  LABEL_PUT(label_end);
+
   return dst_reg;
+}
+
+ND(NODE_NOP) {
+  return -1;
 }
