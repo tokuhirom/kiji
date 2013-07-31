@@ -164,7 +164,7 @@ LIBTOMMATH_BIN = $(TOM)core$(O) \
         $(TOM)_s_mp_sqr$(O) \
         $(TOM)_s_mp_sub$(O) \
 
-KIJI_OBJS = <?= join " ", @{$s->{KIJI_OBJS}} ?>
+KIJI_OBJS = src/compiler/gen.nd.o <?= join " ", @{$s->{KIJI_OBJS}} ?>
 
 all: Makefile kiji
 
@@ -187,6 +187,9 @@ kiji: 3rd/MoarVM/moarvm $(KIJI_OBJS) 3rd/pvip/libpvip.a
 	$(CC) $(CCFLAGS) -Wall $(CINCLUDE) -o kiji $(KIJI_OBJS) $(MOARVM_OBJS) 3rd/MoarVM/3rdparty/apr/.libs/libapr-1.a 3rd/MoarVM/3rdparty/sha1/sha1.o $(LIBTOMMATH_BIN) $(LLIBS) 3rd/pvip/libpvip.a
 
 src/compiler/nd.h: src/gen.assembler.h
+
+src/compiler/gen.nd.c: src/compiler/gen.nd.h
+    perl build/compiler.pl
 
 src/compiler/gen.nd.h: src/compiler/nd_*.c build/compiler.pl
     perl build/compiler.pl

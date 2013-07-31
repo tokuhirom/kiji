@@ -329,6 +329,16 @@ static int Kiji_builtin_function_slurp(KijiCompiler *self, const PVIPNode *args)
   return dst_reg_s;
 }
 
+static int Kiji_builtin_function_abs(KijiCompiler *self, const PVIPNode *args) {
+  if (args->children.size != 1) {
+    MVM_panic(MVM_exitcode_compunit, "Too much arguments for builtin function 'abs'");
+  }
+  // TODO support abs_n?
+  auto r = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, args->children.nodes[0]));
+  ASM_ABS_I(r, r);
+  return r;
+}
+
 ND(NODE_FUNCALL) {
   assert(node->children.size == 2);
   const PVIPNode*ident = node->children.nodes[0];
@@ -343,6 +353,8 @@ ND(NODE_FUNCALL) {
       return Kiji_builtin_function_print(self, args);
     } else if (PVIP_string_cmp(ident->pv, "open")) {
       return Kiji_builtin_function_open(self, args);
+    } else if (PVIP_string_cmp(ident->pv, "abs")) {
+      return Kiji_builtin_function_abs(self, args);
     } else if (PVIP_string_cmp(ident->pv, "slurp")) {
       return Kiji_builtin_function_slurp(self, args);
     }

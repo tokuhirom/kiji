@@ -72,13 +72,6 @@ ND(NODE_BLSHIFT) { // +<
   return r;
 }
 
-ND(NODE_ABS) {
-  // TODO support abs_n?
-  auto r = Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
-  ASM_ABS_I(r, r);
-  return r;
-}
-
 ND(NODE_BIN_AND) {
   return Kiji_compiler_binary_binop(self, node, MVM_OP_band_i);
 }
