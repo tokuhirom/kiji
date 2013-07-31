@@ -27,3 +27,66 @@ ND(NODE_NUMBER) {
   return reg_num;
 }
 
+ND(NODE_VARIABLE) {
+  // copy lexical variable to register
+  return Kiji_compiler_get_variable(self, newMVMStringFromPVIP(node->pv));
+}
+
+ND(NODE_CLARGS) { // @*ARGS
+  MVMuint16 retval = REG_OBJ();
+  ASM_WVAL(retval, 0,0);
+  return retval;
+}
+
+ND(NODE_CLASS) {
+  return Kiji_compiler_compile_class(self, node);
+}
+
+ND(NODE_IDENT) {
+  int lex_no, outer;
+
+  // auto lex_no = find_lexical_by_name(std::string(node->pv->buf, node->pv->len), outer);
+  // class Foo { }; Foo;
+  if (Kiji_compiler_find_lexical_by_name(self, newMVMStringFromPVIP(node->pv), &lex_no, &outer)) {
+    MVMuint16 reg_no = REG_OBJ();
+    ASM_GETLEX(
+      reg_no,
+      lex_no,
+      outer // outer frame
+    );
+    return reg_no;
+  // sub fooo { }; foooo;
+  } else {
+    PVIPString *amp_name = PVIP_string_new();
+    PVIP_string_concat(amp_name, "&", strlen("&"));
+    PVIP_string_concat(amp_name, node->pv->buf, node->pv->len);
+    if (Kiji_compiler_find_lexical_by_name(self, newMVMStringFromPVIP(amp_name), &lex_no, &outer)) {
+      PVIP_string_destroy(amp_name);
+      MVMuint16 func_reg_no = REG_OBJ();
+      ASM_GETLEX(
+        func_reg_no,
+        lex_no,
+        outer // outer frame
+      );
+
+      MVMCallsite* callsite;
+      Newxz(callsite, 1, MVMCallsite);
+      callsite->arg_count = 0;
+      callsite->num_pos = 0;
+      Newxz(callsite->arg_flags, 0, MVMCallsiteEntry);
+
+      int callsite_no = Kiji_compiler_push_callsite(self, callsite);
+      ASM_PREPARGS(callsite_no);
+
+      MVMuint16 dest_reg = REG_OBJ(); // ctx
+      ASM_INVOKE_O(
+          dest_reg,
+          func_reg_no
+      );
+      return dest_reg;
+    }
+    PVIP_string_destroy(amp_name);
+  }
+  PVIP_string_concat(node->pv, "\0", 1);
+  MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", node->pv->buf);
+}

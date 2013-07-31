@@ -219,3 +219,177 @@ ND(NODE_USE) {
 
   return UNKNOWN_REG;
 }
+
+ND(NODE_FOR) {
+  //   init_iter
+  // label_for:
+  //   body
+  //   shift iter
+  //   if_o label_for
+  // label_end:
+
+  LOOP_ENTER;
+    MVMuint16 src_reg = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+    MVMuint16 iter_reg = REG_OBJ();
+    LABEL(label_end);
+    ASM_ITER(iter_reg, src_reg);
+    Kiji_compiler_unless_any(self, iter_reg, &label_end);
+
+  LABEL(label_for); LABEL_PUT(label_for);
+  LOOP_NEXT;
+
+    MVMuint16 val = REG_OBJ();
+    ASM_SHIFT_O(val, iter_reg);
+
+    if (node->children.nodes[1]->type == PVIP_NODE_LAMBDA) {
+      int body = Kiji_compiler_do_compile(self, node->children.nodes[1]);
+      MVMCallsite* callsite;
+      Newxz(callsite, 1, MVMCallsite);
+      callsite->arg_count = 1;
+      callsite->num_pos = 1;
+      Newxz(callsite->arg_flags, 1, MVMCallsiteEntry);
+      callsite->arg_flags[0] = MVM_CALLSITE_ARG_OBJ;
+      int callsite_no = Kiji_compiler_push_callsite(self, callsite);
+      ASM_PREPARGS(callsite_no);
+      ASM_ARG_O(0, val);
+      ASM_INVOKE_V(body);
+    } else {
+      MVMString * name = MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, "$_", strlen("$_"));
+      int it = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
+      ASM_BINDLEX(it, 0, val);
+      Kiji_compiler_do_compile(self, node->children.nodes[1]);
+    }
+
+    Kiji_compiler_if_any(self, iter_reg, &label_for);
+
+  LABEL_PUT(label_end);
+  LOOP_LAST;
+
+  LOOP_LEAVE;
+
+  return UNKNOWN_REG;
+}
+
+ND(NODE_OUR) {
+  if (node->children.size != 1) {
+    printf("NOT IMPLEMENTED\n");
+    abort();
+  }
+  PVIPNode* n = node->children.nodes[0];
+  if (n->type != PVIP_NODE_VARIABLE) {
+    printf("self is variable: %s\n", PVIP_node_name(n->type));
+    exit(1);
+  }
+  MVMString * name = MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, n->pv->buf, n->pv->len);
+  Kiji_compiler_push_pkg_var(self, name);
+  return UNKNOWN_REG;
+}
+
+ND(NODE_MY) {
+  if (node->children.size != 1) {
+    printf("NOT IMPLEMENTED\n");
+    abort();
+  }
+  PVIPNode* n = node->children.nodes[0];
+  if (n->type != PVIP_NODE_VARIABLE) {
+    printf("self is variable: %s\n", PVIP_node_name(n->type));
+    exit(1);
+  }
+  MVMString * name = MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, n->pv->buf, n->pv->len);
+  int idx = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
+  return idx;
+}
+
+ND(NODE_UNLESS) {
+  //   cond
+  //   if_o label_end
+  //   body
+  // label_end:
+  int cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+
+  LABEL(label_end);
+  Kiji_compiler_if_any(self, cond_reg, &label_end);
+  int dst_reg = Kiji_compiler_do_compile(self, node->children.nodes[1]);
+  LABEL_PUT(label_end);
+  return dst_reg;
+}
+
+ND(NODE_IF) {
+  //   if_cond
+  //   if_o if_cond, label_if
+  //   elsif1_cond
+  //   if_o elsif1_cond, label_elsif1
+  //   elsif2_cond
+  //   if_o elsif2_cond, label_elsif2
+  // label_else:
+  //   else_body
+  //   goto label_end
+  // label_if:
+  //   if_body
+  //   goto lable_end
+  // label_elsif1:
+  //   elsif2_body
+  //   goto lable_end
+  // label_elsif2:
+  //   elsif1_body
+  //   goto lable_end
+  // label_end:
+
+  int if_cond_reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+  PVIPNode* if_body = node->children.nodes[1];
+  MVMuint16 dst_reg = REG_OBJ();
+
+  LABEL(label_if);
+  Kiji_compiler_if_any(self, if_cond_reg, &label_if);
+
+  /* put else if conditions */
+  KijiLabel* elsif_poses = NULL;
+  size_t num_elsif_poses = 0;
+  int i;
+  for (i=2; i<node->children.size; ++i) {
+    PVIPNode *n = node->children.nodes[i];
+    if (n->type == PVIP_NODE_ELSE) {
+      break;
+    }
+    int reg = Kiji_compiler_do_compile(self, n->children.nodes[0]);
+
+    ++num_elsif_poses;
+    Renew(elsif_poses, num_elsif_poses, KijiLabel);
+    Kiji_label_init(&(elsif_poses[num_elsif_poses-1]));
+    Kiji_compiler_if_any(self, reg, &(elsif_poses[num_elsif_poses-1]));
+  }
+
+  // compile else clause
+  if (node->children.nodes[node->children.size-1]->type == PVIP_NODE_ELSE) {
+    Kiji_compiler_compile_statements(self, node->children.nodes[node->children.size-1], dst_reg);
+  }
+
+  LABEL(label_end);
+  Kiji_compiler_goto(self, &label_end);
+
+  // update if_label and compile if body
+  LABEL_PUT(label_if);
+    Kiji_compiler_compile_statements(self, if_body, dst_reg);
+    Kiji_compiler_goto(self, &label_end);
+
+  // compile elsif body
+  int elsif_poses_i =0;
+  for (i=2; i<node->children.size; ++i) {
+    PVIPNode*n = node->children.nodes[i];
+    if (n->type == PVIP_NODE_ELSE) {
+      break;
+    }
+
+    LABEL_PUT(elsif_poses[elsif_poses_i++]);
+    Kiji_compiler_compile_statements(self, n->children.nodes[1], dst_reg);
+    Kiji_compiler_goto(self, &label_end);
+  }
+  assert(elsif_poses_i == num_elsif_poses);
+
+  LABEL_PUT(label_end);
+
+  return dst_reg;
+}
+
+ND(NODE_ELSIF) { abort(); }
+ND(NODE_ELSE) { abort(); }
