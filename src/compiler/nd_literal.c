@@ -90,3 +90,33 @@ ND(NODE_IDENT) {
   PVIP_string_concat(node->pv, "\0", 1);
   MVM_panic(MVM_exitcode_compunit, "Unknown lexical variable in find_lexical_by_name: %s\n", node->pv->buf);
 }
+
+ND(NODE_LIST) {
+  // create array
+  MVMuint16 array_reg = REG_OBJ();
+  ASM_HLLLIST(array_reg);
+  ASM_CREATE(array_reg, array_reg);
+
+  // push elements
+  int i;
+  for (i=0; i<node->children.size; ++i) {
+    PVIPNode*n = node->children.nodes[i];
+    Kiji_compiler_compile_array(self, array_reg, n);
+  }
+  return array_reg;
+}
+ND(NODE_ARRAY) {
+  /* TODO: use 6model's container feature after released it. */
+  // create array
+  MVMuint16 array_reg = REG_OBJ();
+  ASM_HLLLIST(array_reg);
+  ASM_CREATE(array_reg, array_reg);
+
+  // push elements
+  int i;
+  for (i=0; i<node->children.size; ++i) {
+    PVIPNode*n = node->children.nodes[i];
+    Kiji_compiler_compile_array(self, array_reg, n);
+  }
+  return array_reg;
+}

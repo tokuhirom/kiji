@@ -200,3 +200,18 @@ ND(NODE_BIND) {
     abort();
   }
 }
+
+ND(NODE_STRING_CONCAT) {
+  MVMuint16 dst_reg = REG_STR();
+  PVIPNode* lhs = node->children.nodes[0];
+  PVIPNode* rhs = node->children.nodes[1];
+  MVMuint16 l = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs));
+  MVMuint16 r = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, rhs));
+  ASM_CONCAT_S(
+    dst_reg,
+    l,
+    r
+  );
+  return dst_reg;
+}
+

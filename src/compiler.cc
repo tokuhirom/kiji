@@ -24,51 +24,6 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
 
   // printf("node: %s\n", node.type_name());
   switch (node->type) {
-  case PVIP_NODE_STATEMENTS:
-    for (int i=0; i<node->children.size; i++) {
-      PVIPNode*n = node->children.nodes[i];
-      // should i return values?
-      Kiji_compiler_do_compile(self, n);
-    }
-    return UNKNOWN_REG;
-  case PVIP_NODE_STRING_CONCAT: {
-    auto dst_reg = REG_STR();
-    auto lhs = node->children.nodes[0];
-    auto rhs = node->children.nodes[1];
-    auto l = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs));
-    auto r = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, rhs));
-    ASM_CONCAT_S(
-      dst_reg,
-      l,
-      r
-    );
-    return dst_reg;
-  }
-  case PVIP_NODE_REPEAT_S: { // x operator
-    auto dst_reg = REG_STR();
-    auto lhs = node->children.nodes[0];
-    auto rhs = node->children.nodes[1];
-    ASM_REPEAT_S(
-      dst_reg,
-      Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs)),
-      Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, rhs))
-    );
-    return dst_reg;
-  }
-  case PVIP_NODE_LIST:
-  case PVIP_NODE_ARRAY: { // TODO: use 6model's container feature after released it.
-    // create array
-    auto array_reg = REG_OBJ();
-    ASM_HLLLIST(array_reg);
-    ASM_CREATE(array_reg, array_reg);
-
-    // push elements
-    for (int i=0; i<node->children.size; i++) {
-      PVIPNode*n = node->children.nodes[i];
-      Kiji_compiler_compile_array(self, array_reg, n);
-    }
-    return array_reg;
-  }
   case PVIP_NODE_ATPOS: {
     assert(node->children.size == 2);
     auto container = Kiji_compiler_do_compile(self, node->children.nodes[0]);

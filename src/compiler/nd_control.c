@@ -393,3 +393,25 @@ ND(NODE_IF) {
 
 ND(NODE_ELSIF) { abort(); }
 ND(NODE_ELSE) { abort(); }
+
+ND(NODE_STATEMENTS) {
+  int i;
+  int retval;
+  for (i=0; i<node->children.size; ++i) {
+    PVIPNode*n = node->children.nodes[i];
+    retval = Kiji_compiler_do_compile(self, n);
+  }
+  return retval;
+}
+
+ND(NODE_REPEAT_S) { /* x operator */
+  MVMuint16 dst_reg = REG_STR();
+  PVIPNode* lhs = node->children.nodes[0];
+  PVIPNode* rhs = node->children.nodes[1];
+  ASM_REPEAT_S(
+    dst_reg,
+    Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, lhs)),
+    Kiji_compiler_to_i(self, Kiji_compiler_do_compile(self, rhs))
+  );
+  return dst_reg;
+}
