@@ -4,6 +4,160 @@
 #include "moarvm.h"
 #include "nd.h"
 #include "../handy.h"
+#include "loop.h"
+
+ND(NODE_LAST) {
+  // break from for, while, loop.
+  MVMuint16 ret = REG_OBJ();
+  ASM_THROWCATLEX(
+    ret,
+    MVM_EX_CAT_LAST
+  );
+  return ret;
+}
+ND(NODE_REDO) {
+  // redo from for, while, loop.
+  MVMuint16 ret = REG_OBJ();
+  ASM_THROWCATLEX(
+    ret,
+    MVM_EX_CAT_REDO
+  );
+  return ret;
+}
+ND(NODE_NEXT) {
+  // continue from for, while, loop.
+  MVMuint16 ret = REG_OBJ();
+  ASM_THROWCATLEX(
+    ret,
+    MVM_EX_CAT_NEXT
+  );
+  return ret;
+}
+
+ND(NODE_RETURN) {
+  assert(node->children.size ==1);
+  MVMuint16 reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+  if (reg < 0) {
+    MVM_panic(MVM_exitcode_compunit, "Compilation error. return with non-value.");
+  }
+  // ASM_RETURN_O(Kiji_compiler_to_o(self, reg));
+  switch (Kiji_compiler_get_local_type(self, reg)) {
+  case MVM_reg_int64:
+    ASM_RETURN_I(reg);
+    break;
+  case MVM_reg_str:
+    ASM_RETURN_S(reg);
+    break;
+  case MVM_reg_obj:
+    ASM_RETURN_O(Kiji_compiler_to_o(self, reg));
+    break;
+  case MVM_reg_num64:
+    ASM_RETURN_N(reg);
+    break;
+  default:
+    MVM_panic(MVM_exitcode_compunit, "Compilation error. Unknown register for returning: %d", Kiji_compiler_get_local_type(self, reg));
+  }
+  return UNKNOWN_REG;
+}
+ND(NODE_MODULE) {
+  // nop, for now.
+  return UNKNOWN_REG;
+}
+
+ND(NODE_DIE) {
+  int msg_reg = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, node->children.nodes[0]));
+  int dst_reg = REG_OBJ();
+  assert(msg_reg != UNKNOWN_REG);
+  ASM_DIE(dst_reg, msg_reg);
+  return UNKNOWN_REG;
+}
+
+ND(NODE_WHILE) {
+  /*
+    *  label_while:
+    *    cond
+    *    unless_o label_end
+    *    body
+    *  label_end:
+    */
+
+  LOOP_ENTER;
+
+  LABEL(label_while); LABEL_PUT(label_while);
+
+  LOOP_NEXT;
+    int reg = Kiji_compiler_do_compile(self, node->children.nodes[0]);
+    assert(reg != UNKNOWN_REG);
+    LABEL(label_end);
+    Kiji_compiler_unless_any(self, reg, &label_end);
+    Kiji_compiler_do_compile(self, node->children.nodes[1]);
+    Kiji_compiler_goto(self, &label_while);
+  LABEL_PUT(label_end);
+
+  LOOP_LAST;
+
+  LOOP_LEAVE;
+
+  return UNKNOWN_REG;
+}
+
+ND(NODE_LAMBDA) {
+  int frame_no = Kiji_compiler_push_frame(self, "lambda", strlen("lambda"));
+  ASM_CHECKARITY(
+    node->children.nodes[0]->children.size,
+    node->children.nodes[0]->children.size
+  );
+  /* Compile parameters */
+  int i;
+  for (i=0; i<node->children.nodes[0]->children.size; i++) {
+    PVIPNode *n = node->children.nodes[0]->children.nodes[i]->children.nodes[1];
+    int reg = REG_OBJ();
+    MVMString * name = MVM_string_utf8_decode(self->tc, self->tc->instance->VMString, n->pv->buf, n->pv->len);
+    int lex = Kiji_compiler_push_lexical(self, name, MVM_reg_obj);
+    ASM_PARAM_RP_O(reg, i);
+    ASM_BINDLEX(lex, 0, reg);
+  }
+  int retval = Kiji_compiler_do_compile(self, node->children.nodes[1]);
+  if (retval == UNKNOWN_REG) {
+    retval = REG_OBJ();
+    ASM_NULL(retval);
+  }
+  Kiji_compiler_return_any(self, retval);
+  Kiji_compiler_pop_frame(self);
+
+  // warn if void context.
+  MVMuint16 dst_reg = REG_OBJ();
+  ASM_GETCODE(dst_reg, frame_no);
+
+  return dst_reg;
+}
+
+ND(NODE_BLOCK) {
+  int frame_no = Kiji_compiler_push_frame(self, "block", strlen("block"));
+  ASM_CHECKARITY(0,0);
+  int i;
+  for (i=0; i<node->children.size; ++i) {
+    PVIPNode *n = node->children.nodes[i];
+    (void)Kiji_compiler_do_compile(self, n);
+  }
+  ASM_RETURN();
+  Kiji_compiler_pop_frame(self);
+
+  MVMuint16 frame_reg = REG_OBJ();
+  ASM_GETCODE(frame_reg, frame_no);
+
+  MVMCallsite* callsite;
+  Newxz(callsite, 1, MVMCallsite);
+  callsite->arg_count = 0;
+  callsite->num_pos = 0;
+  callsite->arg_flags = NULL;
+  int callsite_no = Kiji_compiler_push_callsite(self, callsite);
+  ASM_PREPARGS(callsite_no);
+
+  ASM_INVOKE_V(frame_reg); // trash result
+
+  return UNKNOWN_REG;
+}
 
 ND(NODE_USE) {
   assert(node->children.size==1);

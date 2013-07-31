@@ -52,7 +52,8 @@ int Kiji_compiler_push_frame(KijiCompiler* self, const char* name, size_t name_l
   MVMThreadContext *tc = self->tc;
   assert(tc);
   PVIPString * name_with_id = PVIP_string_new();
-  PVIP_string_printf(name_with_id, "%s%d", name, self->frame_no++);
+  PVIP_string_concat(name_with_id, name, name_len);
+  PVIP_string_printf(name_with_id, "%d", self->frame_no++);
   KijiFrame* frame;
   Newxz(frame, 1, KijiFrame);
   frame->frame.name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_with_id->buf, name_with_id->len);
