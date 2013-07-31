@@ -12,11 +12,9 @@ extern "C" {
 #include "compiler/gen.nd.h"
 
 #include <string>
-#include <vector>
 
 // This reg returns register number contains true value.
 int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
-  MVMThreadContext *tc = self->tc;
   int ret = Kiji_compiler_compile_nodes(self, node);
   if (ret != -18185963) {
     return ret;
@@ -243,14 +241,15 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
       }
 
       {
-        MVMCallsite* callsite = new MVMCallsite;
-        memset(callsite, 0, sizeof(MVMCallsite));
+        MVMCallsite* callsite;
+        Newxz(callsite, 1, MVMCallsite);
         // TODO support named params
         callsite->arg_count = args->children.size;
         callsite->num_pos   = args->children.size;
-        callsite->arg_flags = new MVMCallsiteEntry[args->children.size];
+        Newxz(callsite->arg_flags, args->children.size, MVMCallsiteEntry);
 
-        std::vector<uint16_t> arg_regs;
+        uint16_t *arg_regs  = NULL;
+        size_t num_arg_regs = 0;
 
         for (int i=0; i<args->children.size; i++) {
           PVIPNode *a = args->children.nodes[i];
@@ -262,30 +261,31 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
           switch (Kiji_compiler_get_local_type(self, reg)) {
           case MVM_reg_int64:
             callsite->arg_flags[i] = MVM_CALLSITE_ARG_INT;
-            arg_regs.push_back(reg);
             break;
           case MVM_reg_num64:
             callsite->arg_flags[i] = MVM_CALLSITE_ARG_NUM;
-            arg_regs.push_back(reg);
             break;
           case MVM_reg_str:
             callsite->arg_flags[i] = MVM_CALLSITE_ARG_STR;
-            arg_regs.push_back(reg);
             break;
           case MVM_reg_obj:
             callsite->arg_flags[i] = MVM_CALLSITE_ARG_OBJ;
-            arg_regs.push_back(reg);
             break;
           default:
             abort();
           }
+
+          num_arg_regs++;
+          Renew(arg_regs, num_arg_regs, uint16_t);
+          arg_regs[num_arg_regs-1] = reg;
         }
 
         int callsite_no = Kiji_compiler_push_callsite(self, callsite);
         ASM_PREPARGS(callsite_no);
 
-        int i=0;
-        for (auto reg:arg_regs) {
+        int i;
+        for (i=0; i<num_arg_regs; ++i) {
+          uint16_t reg = arg_regs[i];
           switch (Kiji_compiler_get_local_type(self, reg)) {
           case MVM_reg_int64:
             ASM_ARG_I(i, reg);
@@ -302,7 +302,6 @@ int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
           default:
             abort();
           }
-          ++i;
         }
       }
       MVMuint16 dest_reg = REG_OBJ(); // ctx

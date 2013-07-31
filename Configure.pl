@@ -24,7 +24,7 @@ sub main {
         'debug-asm!' => \my $debug_asm,
     );
 
-    my @CXXFLAGS = qw(-g -std=c++11);
+    my @CXXFLAGS = qw(-g);
     my @CFLAGS= qw(-g);
     if ($debug) {
         # push @CXXFLAGS, qw(-D_GLIBCXX_DEBUG -ferror-limit=3);
