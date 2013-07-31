@@ -281,6 +281,54 @@ ND(NODE_METHODCALL) {
   return ret;
 }
 
+static int Kiji_builtin_function_say(KijiCompiler *self, const PVIPNode *args) {
+  int i;
+  for (i=0; i<args->children.size; i++) {
+    PVIPNode* a = args->children.nodes[i];
+    uint16_t reg_num = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, a));
+    if (i==args->children.size-1) {
+      ASM_SAY(reg_num);
+    } else {
+      ASM_PRINT(reg_num);
+    }
+  }
+  return Kiji_compiler_const_true(self);
+}
+
+static int Kiji_builtin_function_print(KijiCompiler *self, const PVIPNode *args) {
+  int i;
+  for (i=0; i<args->children.size; i++) {
+    PVIPNode* a = args->children.nodes[i];
+    uint16_t reg_num = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, a));
+    ASM_PRINT(reg_num);
+  }
+  return Kiji_compiler_const_true(self);
+}
+
+static int Kiji_builtin_function_open(KijiCompiler *self, const PVIPNode *args) {
+  // TODO support arguments
+  assert(args->children.size == 1);
+  int fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
+  MVMuint16 dst_reg_o = REG_OBJ();
+  // TODO support latin1, etc.
+  int mode = Kiji_compiler_push_string(self, newMVMString_nolen("r"));
+  MVMuint16 mode_s = REG_STR();
+  ASM_CONST_S(mode_s, mode);
+  ASM_OPEN_FH(dst_reg_o, fname_s, mode_s);
+  return dst_reg_o;
+}
+
+static int Kiji_builtin_function_slurp(KijiCompiler *self, const PVIPNode *args) {
+  assert(args->children.size <= 2);
+  assert(args->children.size != 2 && "Encoding option is not supported yet");
+  MVMuint16 fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
+  MVMuint16 dst_reg_s = REG_STR();
+  MVMuint16 encoding_s = REG_STR();
+  ASM_CONST_S(encoding_s, Kiji_compiler_push_string(self, newMVMString_nolen("utf8"))); // TODO support latin1, etc.
+  ASM_SLURP(dst_reg_s, fname_s, encoding_s);
+  return dst_reg_s;
+}
+
 ND(NODE_FUNCALL) {
   assert(node->children.size == 2);
   const PVIPNode*ident = node->children.nodes[0];
@@ -290,45 +338,13 @@ ND(NODE_FUNCALL) {
   if (node->children.nodes[0]->type == PVIP_NODE_IDENT) {
 #define PVIP_string_cmp(n, c) ((n)->len==strlen((c)) && !memcmp(n->buf,c,strlen(c)))
     if (PVIP_string_cmp(ident->pv, "say")) {
-      int i;
-      for (i=0; i<args->children.size; i++) {
-        PVIPNode* a = args->children.nodes[i];
-        uint16_t reg_num = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, a));
-        if (i==args->children.size-1) {
-          ASM_SAY(reg_num);
-        } else {
-          ASM_PRINT(reg_num);
-        }
-      }
-      return Kiji_compiler_const_true(self);
+      return Kiji_builtin_function_say(self, args);
     } else if (PVIP_string_cmp(ident->pv, "print")) {
-      int i;
-      for (i=0; i<args->children.size; i++) {
-        PVIPNode* a = args->children.nodes[i];
-        uint16_t reg_num = Kiji_compiler_to_s(self, Kiji_compiler_do_compile(self, a));
-        ASM_PRINT(reg_num);
-      }
-      return Kiji_compiler_const_true(self);
+      return Kiji_builtin_function_print(self, args);
     } else if (PVIP_string_cmp(ident->pv, "open")) {
-      // TODO support arguments
-      assert(args->children.size == 1);
-      int fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
-      MVMuint16 dst_reg_o = REG_OBJ();
-      // TODO support latin1, etc.
-      int mode = Kiji_compiler_push_string(self, newMVMString_nolen("r"));
-      MVMuint16 mode_s = REG_STR();
-      ASM_CONST_S(mode_s, mode);
-      ASM_OPEN_FH(dst_reg_o, fname_s, mode_s);
-      return dst_reg_o;
+      return Kiji_builtin_function_open(self, args);
     } else if (PVIP_string_cmp(ident->pv, "slurp")) {
-      assert(args->children.size <= 2);
-      assert(args->children.size != 2 && "Encoding option is not supported yet");
-      MVMuint16 fname_s = Kiji_compiler_do_compile(self, args->children.nodes[0]);
-      MVMuint16 dst_reg_s = REG_STR();
-      MVMuint16 encoding_s = REG_STR();
-      ASM_CONST_S(encoding_s, Kiji_compiler_push_string(self, newMVMString_nolen("utf8"))); // TODO support latin1, etc.
-      ASM_SLURP(dst_reg_s, fname_s, encoding_s);
-      return dst_reg_s;
+      return Kiji_builtin_function_slurp(self, args);
     }
   }
 
