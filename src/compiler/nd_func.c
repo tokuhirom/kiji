@@ -339,6 +339,15 @@ static int Kiji_builtin_function_abs(KijiCompiler *self, const PVIPNode *args) {
   return r;
 }
 
+static int Kiji_builtin_function_push(KijiCompiler* self, const PVIPNode *args) {
+  int target = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, args->children.nodes[0]));
+  int i;
+  for (i=1; i<args->children.size; i++) {
+    int reg = Kiji_compiler_to_o(self, Kiji_compiler_do_compile(self, args->children.nodes[i]));
+    ASM_PUSH_O(target, reg);
+  }
+}
+
 ND(NODE_FUNCALL) {
   assert(node->children.size == 2);
   const PVIPNode*ident = node->children.nodes[0];
@@ -357,6 +366,8 @@ ND(NODE_FUNCALL) {
       return Kiji_builtin_function_abs(self, args);
     } else if (PVIP_string_cmp(ident->pv, "slurp")) {
       return Kiji_builtin_function_slurp(self, args);
+    } else if (PVIP_string_cmp(ident->pv, "push")) {
+      return Kiji_builtin_function_push(self, args);
     }
   }
 
