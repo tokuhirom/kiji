@@ -409,7 +409,11 @@ ND(NODE_FUNCALL) {
         PVIPNode *a = args->children.nodes[i];
         int reg = Kiji_compiler_do_compile(self, a);
         if (reg<0) {
-          MVM_panic(MVM_exitcode_compunit, "Compilation error. You should not pass void function as an argument: %s", PVIP_node_name(a->type));
+          MVM_panic(
+              MVM_exitcode_compunit, "Compilation error. You should not pass void function as an argument: %s %s",
+              PVIP_node_name(a->type),
+              (node->children.nodes[0]->type == PVIP_NODE_IDENT ? PVIP_string_c_str(node->children.nodes[0]->pv) : "")
+          );
         }
 
         switch (Kiji_compiler_get_local_type(self, reg)) {
