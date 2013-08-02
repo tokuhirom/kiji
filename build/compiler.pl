@@ -40,7 +40,7 @@ int Kiji_compiler_compile_nodes(KijiCompiler *self, const PVIPNode *node) {
     return Kiji_compiler_nd_<?= $name ?>(self, node);
 ? }
   }
-  return -18185963;
+  MVM_panic(MVM_exitcode_compunit, "AH... '%s' is not implemented yet.", PVIP_node_name(node->type));
 }
 CCC
 
