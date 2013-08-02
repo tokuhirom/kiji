@@ -43,3 +43,8 @@ See also
    * PEG parser generator
  * [greg manual](http://piumarta.com/software/peg/peg.1.html)
 
+Status of roast
+---------------
+
+    2013-08-02 03:19 - OK: 5, FAIL: 874 ( 0.57%) in 11.089065 sec
+

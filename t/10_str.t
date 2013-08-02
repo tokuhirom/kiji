@@ -28,3 +28,9 @@ yyy
 my $n = 'y'; $n ~= 3; say($n);
 --- expected
 y3
+
+===
+--- code
+say("x{3*2}");
+--- expected
+x6
