@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KIJI_XSUB_H_
+#define KIJI_XSUB_H_
 
 #define CLASS_INIT() \
   MVMObject* _cache = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash)); \
@@ -21,3 +22,4 @@
         code_obj); \
   } while (0)
 
+#endif /* KIJI_XSUB_H_ */
