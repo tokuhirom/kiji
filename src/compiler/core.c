@@ -226,8 +226,8 @@ void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm) {
 
   cu->num_scs = 2;
   cu->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
-  cu->scs[0] = sc;
-  cu->scs[1] = self->sc_classes;
+  cu->scs[KIJI_SC_BUILTINS]     = sc;
+  cu->scs[KIJI_SC_USER_CLASSES] = self->sc_classes;
   cu->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
   cu->scs_to_resolve[0] = NULL;
   cu->scs_to_resolve[1] = NULL;

@@ -8,6 +8,9 @@
 #include "handy.h"
 #include "compiler/label.h"
 
+#define KIJI_SC_BUILTINS     0
+#define KIJI_SC_USER_CLASSES 1
+
 #define ASM_OP_U16_U16_U16(a,b,c,d,e) \
   Kiji_asm_op_u16_u16_u16(Kiji_compiler_top_frame(self), a,b,c,d,e)
 
