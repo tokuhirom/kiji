@@ -34,7 +34,7 @@ ND(NODE_VARIABLE) {
 
 ND(NODE_CLARGS) { // @*ARGS
   MVMuint16 retval = REG_OBJ();
-  ASM_WVAL(retval, 0,0);
+  ASM_WVAL(retval, KIJI_SC_BUILTIN_TWARGS,0);
   return retval;
 }
 
@@ -118,6 +118,19 @@ ND(NODE_ARRAY) {
     PVIPNode*n = node->children.nodes[i];
     Kiji_compiler_compile_array(self, array_reg, n);
   }
+  return array_reg;
+}
+
+/*
+ * TODO I guess 6model commiters will be implement Pair() in MoarVM/src/6model/
+ * I use array instead, for now.
+ */
+ND(NODE_PAIR) {
+  MVMuint16 array_reg = REG_OBJ();
+  ASM_HLLLIST(array_reg);
+  ASM_CREATE(array_reg, array_reg);
+
+  Kiji_compiler_compile_array(self, array_reg, node->children.nodes[0]);
   return array_reg;
 }
 

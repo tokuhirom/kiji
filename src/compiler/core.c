@@ -2,7 +2,12 @@
  */
 #include "moarvm.h"
 #include "../compiler.h"
+#include "../builtin.h"
 #include "../gen.assembler.h"
+
+#define dTC MVMThreadContext *tc=self->tc
+#define dVM MVMInstance *vm=self->vm
+#define dCU MVMCompUnit *cu=self->cu
 
 int Kiji_compiler_do_compile(KijiCompiler *self, const PVIPNode*node) {
   return Kiji_compiler_compile_nodes(self, node);
@@ -28,13 +33,23 @@ int Kiji_compiler_push_string(KijiCompiler *self, MVMString *str) {
   return self->cu->num_strings-1;
 }
 
-void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2) {
-  self->num_sc_classes++;
+void Kiji_compiler_push_sc(KijiCompiler *self, MVMSerializationContext*sc) {
+  MVMCompUnit*cu = self->cu;
+  cu->num_scs++;
+  Renew(cu->scs, cu->num_scs, MVMSerializationContext*);
+  cu->scs[cu->num_scs-1] = sc;
+}
 
-  *wval1 = 1;
-  *wval2 = self->num_sc_classes-1;
+void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMString *handle, MVMObject * object, int *wval1, int *wval2) {
+  MVMCompUnit*cu = self->cu;
 
-  MVM_sc_set_object(self->tc, self->sc_classes, self->num_sc_classes-1, object);
+  MVMSerializationContext *sc = (MVMSerializationContext *)MVM_sc_create(self->tc, handle);
+  MVM_sc_set_object(self->tc, sc, 0, object);
+
+  Kiji_compiler_push_sc(self, sc);
+
+  *wval1 = self->cu->num_scs-1;
+  *wval2 = 0;
 }
 
 /* Push lexical variable. */
@@ -118,9 +133,55 @@ void Kiji_compiler_finalize(KijiCompiler *self, MVMInstance* vm) {
   }
 }
 
+/* Initialize @*ARGS */
+void Kiji_compiler_setup_twargs(KijiCompiler *self) {
+  dTC; dVM; dCU;
+
+  MVMObject *clargs = MVM_repr_alloc_init(tc, tc->instance->boot_types->BOOTArray);
+  MVM_gc_root_add_permanent(tc, (MVMCollectable **)&clargs);
+  MVMString* handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"@*ARGS");
+  MVMint64 count;
+  for (count = 0; count < vm->num_clargs; count++) {
+    MVMString *string = MVM_string_utf8_decode(tc,
+      tc->instance->VMString,
+      vm->raw_clargs[count], strlen(vm->raw_clargs[count])
+    );
+    MVMObject*type = cu->hll_config->str_box_type;
+    MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
+    if (REPR(box)->initialize)
+        REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
+    REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
+        OBJECT_BODY(box), string);
+    MVM_repr_push_o(tc, clargs, box);
+  }
+  int wval1, wval2;
+  Kiji_compiler_push_sc_object(self, handle, clargs, &wval1, &wval2);
+}
+
 void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm) {
   MVMCompUnit *cu = self->cu;
   MVMThreadContext *tc = self->tc;
+
+  // setup hllconfig
+  {
+    MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
+    cu->hll_config = MVM_hll_get_config_for(tc, hll_name);
+
+    MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
+    MVM_hll_set_config(tc, hll_name, config);
+  }
+
+  /* setup builtin scs */
+  Kiji_compiler_setup_twargs(self);
+
+  /* Pair class */
+  /*
+  {
+    MVMObject *pair_type = Kiji_bootstrap_Pair(self->cu, self->tc);
+    MVM_sc_set_object(tc, sc, KIJI_SC_BUILTIN_PAIR_CLASS, pair_type);
+  }
+  */
+
   ASM_CHECKARITY(0, -1);
 
   /*
@@ -173,15 +234,6 @@ void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm) {
   ASM_NULL(reg);
   ASM_RETURN_O(reg);
 
-  // setup hllconfig
-  {
-    MVMString *hll_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"kiji");
-    cu->hll_config = MVM_hll_get_config_for(tc, hll_name);
-
-    MVMObject *config = REPR(tc->instance->boot_types->BOOTHash)->allocate(tc, STABLE(tc->instance->boot_types->BOOTHash));
-    MVM_hll_set_config(tc, hll_name, config);
-  }
-
   // hacking hll
   Kiji_bootstrap_Array(cu, tc);
   Kiji_bootstrap_Str(cu,   tc);
@@ -197,40 +249,26 @@ void Kiji_compiler_compile(KijiCompiler *self, PVIPNode*node, MVMInstance* vm) {
     cu->max_callsite_size = MAX(cu->max_callsite_size, callsite->arg_count);
   }
 
-  // Initialize @*ARGS
-  MVMObject *clargs = MVM_repr_alloc_init(tc, tc->instance->boot_types->BOOTArray);
-  MVM_gc_root_add_permanent(tc, (MVMCollectable **)&clargs);
-  MVMString* handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CORE__");
-  MVMSerializationContext *sc = (MVMSerializationContext *)MVM_sc_create(tc, handle);
-  MVMROOT(tc, sc, {
-    MVMROOT(tc, clargs, {
-      MVMint64 count;
-      for (count = 0; count < vm->num_clargs; count++) {
-        MVMString *string = MVM_string_utf8_decode(tc,
-          tc->instance->VMString,
-          vm->raw_clargs[count], strlen(vm->raw_clargs[count])
-        );
-        MVMObject*type = cu->hll_config->str_box_type;
-        MVMObject *box = REPR(type)->allocate(tc, STABLE(type));
-        MVMROOT(tc, box, {
-            if (REPR(box)->initialize)
-                REPR(box)->initialize(tc, STABLE(box), box, OBJECT_BODY(box));
-            REPR(box)->box_funcs->set_str(tc, STABLE(box), box,
-                OBJECT_BODY(box), string);
-        });
-        MVM_repr_push_o(tc, clargs, box);
-      }
-      MVM_sc_set_object(tc, sc, 0, clargs);
-    });
-  });
+  /* fix scs_to_resolve ... (is this valid thing?) */
+  {
+    cu->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*cu->num_scs);
+    for (i=0; i<cu->num_scs; ++i) {
+      cu->scs_to_resolve[i] = NULL;
+    }
+  }
+  // Kiji_compiler_dump_scs(self);
+}
 
-  cu->num_scs = 2;
-  cu->scs = (MVMSerializationContext**)malloc(sizeof(MVMSerializationContext*)*2);
-  cu->scs[KIJI_SC_BUILTINS]     = sc;
-  cu->scs[KIJI_SC_USER_CLASSES] = self->sc_classes;
-  cu->scs_to_resolve = (MVMString**)malloc(sizeof(MVMString*)*2);
-  cu->scs_to_resolve[0] = NULL;
-  cu->scs_to_resolve[1] = NULL;
+void Kiji_compiler_dump_scs(KijiCompiler *self) {
+  dCU; dTC;
+
+  int i;
+  printf("  num_scs: %d\n", cu->num_scs);
+  for (i=0; i<cu->num_scs; ++i) {
+    MVMSerializationContext*sc = cu->scs[i];
+    MVMString *handle = MVM_sc_get_handle(tc, sc);
+    printf("    %d %s\n", i, MVM_string_utf8_encode_C_string(tc, handle));
+  }
 }
 
 uint16_t Kiji_compiler_get_variable(KijiCompiler *self, MVMString *name) {
@@ -309,22 +347,17 @@ void Kiji_compiler_set_variable(KijiCompiler *self, MVMString * name, uint16_t v
 }
 
 
-void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc) {
+void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc, MVMInstance *vm) {
   memset(self, 0, sizeof(KijiCompiler));
   self->cu = cu;
   self->tc = tc;
+  self->vm = vm;
   self->frame_no = 0;
 
   // init compunit.
   Kiji_compiler_push_frame(self, "frame_name_0", strlen("frame_name_0"));
 
   self->current_class_how = NULL;
-
-  MVMString * handle = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"__SARU_CLASSES__");
-  assert(tc);
-  self->sc_classes = (MVMSerializationContext*)MVM_sc_create(tc, handle);
-
-  self->num_sc_classes = 0;
 }
 
 /* Is a and b equivalent? */

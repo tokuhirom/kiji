@@ -28,3 +28,13 @@ my $o = class { method bar() { say(5963); } }; $o.new().bar()
 class Foo { method bar() { say(5963); } }; Foo.new().bar()
 --- expected
 5963
+
+===
+--- code
+class Foo { method x() { say 5963; } };
+Foo.new.x;
+class Bar{ method y() { say 4649 } };
+Bar.new.y;
+--- expected
+5963
+4649

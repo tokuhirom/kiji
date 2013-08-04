@@ -8,8 +8,8 @@
 #include "handy.h"
 #include "compiler/label.h"
 
-#define KIJI_SC_BUILTINS     0
-#define KIJI_SC_USER_CLASSES 1
+#define KIJI_SC_BUILTIN_TWARGS     0
+#define KIJI_SC_BUILTIN_PAIR_CLASS 1
 
 #define ASM_OP_U16_U16_U16(a,b,c,d,e) \
   Kiji_asm_op_u16_u16_u16(Kiji_compiler_top_frame(self), a,b,c,d,e)
@@ -62,9 +62,7 @@ typedef struct _KijiCompiler {
   MVMThreadContext *tc;
   int frame_no;
   MVMObject* current_class_how;
-
-  MVMSerializationContext * sc_classes;
-  int num_sc_classes;
+  MVMInstance *vm;
 } KijiCompiler;
 
 KIJI_STATIC_INLINE KijiFrame* Kiji_compiler_top_frame(KijiCompiler *self) {
@@ -95,7 +93,6 @@ void Kiji_compiler_if_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
 void Kiji_compiler_unless_any(KijiCompiler *self, uint16_t reg, KijiLabel *label);
 uint16_t Kiji_compiler_if_op(KijiCompiler* self, uint16_t cond_reg);
 uint16_t Kiji_compiler_unless_op(KijiCompiler * self, uint16_t cond_reg);
-void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMObject * object, int *wval1, int *wval2);
 int Kiji_compiler_push_lexical(KijiCompiler *self, MVMString *name, MVMuint16 type);
 void Kiji_compiler_push_pkg_var(KijiCompiler *self, MVMString *name);
 void Kiji_compiler_pop_frame(KijiCompiler* self);
@@ -121,11 +118,13 @@ void Kiji_compiler_compile_statements(KijiCompiler *self, const PVIPNode*node, i
 uint16_t Kiji_compiler_compile_chained_comparisions(KijiCompiler *self, const PVIPNode* node);
 int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
 uint16_t Kiji_compiler_do_compare(KijiCompiler* self, PVIP_node_type_t type, uint16_t lhs, uint16_t rhs);
-void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc);
+void Kiji_compiler_init(KijiCompiler *self, MVMCompUnit * cu, MVMThreadContext * tc, MVMInstance *vm);
 int Kiji_compiler_str_cmp_binop(KijiCompiler * self, uint16_t lhs, uint16_t rhs, uint16_t op);
 int Kiji_compiler_num_cmp_binop(KijiCompiler *self, uint16_t lhs, uint16_t rhs, uint16_t op_i, uint16_t op_n);
 size_t Kiji_compiler_push_callsite(KijiCompiler *self, MVMCallsite *callsite);
 MVMuint16 Kiji_compiler_count_min_arity(KijiCompiler* self, PVIPNode*node);
+void Kiji_compiler_push_sc_object(KijiCompiler *self, MVMString *handle, MVMObject * object, int *wval1, int *wval2);
+void Kiji_compiler_push_sc(KijiCompiler *self, MVMSerializationContext*sc);
 #ifdef __cplusplus
 };
 #endif

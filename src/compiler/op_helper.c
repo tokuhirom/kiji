@@ -203,12 +203,28 @@ int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node) {
   int wval1, wval2;
   {
     // Create new class.
-    MVMObject * type = MVM_6model_find_method(
-      tc,
-      STABLE(tc->instance->KnowHOW)->HOW,
-      MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"new_type")
-    );
-    MVMObject * how = STABLE(type)->HOW;
+
+    PVIPNode * name_node = node->children.nodes[0];
+    MVMString *class_name;
+    if (PVIP_node_category(name_node->type) == PVIP_CATEGORY_STRING) {
+      class_name = MVM_string_utf8_decode(tc, tc->instance->VMString, name_node->pv->buf, name_node->pv->len);
+    } else {
+      class_name = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, "anon");
+    }
+
+    MVMObject * HOW  = REPR(tc->instance->KnowHOW)->allocate(tc, STABLE(tc->instance->KnowHOW));
+
+    MVMString * str_P6opaque = MVM_string_ascii_decode_nt(tc, tc->instance->VMString, (char*)"P6opaque");
+    MVMREPROps * repr_to_use = MVM_repr_get_by_name(tc, str_P6opaque);
+    MVMObject * type_object = repr_to_use->type_object_for(tc, HOW);
+    REPR(HOW)->initialize(tc, STABLE(HOW), HOW, OBJECT_BODY(HOW));
+    MVM_ASSIGN_REF(tc, HOW, ((MVMKnowHOWREPR *)HOW)->body.name, class_name);
+
+    /* Set .WHO to an empty hash. */
+    MVMObject * BOOTHash = tc->instance->boot_types->BOOTHash;
+    MVMObject *stash = REPR(BOOTHash)->allocate(tc, STABLE(BOOTHash));
+    REPR(stash)->initialize(tc, STABLE(stash), stash, OBJECT_BODY(stash));
+    MVM_ASSIGN_REF(tc, STABLE(type_object), STABLE(type_object)->WHO, stash);
 
     // Add "new" method
     {
@@ -227,13 +243,11 @@ int Kiji_compiler_compile_class(KijiCompiler *self, const PVIPNode* node) {
           OBJECT_BODY(method_cache),
           (MVMObject*)name,
           method);
-      // REPR(method_table)->ass_funcs->bind_key_boxed(tc, STABLE(method_table),
-          // method_table, OBJECT_BODY(method_table), (MVMObject *)name, method);
-      STABLE(type)->method_cache = method_cache;
+      STABLE(type_object)->method_cache = method_cache;
     }
 
-    Kiji_compiler_push_sc_object(self, type, &wval1, &wval2);
-    self->current_class_how = how;
+    Kiji_compiler_push_sc_object(self, class_name, type_object, &wval1, &wval2);
+    self->current_class_how = HOW;
   }
 
   /* compile body */
